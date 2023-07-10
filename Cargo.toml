@@ -1,0 +1,15 @@
+[package]
+name = "puccinia_s_checkmate"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+clap = { version = "4.3.11", features = ["derive"] }
+const-random = "0.1.15"
+rand = "0.8.5"
+
+[dev-dependencies]
+
+[profile.release]
+#debug = true
+lto = true
