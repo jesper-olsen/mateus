@@ -25,7 +25,7 @@ Options:
 
 ```
 
-Run CLI app like this (option -w or -b to take a side).
+Run CLI app like this to play (option -w or -b to take a side):
 ```
 % cargo run --release -- -v 
 
