@@ -4,7 +4,7 @@ A rusty chess library:
 * [Negamax search](https://en.wikipedia.org/wiki/Negamax) with alpha beta pruning
 * Evaluation based on material, pawn structure & mobility
 
-Two example apps included - terminal CLI app (src/bin) and browser web application (examples/spa).
+Two example apps included - terminal CLI app (src/bin) and browser web application ([examples/spa](https://github.com/jesper-olsen/puccinia_s_checkmate/tree/main/examples/spa)).
 
 Run CLI app like this: 
 
