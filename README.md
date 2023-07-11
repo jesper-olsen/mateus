@@ -1,6 +1,6 @@
 # Puccinia's Checkmate
 
-A rusty chess library:
+Puccinia's Checkmate - a rusty chess library:
 * [Negamax search](https://en.wikipedia.org/wiki/Negamax) with alpha beta pruning
 * Evaluation based on material, pawn structure & mobility
 

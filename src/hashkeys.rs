@@ -1,5 +1,10 @@
 use crate::val::*;
 
+// We use const_random! to create hash keys at compile time.
+// Our hash keys are u64, which const_random supports.
+// For arrays, however, const_random only supports u8 arrays,
+// so we need to define our own macros to make that convenient...
+
 macro_rules! add_elems {
     ($entry:ident $($tokens:tt)*) => {
         add_elems!{0, $entry $($tokens)*}
