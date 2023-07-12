@@ -1,9 +1,5 @@
 use std::fmt;
 
-// +9 +1 -7
-// +8    -8
-// +7 -1 -9
-
 #[derive(Debug, PartialEq, Eq, Hash, Copy, Clone)]
 pub enum PType {
     Rook,
@@ -16,11 +12,6 @@ pub enum PType {
 }
 pub const WHITE: bool = true;
 pub const BLACK: bool = false;
-
-//#[rustfmt::skip]
-//mod unformatted {
-//}
-//use unformatted::*;
 
 #[derive(Debug, PartialEq, Eq, Hash, Copy, Clone)]
 pub struct Piece {

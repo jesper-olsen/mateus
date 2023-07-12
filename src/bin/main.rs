@@ -13,13 +13,6 @@ use puccinia_s_checkmate::Game;
 use rand::random;
 use std::collections::hash_map::HashMap;
 use std::io;
-//use puccinia_s_checkmate::val::val::*;
-//mod bitmaps;
-//mod hashkeys;
-//mod mgen;
-//use mgen::*;
-//mod search;
-//use search::*;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
