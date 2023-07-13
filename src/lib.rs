@@ -234,17 +234,7 @@ impl Game {
         // verify move does not expose own king
         let colour = self.board[m.frm].colour;
         self.update(m);
-        //let flag = self.in_check(colour);
-
-        let flag = in_check(
-            &self.board,
-            colour,
-            self.bm_wking,
-            self.bm_bking,
-            self.bm_white | self.bm_black,
-        );
-        //println!("old ic {flag} vs new ic {flag2}");
-
+        let flag = self.in_check(colour);
         self.backdate();
         !flag
     }
