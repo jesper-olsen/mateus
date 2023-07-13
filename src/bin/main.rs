@@ -117,6 +117,28 @@ fn check_game_over(game: &Game, moves: &Vec<Move>, half_moves: isize) -> String 
     }
 }
 
+fn pick_library_move(
+    moves: &Vec<Move>,
+    o: &Vec<(usize, usize)>,
+    verbose: bool,
+) -> Vec<(Move, i32)> {
+    let i = random::<usize>() % o.len();
+    for (q, x) in o.iter().enumerate() {
+        if verbose {
+            if q == i {
+                println!("Opening: {},{} (picked)", i2str(x.0), i2str(x.1));
+            } else {
+                println!("Opening: {},{}", i2str(x.0), i2str(x.1));
+            }
+        }
+    }
+    if let Some(m) = moves.iter().find(|m2| (m2.frm, m2.to) == o[i]) {
+        vec![(*m, 0i32)]
+    } else {
+        panic!("Invalid library move")
+    }
+}
+
 fn play(
     players: HashMap<bool, bool>,
     verbose: bool,
@@ -153,21 +175,7 @@ fn play(
         } else {
             // try library 1st - compute if not there
             if let Some(o) = openings.get(&game.hash) {
-                let i = random::<usize>() % o.len();
-                for (q, x) in o.iter().enumerate() {
-                    if verbose {
-                        if q == i {
-                            println!("Opening: {},{} (picked)", i2str(x.0), i2str(x.1));
-                        } else {
-                            println!("Opening: {},{}", i2str(x.0), i2str(x.1));
-                        }
-                    }
-                }
-                if let Some(m) = moves.iter().find(|m2| (m2.frm, m2.to) == o[i]) {
-                    vec![(*m, 0i32)]
-                } else {
-                    panic!("Invalid library move")
-                }
+                pick_library_move(&moves, &o, verbose)
             } else {
                 game.score_moves(&moves, search_threshold, max_depth, verbose)
             }
