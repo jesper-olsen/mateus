@@ -2,7 +2,10 @@
 
 Puccinia's Checkmate - a rusty chess library:
 * [Negamax search](https://en.wikipedia.org/wiki/Negamax) with alpha beta pruning
+* Transposition table to avoid re-searching cycles
 * Evaluation based on material, pawn structure & mobility
+* Checks draw by 3x repetition and 50 move rule
+* Opening library
 
 Two example apps included - terminal CLI app (src/bin) and browser web application ([examples/spa](https://github.com/jesper-olsen/puccinia_s_checkmate/tree/main/examples/spa)).
 

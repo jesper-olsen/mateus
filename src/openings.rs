@@ -75,7 +75,7 @@ fn col2i(s: &str) -> usize {
         "f" => 2,
         "g" => 1,
         "h" => 0,
-        _ => panic!(),
+        _ => 100, //panic!(),
     }
 }
 
