@@ -12,7 +12,7 @@ Two example apps included - terminal CLI app (src/bin) and browser web applicati
 Run CLI app like this: 
 
 ```
-% cargo run --release -- -h 
+% cargo run --release -- --bin main -h 
 
 Usage: main [OPTIONS]
 
@@ -30,7 +30,7 @@ Options:
 
 Run CLI app like this to play white:
 ```
-% cargo run --release -- -w 
+% cargo run --release -- --bin main -w 
 
 8 rnbqkbnr
 7 pppppppp

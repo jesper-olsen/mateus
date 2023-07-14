@@ -7,10 +7,10 @@
 use ::std::time::Instant;
 use clap::Parser;
 use puccinia_s_checkmate::mgen::*;
-use puccinia_s_checkmate::openings::*;
+use puccinia_s_checkmate::misc::str2move;
+use puccinia_s_checkmate::openings::pick_library_move;
 use puccinia_s_checkmate::val::*;
 use puccinia_s_checkmate::Game;
-use rand::random;
 use std::collections::hash_map::HashMap;
 use std::io;
 
@@ -117,28 +117,6 @@ fn check_game_over(game: &Game, moves: &Vec<Move>, half_moves: isize) -> String 
     }
 }
 
-fn pick_library_move(
-    moves: &Vec<Move>,
-    o: &Vec<(usize, usize)>,
-    verbose: bool,
-) -> Vec<(Move, i32)> {
-    let i = random::<usize>() % o.len();
-    for (q, x) in o.iter().enumerate() {
-        if verbose {
-            if q == i {
-                println!("Opening: {},{} (picked)", i2str(x.0), i2str(x.1));
-            } else {
-                println!("Opening: {},{}", i2str(x.0), i2str(x.1));
-            }
-        }
-    }
-    if let Some(m) = moves.iter().find(|m2| (m2.frm, m2.to) == o[i]) {
-        vec![(*m, 0i32)]
-    } else {
-        panic!("Invalid library move")
-    }
-}
-
 fn play(
     players: HashMap<bool, bool>,
     verbose: bool,
@@ -151,11 +129,6 @@ fn play(
 
     let mut tot = 0;
     let mut moves = game.legal_moves();
-    let openings = openings();
-    if verbose {
-        let x: usize = openings.values().map(|v| v.len()).sum();
-        println!("Opening positions: {v} - Moves: {x}", v = openings.len());
-    }
 
     let start = Instant::now();
     loop {
@@ -174,8 +147,12 @@ fn play(
             pick_move(&moves, label)
         } else {
             // try library 1st - compute if not there
-            if let Some(o) = openings.get(&game.hash) {
-                pick_library_move(&moves, &o, verbose)
+            if let Some((frm, to)) = pick_library_move(game.hash) {
+                if let Some(m) = moves.iter().find(|m| (m.frm, m.to) == (frm, to)) {
+                    vec![(*m, 0i32)]
+                } else {
+                    panic!("Not a valid library move")
+                }
             } else {
                 game.score_moves(&moves, search_threshold, max_depth, verbose)
             }

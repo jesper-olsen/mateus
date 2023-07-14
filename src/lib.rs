@@ -1,6 +1,7 @@
 pub mod bitmaps;
 pub mod hashkeys;
 pub mod mgen;
+pub mod misc;
 pub mod openings;
 pub mod val;
 use core::cmp::max;
@@ -61,11 +62,11 @@ impl fmt::Display for Game {
     }
 }
 
-fn print_moves(moves: &Vec<Move>) {
-    for (i, m) in moves.iter().enumerate() {
-        println!("{}/{}: {} {}", i, moves.len(), m, m.val);
-    }
-}
+// fn print_moves(moves: &Vec<Move>) {
+//     for (i, m) in moves.iter().enumerate() {
+//         println!("{}/{}: {} {}", i, moves.len(), m, m.val);
+//     }
+// }
 
 fn move_to_head(moves: &mut Vec<Move>, k: &Move) {
     if let Some(q) = moves.iter().position(|m| (m.frm, m.to) == (k.frm, k.to)) {
