@@ -1,5 +1,7 @@
 pub mod bitmaps;
 pub mod hashkeys;
+pub mod hashkeys_generated;
+use crate::hashkeys_generated::WHITE_HASH;
 pub mod mgen;
 pub mod misc;
 pub mod openings;

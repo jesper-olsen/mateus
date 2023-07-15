@@ -8,9 +8,10 @@ use ::std::time::Instant;
 use clap::Parser;
 use puccinia_s_checkmate::mgen::*;
 use puccinia_s_checkmate::misc::str2move;
-use puccinia_s_checkmate::openings::pick_library_move;
+use puccinia_s_checkmate::openings::library_moves;
 use puccinia_s_checkmate::val::*;
 use puccinia_s_checkmate::Game;
+use rand::random;
 use std::collections::hash_map::HashMap;
 use std::io;
 
@@ -147,12 +148,24 @@ fn play(
             pick_move(&moves, label)
         } else {
             // try library 1st - compute if not there
-            if let Some((frm, to)) = pick_library_move(game.hash) {
+            let lmoves = library_moves(game.hash);
+            println!("#library moves from {}: {}", game.hash, lmoves.len());
+            if !lmoves.is_empty() {
+                let i = random::<usize>() % lmoves.len();
+                let (frm, to) = lmoves[i];
                 if let Some(m) = moves.iter().find(|m| (m.frm, m.to) == (frm, to)) {
+                    println!("Library Move {} ", m);
                     vec![(*m, 0i32)]
                 } else {
                     panic!("Not a valid library move")
                 }
+            // }
+            // if let Some((frm, to)) = pick_library_move(game.hash) {
+            //     if let Some(m) = moves.iter().find(|m| (m.frm, m.to) == (frm, to)) {
+            //         vec![(*m, 0i32)]
+            //     } else {
+            //         panic!("Not a valid library move")
+            //     }
             } else {
                 game.score_moves(&moves, search_threshold, max_depth, verbose)
             }
