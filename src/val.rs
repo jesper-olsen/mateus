@@ -146,6 +146,47 @@ pub const _TEST_BOARD2: [Piece; 64] = [
     K1,  NIL, NIL, P1,  P2,  NIL, K2,  NIL, 
 ];
 
+fn feni(i: usize) -> usize {
+    let x = 7 - i % 8;
+    let y = 7 - i / 8;
+    x * 8 + y
+}
+
+pub fn fen2board(s: &str) -> [Piece; 64] {
+    let mut a = [NIL; 64];
+    let mut offset = 0i32;
+    //for (i, c) in "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"
+    for (i, c) in s 
+        .chars()
+        .enumerate()
+    {
+        if let Some(d) = c.to_digit(10) {
+            offset += d as i32 - 1;
+        } else if c == '/' {
+            offset -= 1;
+        } else {
+            let k: usize = (i as i32 + offset).try_into().unwrap();
+            let q = feni(k);
+            a[q] = match c {
+                'r' => R2,
+                'n' => N2,
+                'b' => B2,
+                'q' => Q2,
+                'k' => K2,
+                'p' => P2,
+                'R' => R1,
+                'N' => N1,
+                'B' => B1,
+                'Q' => Q1,
+                'K' => K1,
+                'P' => P1,
+                _ => panic!("invalid fen"),
+            }
+        }
+    }
+    a
+}
+
 pub const END_GAME_MATERIAL: i32 = abs_material(&ROOT_BOARD) / 3;
 
 impl fmt::Display for Piece {

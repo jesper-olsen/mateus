@@ -125,6 +125,10 @@ fn play(
     max_depth: usize,
     half_moves: isize,
 ) {
+    // let board = fen2board("3r2k1/1p3ppp/2pq4/p1n5/P6P/1P6/1PB2QP1/1K2R3"); // w - - am Rd1; position 03;
+    // let board = fen2board("r1b1r1k1/1ppn1p1p/3pnqp1/8/p1P1P3/5P2/PbNQNBPP/1R2RB1K"); // w - - bm Rxb2; position 04;
+    // let board = fen2board("1rbq1rk1/p1b1nppp/1p2p3/8/1B1pN3/P2B4/1P3PPP/2RQ1R1K"); // w - - bm Nf6+; id "position 01";
+    // let mut game = Game::new(board);
     let mut game = Game::new(ROOT_BOARD);
     println!("{}", game);
 
