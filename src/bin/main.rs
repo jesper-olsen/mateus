@@ -149,10 +149,10 @@ fn play(
         } else {
             // try library 1st - compute if not there
             let lmoves = library_moves(game.hash);
-            if verbose {
-                println!("#library moves from {}: {}", game.hash, lmoves.len());
-            };
             if !lmoves.is_empty() {
+                if verbose {
+                    println!("#library moves from {}: {}", game.hash, lmoves.len());
+                };
                 let i = random::<usize>() % lmoves.len();
                 let (frm, to) = lmoves[i];
                 if let Some(m) = moves.iter().find(|m| (m.frm, m.to) == (frm, to)) {
@@ -161,13 +161,6 @@ fn play(
                 } else {
                     panic!("Not a valid library move")
                 }
-            // }
-            // if let Some((frm, to)) = pick_library_move(game.hash) {
-            //     if let Some(m) = moves.iter().find(|m| (m.frm, m.to) == (frm, to)) {
-            //         vec![(*m, 0i32)]
-            //     } else {
-            //         panic!("Not a valid library move")
-            //     }
             } else {
                 game.score_moves(&moves, search_threshold, max_depth, verbose)
             }
