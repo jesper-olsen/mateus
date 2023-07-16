@@ -149,7 +149,9 @@ fn play(
         } else {
             // try library 1st - compute if not there
             let lmoves = library_moves(game.hash);
-            println!("#library moves from {}: {}", game.hash, lmoves.len());
+            if verbose {
+                println!("#library moves from {}: {}", game.hash, lmoves.len());
+            };
             if !lmoves.is_empty() {
                 let i = random::<usize>() % lmoves.len();
                 let (frm, to) = lmoves[i];
