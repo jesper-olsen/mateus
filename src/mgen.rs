@@ -14,6 +14,16 @@ pub struct Move {
     pub hash: u64,
 }
 
+pub const NULL_MOVE: Move = Move {
+    frm: 0,
+    to: 0,
+    castle: false,
+    transform: (NIL, NIL),
+    val: 0,
+    kill: (NIL, 0),
+    hash: 0,
+};
+
 impl fmt::Display for Move {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let x1 = 7 - self.frm / 8;

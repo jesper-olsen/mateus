@@ -14,7 +14,7 @@ use std::collections::hash_map::{Entry, HashMap};
 use std::fmt;
 use val::*;
 
-const INFINITE: i32 = 10000;
+pub const INFINITE: i32 = 10000;
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 enum BType {
@@ -24,10 +24,10 @@ enum BType {
 }
 
 #[derive(Debug, Copy, Clone)]
-struct TTable {
+pub struct TTable {
     depth: usize,
-    score: i32,
-    m: Move,
+    pub score: i32,
+    pub m: Move,
     bound: BType,
 }
 
@@ -38,7 +38,7 @@ pub struct Game {
     pub n_searched: usize,
     material: i32,
     rep: HashMap<u64, usize>,
-    ttable: HashMap<u64, TTable>,
+    pub ttable: HashMap<u64, TTable>,
     can_castle: Vec<[bool; 4]>, // white short, long, black short, long
     end_game: bool,
     pub hash: u64,
@@ -47,7 +47,8 @@ pub struct Game {
     bm_pawns: u64,
     bm_wking: u64,
     bm_bking: u64,
-    log_bms: Vec<(u64, u64, u64)>,
+    log_bms: Vec<(u64, u64, u64, u64, u64)>,
+    pub colour: bool,
 }
 
 impl fmt::Display for Game {
@@ -100,6 +101,7 @@ impl Game {
             log_bms: vec![],
             bm_wking: 0,
             bm_bking: 0,
+            colour: WHITE,
         }
     }
 
@@ -229,7 +231,7 @@ impl Game {
         //     self.bm_white,
         //     self.bm_black,
         // );
-        // //self.n_searched += l.len(); // linked to stop criterion
+        // self.n_searched += l.len(); // linked to stop criterion
         // l.iter().find(|&m| m.kill.0.ptype == PType::King).is_some()
     }
 
@@ -272,8 +274,13 @@ impl Game {
     }
 
     pub fn update(&mut self, m: &Move) {
-        self.log_bms
-            .push((self.bm_pawns, self.bm_white, self.bm_black));
+        self.log_bms.push((
+            self.bm_pawns,
+            self.bm_white,
+            self.bm_black,
+            self.bm_wking,
+            self.bm_bking,
+        ));
         self.log.push(*m);
         if m.castle {
             let mut cc = *self.can_castle.last().unwrap();
@@ -332,7 +339,13 @@ impl Game {
 
     pub fn backdate(&mut self) {
         if let Some(bms) = self.log_bms.pop() {
-            (self.bm_pawns, self.bm_white, self.bm_black) = bms;
+            (
+                self.bm_pawns,
+                self.bm_white,
+                self.bm_black,
+                self.bm_wking,
+                self.bm_bking,
+            ) = bms;
         }
         if let Some(m) = self.log.pop() {
             self.hash ^= m.hash ^ WHITE_HASH;
@@ -392,7 +405,12 @@ impl Game {
     }
 
     pub fn eval(&self) -> i32 {
-        self.material + self.score_pawn_structure() + self.mobility()
+        let s = self.material + self.score_pawn_structure() + self.mobility();
+        if self.colour {
+            s
+        } else {
+            -s
+        }
     }
 
     pub fn score_pawn_structure(&self) -> i32 {
@@ -484,17 +502,18 @@ impl Game {
             self.backdate();
         }
         if first {
-            if colour {
-                self.eval()
-            } else {
-                -self.eval()
-            }
+            self.eval()
+            // if colour {
+            //     self.eval()
+            // } else {
+            //     -self.eval()
+            // }
         } else {
             bscore
         }
     } // fn quiescence fab
 
-    fn pvs(&mut self, dpt: usize, ply: usize, alp: i32, bet: i32) -> i32 {
+    pub fn pvs(&mut self, dpt: usize, ply: usize, alp: i32, bet: i32) -> i32 {
         if self.rep_count() >= 2 {
             return 0;
         }
