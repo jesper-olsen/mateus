@@ -31,7 +31,8 @@ impl fmt::Display for Move {
         let x2 = 7 - self.to / 8;
         let y2 = self.to % 8 + 1;
         let s = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
-        write!(f, "{}{} {}{}", s[x1], y1, s[x2], y2)
+        let c = if self.kill.0 == NIL { ' ' } else { 'x' };
+        write!(f, "{}{}{c}{}{}", s[x1], y1, s[x2], y2)
     }
 }
 

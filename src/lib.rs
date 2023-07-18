@@ -25,7 +25,7 @@ enum BType {
 
 #[derive(Debug, Copy, Clone)]
 pub struct TTable {
-    depth: usize,
+    pub depth: usize,
     pub score: i32,
     pub m: Move,
     bound: BType,
@@ -89,7 +89,7 @@ impl Game {
             board,
             log: vec![],
             n_searched: 0,
-            material: 0,
+            material: material(&board),
             rep: HashMap::from([(key, 1)]),
             ttable: HashMap::new(),
             can_castle: vec![[true; 4]],
@@ -404,9 +404,9 @@ impl Game {
             - count_moves(&self.board, BLACK, self.bm_white, self.bm_black) as i32
     }
 
-    pub fn eval(&self) -> i32 {
+    pub fn eval(&self, colour: bool) -> i32 {
         let s = self.material + self.score_pawn_structure() + self.mobility();
-        if self.colour {
+        if colour {
             s
         } else {
             -s
@@ -502,7 +502,7 @@ impl Game {
             self.backdate();
         }
         if first {
-            self.eval()
+            self.eval(colour)
             // if colour {
             //     self.eval()
             // } else {
@@ -547,6 +547,7 @@ impl Game {
         if depth == 0 {
             let to = self.log.last().unwrap().to;
             return self.quiescence_fab(ply, alpha, beta, to, self.is_quiescent(), false);
+            //return self.eval(colour);
         }
 
         let mut moves = self.moves(colour);
@@ -605,7 +606,7 @@ impl Game {
 
         self.n_searched = 0;
         let mut pq0: Vec<(Move, i32)> = moves.iter().map(|m| (*m, 0)).collect();
-        for depth in (1..=max_depth).step_by(1) {
+        for depth in (2..=max_depth).step_by(1) {
             if depth > 1 && self.n_searched > max_searched {
                 break;
             }

@@ -220,7 +220,10 @@ fn play(
     half_moves: isize,
     library_bypass: bool,
 ) {
-    //let board = fen2board(KAUFMAN[23].0);
+    let board = fen2board(KAUFMAN[24].0);
+    //let board = fen2board("8/4k3/8/8/8/1R6/R2K4/8");
+    let board = fen2board("8/8/8/8/4k3/5R2/R7/2K5");
+    let board = fen2board("8/8/8/8/4K3/5r2/r7/2k5");
     //let mut game = Game::new(board);
     //game.log.push(NULL_MOVE); // dummy to force black
 
@@ -251,6 +254,7 @@ fn play(
             if !library_bypass && !lmoves.is_empty() {
                 if verbose {
                     println!("#library moves from {}: {}", game.hash, lmoves.len());
+                    println!("{:?}", lmoves);
                 };
                 let i = random::<usize>() % lmoves.len();
                 let (frm, to) = lmoves[i];
@@ -264,18 +268,34 @@ fn play(
                 game.colour = game.turn();
                 game.score_moves(&moves, search_threshold, max_depth, verbose)
                 // game.n_searched = 0;
-                // game.pvs(max_depth, 1, -INFINITE, INFINITE);
+                // game.pvs(1, 1, -INFINITE, INFINITE);
+                // for d in 2..=25 {
+                //     game.pvs(d, 1, -INFINITE, INFINITE);
+                //     println!("It {} n_searched {}", d, game.n_searched);
+                //     if game.n_searched > search_threshold {
+                //         break;
+                //     }
+                // }
                 // let (score, best) = moves
                 //     .iter()
                 //     .enumerate()
                 //     .map(|(i, m)| {
                 //         let key = game.hash ^ m.hash ^ WHITE_HASH;
                 //         if let Some(e) = game.ttable.get(&key) {
-                //             println!("{}/{}: {} {}/{}", i, moves.len(), m, e.m.val, -e.score);
+                //             println!(
+                //                 "{}/{}: dpt {} {} {}/{}",
+                //                 i,
+                //                 moves.len(),
+                //                 e.depth,
+                //                 m,
+                //                 e.m.val,
+                //                 -e.score
+                //             );
                 //             (-e.score, m)
                 //         } else {
-                //             println!("{}", m);
-                //             panic!("move not in tt")
+                //             println!("move not in tt {}", m);
+                //             //panic!("move not in tt")
+                //             (-INFINITE, m)
                 //         }
                 //     })
                 //     .max_by(|&x, &y| y.0.cmp(&x.0))
@@ -283,9 +303,9 @@ fn play(
                 // vec![(*best, score)]
             }
         };
-        for (i, (m, score)) in l.iter().enumerate() {
-            println!("{}/{}: {} {}/{}", i, moves.len(), m, m.val, score);
-        }
+        // for (i, (m, score)) in l.iter().enumerate() {
+        //     println!("{}/{}: {} {}/{}", i, moves.len(), m, m.val, score);
+        // }
         // println!(
         //     "Searched: {}, Best: {} {} ",
         //     game.n_searched, l[0].0, l[0].1
