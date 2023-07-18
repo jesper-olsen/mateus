@@ -33,8 +33,11 @@ struct Args {
     ///play white (human-computer)
     w: bool,
     #[arg(short, long, default_value_t = false)]
-    ///play black (computer-human)
+    ///play black (human-computer)
     b: bool,
+    #[arg(short, long, default_value_t = false)]
+    ///library bypass
+    l: bool,
     #[arg(short, long, default_value_t = false)]
     ///verbose output
     v: bool,
@@ -215,6 +218,7 @@ fn play(
     search_threshold: usize,
     max_depth: usize,
     half_moves: isize,
+    library_bypass: bool,
 ) {
     //let board = fen2board(KAUFMAN[23].0);
     //let mut game = Game::new(board);
@@ -244,8 +248,7 @@ fn play(
         } else {
             // try library 1st - compute if not there
             let lmoves = library_moves(game.hash);
-            if !lmoves.is_empty() {
-                //if false {
+            if !library_bypass && !lmoves.is_empty() {
                 if verbose {
                     println!("#library moves from {}: {}", game.hash, lmoves.len());
                 };
@@ -351,5 +354,5 @@ fn main() {
     let args = Args::parse();
 
     let players = HashMap::from([(WHITE, args.w), (BLACK, args.b)]);
-    play(players, args.v, args.n, args.d, args.m);
+    play(players, args.v, args.n, args.d, args.m, args.l);
 }
