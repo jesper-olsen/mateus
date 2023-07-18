@@ -1,11 +1,16 @@
 # Puccinia's Checkmate
 
 Puccinia's Checkmate - a rusty chess library:
-* [Negamax search](https://en.wikipedia.org/wiki/Negamax) with alpha beta pruning
+* Principle variation negamax search with alpha beta pruning
 * Transposition table to avoid re-searching cycles
 * Evaluation based on material, pawn structure & mobility
 * Checks draw by 3x repetition and 50 move rule
 * Opening library
+
+References:
+* ["An Analysis of Alpha-Beta Pruning", Donald E. Knuth and Ronald W. Moore, Artificial Intelligence 6 (1975), 293-326](http://www-public.telecom-sudparis.eu/~gibson/Teaching/Teaching-ReadingMaterial/KnuthMoore75.pdf) 
+* "The History Heuristic and Alpha-Beta Search Enhancements in Practice", Jonathan Schaeffer, IEEE Transactions on Pattern Analysis and Machine Intelligence, Volume: 11, Issue: 11, November 1989, Page(s): 1203 - 1212
+* "Computer Chess and Search", T.A. Marsland, ENCYCLOPEDIA OF ARTIFICIAL INTELLIGENCE (2nd Ed.), 1992
 
 Two example apps included - terminal CLI app (src/bin) and browser web application ([examples/spa](https://github.com/jesper-olsen/puccinia_s_checkmate/tree/main/examples/spa)).
 
