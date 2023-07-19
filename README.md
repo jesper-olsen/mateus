@@ -21,10 +21,12 @@ Usage: main [OPTIONS]
 
 Options:
   -n, --n <N>    break off search threshold - positions generated [default: 1000000]
-  -d, --d <D>    max depth of regular search [default: 25]
+  -d, --d <D>    max depth of regular search [default: 30]
   -m, --m <M>    number of (half) moves before stopping [default: -1]
   -w, --w        play white (human-computer)
-  -b, --b        play black (computer-human)
+  -b, --b        play black (human-computer)
+  -l, --l        library bypass
+  -k, --k        benchmark test positions - Bratko-Kopec / Kaufman
   -v, --v        verbose output
   -h, --help     Print help
   -V, --version  Print version
