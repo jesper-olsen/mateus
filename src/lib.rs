@@ -1,3 +1,13 @@
+// Copyright (c) 2023 Jesper Olsen
+// License: MIT, see License.txt
+//
+// Puccinia's Checkmate - small chess library implemented in rust
+
+// References:
+// * ["An Analysis of Alpha-Beta Pruning", Donald E. Knuth and Ronald W. Moore, Artificial Intelligence 6 (1975), 293-326](http://www-public.telecom-sudparis.eu/~gibson/Teaching/Teaching-ReadingMaterial/KnuthMoore75.pdf)
+// * "The History Heuristic and Alpha-Beta Search Enhancements in Practice", Jonathan Schaeffer, IEEE Transactions on Pattern Analysis and Machine Intelligence, Volume: 11, Issue: 11, November 1989, Page(s): 1203 - 1212
+// * "Computer Chess and Search", T.A. Marsland, ENCYCLOPEDIA OF ARTIFICIAL INTELLIGENCE (2nd Ed.), 1992
+
 pub mod bitmaps;
 pub mod hashkeys;
 pub mod hashkeys_generated;
@@ -48,7 +58,6 @@ pub struct Game {
     bm_wking: u64,
     bm_bking: u64,
     log_bms: Vec<(u64, u64, u64, u64, u64)>,
-    pub colour: bool,
 }
 
 impl fmt::Display for Game {
@@ -101,7 +110,6 @@ impl Game {
             log_bms: vec![],
             bm_wking: 0,
             bm_bking: 0,
-            colour: WHITE,
         }
     }
 

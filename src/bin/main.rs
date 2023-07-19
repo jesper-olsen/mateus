@@ -1,18 +1,15 @@
 // Copyright (c) 2022 Jesper Olsen
 // License: MIT, see License.txt
 //
-// Golden Monkey Chess - small chess engine implemented in rust
+// Puccinia's Checkmate - small chess engine implemented in rust
 
-//use crate::val::*;
 use ::std::time::Instant;
 use clap::Parser;
-use puccinia_s_checkmate::hashkeys_generated::WHITE_HASH;
 use puccinia_s_checkmate::mgen::*;
 use puccinia_s_checkmate::misc::str2move;
 use puccinia_s_checkmate::openings::library_moves;
 use puccinia_s_checkmate::val::*;
 use puccinia_s_checkmate::Game;
-use puccinia_s_checkmate::INFINITE;
 use rand::random;
 use std::collections::hash_map::HashMap;
 use std::io;
@@ -23,7 +20,7 @@ struct Args {
     #[arg(short, long, default_value_t = 1000000)]
     ///break off search threshold - positions generated
     n: usize,
-    #[arg(short, long, default_value_t = 25)]
+    #[arg(short, long, default_value_t = 30)]
     ///max depth of regular search  
     d: usize,
     #[arg(short, long, default_value_t = -1)]
@@ -38,6 +35,9 @@ struct Args {
     #[arg(short, long, default_value_t = false)]
     ///library bypass
     l: bool,
+    #[arg(short, long, default_value_t = false)]
+    ///benchmark test positions - Bratko-Kopec / Kaufman
+    k: bool,
     #[arg(short, long, default_value_t = false)]
     ///verbose output
     v: bool,
@@ -123,8 +123,122 @@ fn check_game_over(game: &Game, moves: &Vec<Move>, half_moves: isize) -> String 
     }
 }
 
+//https://www.chessprogramming.org/Bratko-Kopec_Test
+const BRATKO_KOPEC: [(&str, &str, &str); 24] = [
+    // fen, turn-castling-enpassant, best move
+    (
+        "1k1r4/pp1b1R2/3q2pp/4p3/2B5/4Q3/PPP2B2/2K5",
+        "b - -",
+        "Qd1+",
+    ),
+    ("3r1k2/4npp1/1ppr3p/p6P/P2PPPP1/1NR5/5K2/2R5", "w - -", "d5"),
+    (
+        "2q1rr1k/3bbnnp/p2p1pp1/2pPp3/PpP1P1P1/1P2BNNP/2BQ1PRK/7R",
+        "b - -",
+        "f5",
+    ),
+    (
+        "rnbqkb1r/p3pppp/1p6/2ppP3/3N4/2P5/PPP1QPPP/R1B1KB1R",
+        "w KQkq -",
+        "e6",
+    ),
+    (
+        "r1b2rk1/2q1b1pp/p2ppn2/1p6/3QP3/1BN1B3/PPP3PP/R4RK1",
+        "w - -",
+        "Nd5 a4",
+    ),
+    ("2r3k1/pppR1pp1/4p3/4P1P1/5P2/1P4K1/P1P5/8", "w - -", "g6"),
+    (
+        "1nk1r1r1/pp2n1pp/4p3/q2pPp1N/b1pP1P2/B1P2R2/2P1B1PP/R2Q2K1",
+        "w - -",
+        "Nf6",
+    ),
+    ("4b3/p3kp2/6p1/3pP2p/2pP1P2/4K1P1/P3N2P/8", "w - -", "f5"),
+    (
+        "2kr1bnr/pbpq4/2n1pp2/3p3p/3P1P1B/2N2N1Q/PPP3PP/2KR1B1R",
+        "w - -",
+        "f5",
+    ),
+    (
+        "3rr1k1/pp3pp1/1qn2np1/8/3p4/PP1R1P2/2P1NQPP/R1B3K1",
+        "b - -",
+        "Ne5",
+    ),
+    (
+        "2r1nrk1/p2q1ppp/bp1p4/n1pPp3/P1P1P3/2PBB1N1/4QPPP/R4RK1",
+        "w - -",
+        "f4",
+    ),
+    (
+        "r3r1k1/ppqb1ppp/8/4p1NQ/8/2P5/PP3PPP/R3R1K1",
+        "b - -",
+        "Bf5",
+    ),
+    (
+        "r2q1rk1/4bppp/p2p4/2pP4/3pP3/3Q4/PP1B1PPP/R3R1K1",
+        "w - -",
+        "b4",
+    ),
+    (
+        "rnb2r1k/pp2p2p/2pp2p1/q2P1p2/8/1Pb2NP1/PB2PPBP/R2Q1RK1",
+        "w - -",
+        "Qd2 Qe1",
+    ),
+    (
+        "2r3k1/1p2q1pp/2b1pr2/p1pp4/6Q1/1P1PP1R1/P1PN2PP/5RK1",
+        "w - -",
+        "Qxg7+",
+    ),
+    (
+        "r1bqkb1r/4npp1/p1p4p/1p1pP1B1/8/1B6/PPPN1PPP/R2Q1RK1",
+        "w kq -",
+        "Ne4",
+    ),
+    (
+        "r2q1rk1/1ppnbppp/p2p1nb1/3Pp3/2P1P1P1/2N2N1P/PPB1QP2/R1B2RK1",
+        "b - -",
+        "h5",
+    ),
+    (
+        "r1bq1rk1/pp2ppbp/2np2p1/2n5/P3PP2/N1P2N2/1PB3PP/R1B1QRK1",
+        "b - -",
+        "Nb3",
+    ),
+    (
+        "3rr3/2pq2pk/p2p1pnp/8/2QBPP2/1P6/P5PP/4RRK1",
+        "b - -",
+        "Rxe4",
+    ),
+    (
+        "r4k2/pb2bp1r/1p1qp2p/3pNp2/3P1P2/2N3P1/PPP1Q2P/2KRR3",
+        "w - -",
+        "g4",
+    ),
+    (
+        "3rn2k/ppb2rpp/2ppqp2/5N2/2P1P3/1P5Q/PB3PPP/3RR1K1",
+        "w - -",
+        "Nh6",
+    ),
+    (
+        "2r2rk1/1bqnbpp1/1p1ppn1p/pP6/N1P1P3/P2B1N1P/1B2QPP1/R2R2K1",
+        "b - -",
+        "Bxe4",
+    ),
+    (
+        "r1bqk2r/pp2bppp/2p5/3pP3/P2Q1P2/2N1B3/1PP3PP/R4RK1",
+        "b kq -",
+        "f6",
+    ),
+    (
+        "r2qnrnk/p2b2b1/1p1p2pp/2pPpp2/1PP1P3/PRNBB3/3QNPPP/5RK1",
+        "w - -",
+        "f4",
+    ),
+];
+
 // https://www.chessprogramming.org/Kaufman_Test
-const KAUFMAN: [(&str, &str, &str); 25] = [
+const _KAUFMAN: [(&str, &str, &str); 25] = [
+    // fen, turn-castling-enpassant, best move
     (
         "1rbq1rk1/p1b1nppp/1p2p3/8/1B1pN3/P2B4/1P3PPP/2RQ1R1K",
         "w - - bm",
@@ -212,6 +326,74 @@ const KAUFMAN: [(&str, &str, &str); 25] = [
     ("8/3nk3/3pp3/1B6/8/3PPP2/4K3/8", "w - - bm", "Bxd7"),
 ];
 
+fn benchmark(verbose: bool, search_threshold: usize, max_depth: usize) {
+    let mut correct: Vec<usize> = vec![];
+    let mut points: f64 = 0.0;
+    let mut n_searched: usize = 0;
+    //let a = &KAUFMAN;
+    let a = &BRATKO_KOPEC;
+    let start = Instant::now();
+    for (i, (fen, h, label)) in a.iter().enumerate() {
+        let board = fen2board(fen);
+        let mut game = Game::new(board);
+        if h.chars().nth(0).unwrap() == 'b' {
+            game.log.push(NULL_MOVE); // dummy to force black
+        }
+        let moves = game.legal_moves();
+        game.n_searched = 0;
+
+        let l = game.score_moves(&moves, search_threshold, max_depth, verbose);
+        let (best, score) = l[0];
+        n_searched += game.n_searched;
+        let clabel = move2label(&game.board, &best, &moves);
+        let colour = if game.turn() { "white" } else { "black" };
+        println!("{game}");
+
+        for (i, (m, score)) in l.iter().enumerate() {
+            if verbose {
+                println!("{i}/{}: dpt {max_depth} {m} {}/{score}", l.len(), m.val);
+            }
+            let clabel = move2label(&game.board, m, &moves);
+            if i < 4 && (*label).contains(clabel.as_str()) {
+                // note - only the best move is accurately scored (pruning)
+                points += match i {
+                    0 => 1.0,
+                    1 => 0.5,
+                    2 => 0.25,
+                    3 => 0.33,
+                    _ => 0.0,
+                }
+            }
+        }
+        println!(
+            "Position {i}; Searched: {}, Score: {score}, Move ({colour}): {} = {clabel}; Expected: {label}\n",
+            game.n_searched, best
+        );
+        if (*label).contains(clabel.as_str()) {
+            //if clabel.as_str() == *label {
+            correct.push(i + 1);
+        }
+        println!("Correct: {:?} {}/{}", correct, correct.len(), a.len());
+        println!("Points: {points}");
+
+        let dur = (Instant::now() - start).as_millis();
+        println!(
+            "Total searched: {n_searched}; Time: {dur} ms / {} ms/position",
+            dur / (i + 1) as u128
+        );
+        let speed = if let Some(speed) = (n_searched as u128).checked_div(dur) {
+            speed as usize
+        } else {
+            0
+        };
+        println!(
+            "Search total: {n_searched} / {} ms / {speed} nodes/ms; Time per position: {} ms",
+            (Instant::now() - start).as_millis() as usize,
+            dur / (i + 1) as u128
+        );
+    }
+}
+
 fn play(
     players: HashMap<bool, bool>,
     verbose: bool,
@@ -220,13 +402,6 @@ fn play(
     half_moves: isize,
     library_bypass: bool,
 ) {
-    let board = fen2board(KAUFMAN[24].0);
-    //let board = fen2board("8/4k3/8/8/8/1R6/R2K4/8");
-    let board = fen2board("8/8/8/8/4k3/5R2/R7/2K5");
-    let board = fen2board("8/8/8/8/4K3/5r2/r7/2k5");
-    //let mut game = Game::new(board);
-    //game.log.push(NULL_MOVE); // dummy to force black
-
     let mut game = Game::new(ROOT_BOARD);
     println!("{}", game);
 
@@ -265,51 +440,9 @@ fn play(
                     panic!("Not a valid library move")
                 }
             } else {
-                game.colour = game.turn();
                 game.score_moves(&moves, search_threshold, max_depth, verbose)
-                // game.n_searched = 0;
-                // game.pvs(1, 1, -INFINITE, INFINITE);
-                // for d in 2..=25 {
-                //     game.pvs(d, 1, -INFINITE, INFINITE);
-                //     println!("It {} n_searched {}", d, game.n_searched);
-                //     if game.n_searched > search_threshold {
-                //         break;
-                //     }
-                // }
-                // let (score, best) = moves
-                //     .iter()
-                //     .enumerate()
-                //     .map(|(i, m)| {
-                //         let key = game.hash ^ m.hash ^ WHITE_HASH;
-                //         if let Some(e) = game.ttable.get(&key) {
-                //             println!(
-                //                 "{}/{}: dpt {} {} {}/{}",
-                //                 i,
-                //                 moves.len(),
-                //                 e.depth,
-                //                 m,
-                //                 e.m.val,
-                //                 -e.score
-                //             );
-                //             (-e.score, m)
-                //         } else {
-                //             println!("move not in tt {}", m);
-                //             //panic!("move not in tt")
-                //             (-INFINITE, m)
-                //         }
-                //     })
-                //     .max_by(|&x, &y| y.0.cmp(&x.0))
-                //     .unwrap();
-                // vec![(*best, score)]
             }
         };
-        // for (i, (m, score)) in l.iter().enumerate() {
-        //     println!("{}/{}: {} {}/{}", i, moves.len(), m, m.val, score);
-        // }
-        // println!(
-        //     "Searched: {}, Best: {} {} ",
-        //     game.n_searched, l[0].0, l[0].1
-        // );
 
         if verbose {
             tot += game.n_searched;
@@ -329,10 +462,6 @@ fn play(
             println!("hash size r {} t {} ", game.rep_len(), game.ttable_len(),);
             for (i, (m, score)) in l.iter().enumerate() {
                 println!("{}/{}: {} {}/{}", i, moves.len(), m, m.val, score);
-                // let key = game.hash ^ m.hash ^ WHITE_HASH;
-                // if let Some(e) = game.ttable.get(&key) {
-                //     println!("tt {}", e.score);
-                // }
             }
         }
         let (m, score) = l[0];
@@ -373,6 +502,10 @@ fn get_input() -> String {
 fn main() {
     let args = Args::parse();
 
-    let players = HashMap::from([(WHITE, args.w), (BLACK, args.b)]);
-    play(players, args.v, args.n, args.d, args.m, args.l);
+    if args.k {
+        benchmark(args.v, args.n, args.d);
+    } else {
+        let players = HashMap::from([(WHITE, args.w), (BLACK, args.b)]);
+        play(players, args.v, args.n, args.d, args.m, args.l);
+    }
 }
