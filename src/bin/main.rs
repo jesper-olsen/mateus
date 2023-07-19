@@ -366,9 +366,9 @@ fn benchmark(verbose: bool, search_threshold: usize, max_depth: usize) {
             }
         }
         println!(
-            "Position {}; Searched: {}, Score: {score}, Move ({colour}): {} = {clabel}; Expected: {label}\n",
+            "Position {:>2}; Searched: {:>9}, Score: {score:>5 }, Move ({colour}): {} = {clabel:>4 }; Expected: {label}\n",
             i+1,
-            game.n_searched, best
+            game.n_searched, best, 
         );
         if (*label).contains(clabel.as_str()) {
             //if clabel.as_str() == *label {
