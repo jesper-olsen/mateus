@@ -379,8 +379,7 @@ fn benchmark(verbose: bool, search_threshold: usize, max_depth: usize) {
 
         let dur = (Instant::now() - start).as_millis();
         println!(
-            "Total searched: {n_searched}; Time: {dur} ms / {} ms/position",
-            dur / (i + 1) as u128
+            "Time: {dur} ms => {} ms/position", dur / (i + 1) as u128
         );
         let speed = if let Some(speed) = (n_searched as u128).checked_div(dur) {
             speed as usize
@@ -388,9 +387,8 @@ fn benchmark(verbose: bool, search_threshold: usize, max_depth: usize) {
             0
         };
         println!(
-            "Search total: {n_searched} / {} ms / {speed} nodes/ms; Time per position: {} ms",
+            "Search total: {n_searched}; Time {} ms => {speed} nodes/ms ",
             (Instant::now() - start).as_millis() as usize,
-            dur / (i + 1) as u128
         );
     }
 }

@@ -104,6 +104,6 @@ Position 24; Searched:  23343422, Score:   -54, Move (white): c3 b5 =   Nb5; Exp
 
 Correct: [1, 4, 6, 8, 11, 14, 19, 21] 8/24
 Points: 8.25
-Total searched: 891849514; Time: 62723 ms / 2613 ms/position
-Search total: 891849514 / 62723 ms / 14218 nodes/ms; Time per position: 2613 ms
+Time: 61876 ms => 2578 ms/position
+Search total: 891849514; Time 61876 ms => 14413 nodes/ms
 ```

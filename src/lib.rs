@@ -607,6 +607,7 @@ impl Game {
         verbose: bool,
     ) -> Vec<(Move, i32)> {
         // top level pvs - does iterative deepening, sorts moves
+        // note that only the best move has exact scoring...
 
         if moves.is_empty() {
             return vec![];
