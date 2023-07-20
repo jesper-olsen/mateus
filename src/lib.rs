@@ -194,18 +194,17 @@ impl Game {
 
         //update castling permissions
         let n = self.can_castle.len() - 1;
-        if m.castle {
-            println!("Castle!!");
-            let i = if self.board[m.to] == K1 { 0 } else { 2 };
-            for x in self.can_castle[n][i..=i + 1].iter_mut() {
-                *x = false;
-            }
-        }
-        // disable castling if rook moves
-        for (i, frm) in [(0, 0), (1, 56), (2, 7), (3, 63)] {
-            if self.can_castle[n][i] && m.frm == frm {
-                self.can_castle[n][i] = false;
-            }
+        let mut cc = self.can_castle[n];
+        match (cc, self.board[m.to], m.frm) {
+            ([true, _, _, _], K1, 24) => cc[0] = false,
+            ([_, true, _, _], K1, 24) => cc[1] = false,
+            ([_, _, true, _], K2, 31) => cc[2] = false,
+            ([_, _, _, true], K2, 31) => cc[3] = false,
+            ([true, _, _, _], R1, 0) => cc[0] = false,
+            ([_, true, _, _], R1, 56) => cc[1] = false,
+            ([_, _, true, _], R2, 7) => cc[2] = false,
+            ([_, _, _, true], R2, 63) => cc[3] = false,
+            _ => (),
         }
     }
 
@@ -287,7 +286,7 @@ impl Game {
         if m.castle {
             let mut cc = *self.can_castle.last().unwrap();
             let i = if self.board[m.frm] == K1 { 0 } else { 2 };
-            for x in cc[i..=i + 1].iter_mut() {
+            for x in &mut cc[i..=i + 1] {
                 *x = false;
             }
             self.can_castle.push(cc);
