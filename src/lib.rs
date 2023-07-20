@@ -74,12 +74,6 @@ impl fmt::Display for Game {
     }
 }
 
-// fn print_moves(moves: &Vec<Move>) {
-//     for (i, m) in moves.iter().enumerate() {
-//         println!("{}/{}: {} {}", i, moves.len(), m, m.val);
-//     }
-// }
-
 fn move_to_head(moves: &mut Vec<Move>, k: &Move) {
     if let Some(q) = moves.iter().position(|m| (m.frm, m.to) == (k.frm, k.to)) {
         if q != 0 {
@@ -511,11 +505,6 @@ impl Game {
         }
         if first {
             self.eval(colour)
-            // if colour {
-            //     self.eval()
-            // } else {
-            //     -self.eval()
-            // }
         } else {
             bscore
         }
