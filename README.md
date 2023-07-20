@@ -75,7 +75,7 @@ Your Move (White):
 
 Run CLI app like this to benchmark on Bratko-Kopec positions:
 ```
-% cargo run --release -- --bin main -k -n 10000000
+% cargo run --release --bin main -- -k -n 10000000
 
 Position  1; Searched:   2530720, Score:  9995, Move (black): d6 d1 =   Qd1; Expected: Qd1+
 Position  2; Searched:  47612990, Score:    50, Move (white): e4 e5 =    e5; Expected: d5

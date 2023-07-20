@@ -268,7 +268,7 @@ impl Game {
             self.bm_white,
             self.bm_black,
         );
-        l.sort_by(|b, a| a.val.cmp(&b.val));
+        l.sort_by(|b, a| a.val.cmp(&b.val)); // slower but less search
         self.n_searched += l.len();
         l
     }
@@ -555,7 +555,6 @@ impl Game {
         if depth == 0 {
             let to = self.log.last().unwrap().to;
             return self.quiescence_fab(ply, alpha, beta, to, self.is_quiescent(), false);
-            //return self.eval(colour);
         }
 
         let mut moves = self.moves(colour);
