@@ -183,7 +183,7 @@ impl Game {
     }
 
     pub fn make_move(&mut self, m: Move) {
-        if m.kill.0 != NIL || [P1, P2].contains(&self.board[m.frm]) {
+        if m.capture.0 != NIL || [P1, P2].contains(&self.board[m.frm]) {
             self.rep_clear(); // ireversible move
         }
         self.ttable_clear();
@@ -235,7 +235,7 @@ impl Game {
         //     self.bm_black,
         // );
         // self.n_searched += l.len(); // linked to stop criterion
-        // l.iter().find(|&m| m.kill.0.ptype == PType::King).is_some()
+        // l.iter().find(|&m| m.capture.0.ptype == PType::King).is_some()
     }
 
     fn legal_move(&mut self, m: &Move) -> bool {
@@ -301,9 +301,10 @@ impl Game {
             self.board[y] = self.board[x];
             self.board[x] = NIL;
         }
-        self.board[m.kill.1] = NIL; // enpassant
-        if m.transform.1 != NIL {
-            self.board[m.to] = m.transform.1;
+        self.board[m.capture.1] = NIL; // enpassant
+
+        if let Some((_, pto)) = m.transform {
+            self.board[m.to] = pto;
         } else {
             self.board[m.to] = self.board[m.frm];
         }
@@ -363,15 +364,15 @@ impl Game {
                 self.board[frm] = self.board[to];
                 self.board[to] = NIL;
             }
-            if m.transform.0 != NIL {
-                self.board[m.frm] = m.transform.0;
+            if let Some((pfrm, _)) = m.transform {
+                self.board[m.frm] = pfrm
             } else {
                 self.board[m.frm] = self.board[m.to];
             }
             self.board[m.to] = NIL;
 
-            if m.kill.0 != NIL {
-                self.board[m.kill.1] = m.kill.0;
+            if m.capture.0 != NIL {
+                self.board[m.capture.1] = m.capture.0;
             }
             self.material -= m.val;
         }
@@ -477,8 +478,8 @@ impl Game {
         for m in self
             .moves(colour)
             .iter()
-            .filter(|m| !quiescent || m.kill.0 != NIL)
-            .filter(|m| !rfab || m.kill.1 == last_to)
+            .filter(|m| !quiescent || m.capture.0 != NIL)
+            .filter(|m| !rfab || m.capture.1 == last_to)
         {
             self.update(m);
             if !self.in_check(colour) {
