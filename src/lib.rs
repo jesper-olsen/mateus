@@ -88,6 +88,7 @@ fn move_to_head(moves: &mut Vec<Move>, k: &Move) {
 impl Game {
     pub fn new(board: [Piece; 64]) -> Self {
         let key = board2hash(&board, WHITE);
+        let (bm_white, bm_black) = board2bm(&board);
         Game {
             board,
             log: vec![],
@@ -98,9 +99,9 @@ impl Game {
             can_castle: vec![[true; 4]],
             end_game: false,
             hash: key,
-            bm_white: board2bm_colour(&board, WHITE),
-            bm_black: board2bm_colour(&board, BLACK),
-            bm_pawns: board2bm_white_pawns(&board) | board2bm_black_pawns(&board),
+            bm_white,
+            bm_black,
+            bm_pawns: board2bm_pawns(&board),
             log_bms: vec![],
             bm_wking: 0,
             bm_bking: 0,

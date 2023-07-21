@@ -339,51 +339,26 @@ fn king_moves(
 //     b
 // }
 
-pub const fn board2bm_colour(board: &[Piece; 64], colour: bool) -> u64 {
-    let mut b: u64 = 0;
+pub const fn board2bm(board: &[Piece; 64]) -> (u64, u64) {
+    let (mut w, mut b): (u64, u64) = (0, 0);
     let mut i = 0;
     while i < 64 {
-        match (board[i], colour) {
-            (R2 | N2 | B2 | K2 | Q2 | P2, BLACK) => b |= 1 << i,
-            (R1 | N1 | B1 | K1 | Q1 | P1, WHITE) => b |= 1 << i,
+        match board[i] {
+            R2 | N2 | B2 | K2 | Q2 | P2 => b |= 1 << i,
+            R1 | N1 | B1 | K1 | Q1 | P1 => w |= 1 << i,
             _ => (),
         }
         i += 1;
     }
-    b
+    (w, b)
 }
 
-// pub fn board2bm_piece(board: &[Piece; 64], p: Piece) -> u64 {
-//     let mut b: u64 = 0;
-//     let mut i = 0;
-//     while i < 64 {
-//         if board[i] == p {
-//             b |= 1 << i;
-//         }
-//         i += 1;
-//     }
-//     b
-// }
-
-pub const fn board2bm_white_pawns(board: &[Piece; 64]) -> u64 {
+pub const fn board2bm_pawns(board: &[Piece; 64]) -> u64 {
     let mut b: u64 = 0;
     let mut i = 0;
     while i < 64 {
         match board[i] {
-            P1 => b |= 1 << i,
-            _ => (),
-        }
-        i += 1;
-    }
-    b
-}
-
-pub const fn board2bm_black_pawns(board: &[Piece; 64]) -> u64 {
-    let mut b: u64 = 0;
-    let mut i = 0;
-    while i < 64 {
-        match board[i] {
-            P2 => b |= 1 << i,
+            P1 | P2 => b |= 1 << i,
             _ => (),
         }
         i += 1;
