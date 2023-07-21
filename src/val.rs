@@ -120,31 +120,9 @@ pub const ROOT_BOARD: [Piece; 64] = [
     R1, P1, NIL, NIL, NIL, NIL, P2, R2,
 ];
 
-#[rustfmt::skip]
-pub const _TEST_BOARD: [Piece; 64] = [
-    NIL, P1, NIL, NIL, NIL, NIL, P2, NIL, 
-    NIL, P1, NIL, NIL, NIL, NIL, P2, NIL, 
-    NIL, P1, NIL, NIL, NIL, NIL, P2, NIL, 
-    K1,  P1, NIL, NIL, NIL, NIL, P2, K2, 
-    NIL, P1, NIL, NIL, NIL, NIL, P2, NIL,
-    NIL, P1, NIL, NIL, NIL, NIL, P2, NIL,
-    NIL, P1, NIL, NIL, NIL, NIL, P2, NIL, 
-    NIL, P1, NIL, NIL, NIL, NIL, P2, NIL,
-];
-
 // Lasker position - winning move Ka1-b1!!
 // Test for transpotion table
-#[rustfmt::skip]
-pub const _TEST_BOARD2: [Piece; 64] = [
-    NIL, NIL, NIL, NIL, NIL, NIL, NIL, NIL, 
-    NIL, NIL, NIL, NIL, NIL, NIL, NIL, NIL, 
-    NIL, NIL, NIL, P1,  P2,  NIL, NIL, NIL,
-    NIL, NIL, NIL, NIL, NIL, NIL, NIL, NIL, 
-    NIL, NIL, NIL, P1,  P1,  P2,  NIL, NIL, 
-    NIL, NIL, NIL, NIL, NIL, NIL, NIL, NIL, 
-    NIL, NIL, NIL, NIL, NIL, NIL, NIL, NIL, 
-    K1,  NIL, NIL, P1,  P2,  NIL, K2,  NIL, 
-];
+// ("8/k7/3p4/p2P1p2/P2P1P2/8/8/K7", "w - -", "Kb1")
 
 fn feni(i: usize) -> usize {
     let x = 7 - i % 8;
