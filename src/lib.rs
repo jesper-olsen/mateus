@@ -49,7 +49,7 @@ pub struct Game {
     material: i32,
     rep: HashMap<u64, usize>,
     pub ttable: HashMap<u64, TTable>,
-    can_castle: Vec<[bool; 4]>, // white short, long, black short, long
+    pub can_castle: Vec<[bool; 4]>, // white short, long, black short, long
     end_game: bool,
     pub hash: u64,
     bm_white: u64,
@@ -193,13 +193,15 @@ impl Game {
         self.end_game = abs_material(&self.board) < END_GAME_MATERIAL;
 
         //update castling permissions
-        let n = self.can_castle.len() - 1;
-        let mut cc = self.can_castle[n];
-        match (cc, self.board[m.to], m.frm) {
-            ([true, _, _, _], K1, 24) => cc[0] = false,
-            ([_, true, _, _], K1, 24) => cc[1] = false,
-            ([_, _, true, _], K2, 31) => cc[2] = false,
-            ([_, _, _, true], K2, 31) => cc[3] = false,
+        //let n = self.can_castle.len() - 1;
+        //let mut cc = self.can_castle[n];
+        //if let Some(cc) = self.can_castle.last_mut() {
+        let cc = self.can_castle.last_mut().unwrap();
+        match (*cc, self.board[m.to], m.frm) {
+            ([true, _, _, _], K1, 24) => (cc[0], cc[1]) = (false, false),
+            ([_, true, _, _], K1, 24) => (cc[0], cc[1]) = (false, false),
+            ([_, _, true, _], K2, 31) => (cc[2], cc[3]) = (false, false),
+            ([_, _, _, true], K2, 31) => (cc[2], cc[3]) = (false, false),
             ([true, _, _, _], R1, 0) => cc[0] = false,
             ([_, true, _, _], R1, 56) => cc[1] = false,
             ([_, _, true, _], R2, 7) => cc[2] = false,
@@ -284,12 +286,12 @@ impl Game {
         ));
         self.log.push(*m);
         if m.castle {
-            let mut cc = *self.can_castle.last().unwrap();
-            let i = if self.board[m.frm] == K1 { 0 } else { 2 };
-            for x in &mut cc[i..=i + 1] {
-                *x = false;
+            let cc = self.can_castle.last().unwrap();
+            match self.board[m.frm] {
+                K1 => self.can_castle.push([false, false, cc[2], cc[3]]),
+                K2 => self.can_castle.push([cc[0], cc[1], false, false]),
+                _ => (),
             }
-            self.can_castle.push(cc);
 
             let (x, y) = if m.to <= 15 {
                 (m.frm - 24, m.frm - 8) // short
