@@ -244,7 +244,7 @@ impl Game {
         let colour = self.board[m.frm].colour;
         self.update(m);
         let flag = self.in_check(colour);
-        self.backdate();
+        self.backdate(m);
         !flag
     }
 
@@ -342,7 +342,7 @@ impl Game {
         }
     }
 
-    pub fn backdate(&mut self) {
+    pub fn backdate(&mut self, m: &Move) {
         if let Some(bms) = self.log_bms.pop() {
             (
                 self.bm_pawns,
@@ -352,31 +352,30 @@ impl Game {
                 self.bm_bking,
             ) = bms;
         }
-        if let Some(m) = self.log.pop() {
-            self.hash ^= m.hash ^ WHITE_HASH;
-            self.rep_dec();
-            if m.castle {
-                self.can_castle.pop();
-                let (frm, to) = if m.to <= 15 {
-                    (m.frm - 24, m.frm - 8) // short
-                } else {
-                    (m.frm + 32, m.frm + 8) // long
-                };
-                self.board[frm] = self.board[to];
-                self.board[to] = NIL;
-            }
-            if let Some((pfrm, _)) = m.transform {
-                self.board[m.frm] = pfrm
+        self.log.pop(); // TODO
+        self.hash ^= m.hash ^ WHITE_HASH;
+        self.rep_dec();
+        if m.castle {
+            self.can_castle.pop();
+            let (frm, to) = if m.to <= 15 {
+                (m.frm - 24, m.frm - 8) // short
             } else {
-                self.board[m.frm] = self.board[m.to];
-            }
-            self.board[m.to] = NIL;
-
-            if m.capture.0 != NIL {
-                self.board[m.capture.1] = m.capture.0;
-            }
-            self.material -= m.val;
+                (m.frm + 32, m.frm + 8) // long
+            };
+            self.board[frm] = self.board[to];
+            self.board[to] = NIL;
         }
+        if let Some((pfrm, _)) = m.transform {
+            self.board[m.frm] = pfrm
+        } else {
+            self.board[m.frm] = self.board[m.to];
+        }
+        self.board[m.to] = NIL;
+
+        if m.capture.0 != NIL {
+            self.board[m.capture.1] = m.capture.0;
+        }
+        self.material -= m.val;
     }
 
     fn ttstore(&mut self, depth: usize, score: i32, alpha: i32, beta: i32, m: &Move) {
@@ -499,12 +498,12 @@ impl Game {
                 if score > bscore {
                     bscore = score;
                     if bscore >= beta {
-                        self.backdate();
+                        self.backdate(m);
                         return bscore;
                     }
                 }
             }
-            self.backdate();
+            self.backdate(m);
         }
         if first {
             self.eval(colour)
@@ -571,7 +570,7 @@ impl Game {
                     }
                 }
             }
-            self.backdate();
+            self.backdate(m);
             if let Some(m) = bmove {
                 if bscore >= beta {
                     self.ttstore(depth, bscore, alp, beta, m);
@@ -631,7 +630,7 @@ impl Game {
                     }
                     bscore = score;
                 }
-                self.backdate();
+                self.backdate(m);
                 pq.push((*m, score));
             }
             pq.sort_by(|b, a| a.1.cmp(&b.1));
