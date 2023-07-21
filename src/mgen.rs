@@ -36,7 +36,7 @@ impl fmt::Display for Move {
     }
 }
 
-// count pseudo legal moves - ignoring enpassant & castling
+// count pseudo legal moves - ignoring en passant & castling
 pub fn count_moves(board: &[Piece; 64], colour: bool, bm_white: u64, bm_black: u64) -> u32 {
     let (bm_own, bm_opp) = if colour == WHITE {
         (bm_white, bm_black)
