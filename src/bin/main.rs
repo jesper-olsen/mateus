@@ -264,7 +264,7 @@ fn play(
     half_moves: isize,
     library_bypass: bool,
 ) {
-    let mut game = Game::new(ROOT_BOARD);
+    let mut game = Game::new(fen2board(ROOT_FEN));
     println!("{}", game);
 
     let mut tot = 0;

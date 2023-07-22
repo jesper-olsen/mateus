@@ -69,12 +69,12 @@ const OPENINGS: [&str;107]=[
 ];
 
 fn main() {
-    let mut game = Game::new(ROOT_BOARD);
+    let mut game = Game::new(fen2board(ROOT_FEN));
     let mut h: HashMap<u64, Vec<(usize, usize)>> = HashMap::new();
     for s in &OPENINGS {
         if &s[0..1] == "#" {
             //println!("Opening: {s}");
-            game = Game::new(ROOT_BOARD);
+            Game::new(fen2board(ROOT_FEN));
         } else {
             let (frm, to) = str2move(s);
             let moves = game.legal_moves();

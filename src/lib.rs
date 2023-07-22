@@ -191,7 +191,7 @@ impl Game {
         self.update(&m);
 
         //adjust king value in end game
-        self.end_game = abs_material(&self.board) < END_GAME_MATERIAL;
+        self.end_game = abs_material(&self.board) < abs_material(&fen2board(ROOT_FEN)) / 3;
 
         //update castling permissions
         let cc = self.can_castle.last_mut().unwrap();
