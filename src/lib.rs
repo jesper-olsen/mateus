@@ -225,18 +225,6 @@ impl Game {
             self.bm_bking,
             self.bm_white | self.bm_black,
         )
-
-        // let l = moves(
-        //     &self.board,
-        //     !colour,
-        //     self.end_game,
-        //     self.can_castle.last().unwrap(),
-        //     self.log.last(),
-        //     self.bm_white,
-        //     self.bm_black,
-        // );
-        // self.n_searched += l.len(); // linked to stop criterion
-        // l.iter().find(|&m| m.capture.0.ptype == PType::King).is_some()
     }
 
     fn legal_move(&mut self, m: &Move) -> bool {
@@ -512,7 +500,7 @@ impl Game {
         }
     } // fn quiescence fab
 
-    pub fn pvs(&mut self, dpt: usize, ply: usize, alp: i32, bet: i32) -> i32 {
+    pub fn pvs(&mut self, dpt: usize, ply: usize, alp: i32, bet: i32, lastto: usize) -> i32 {
         if self.rep_count() >= 2 {
             return 0;
         }
@@ -544,8 +532,7 @@ impl Game {
         }
 
         if depth == 0 {
-            let to = self.log.last().unwrap().to;
-            return self.quiescence_fab(ply, alpha, beta, to, self.is_quiescent(), false);
+            return self.quiescence_fab(ply, alpha, beta, lastto, self.is_quiescent(), false);
         }
 
         let mut moves = self.moves(colour);
@@ -557,13 +544,14 @@ impl Game {
             if !self.in_check(colour) {
                 // legal move
                 if bmove.is_none() {
-                    bscore = -self.pvs(depth - 1, ply + 1, -beta, -alpha); // full beam
+                    bscore = -self.pvs(depth - 1, ply + 1, -beta, -alpha, m.to); // full beam
                     bmove = Some(m);
                 } else {
-                    let mut score = -self.pvs(depth - 1, ply + 1, -alpha - 1, -max(bscore, alpha));
+                    let mut score =
+                        -self.pvs(depth - 1, ply + 1, -alpha - 1, -max(bscore, alpha), m.to);
                     if score > bscore {
                         if score > max(bscore, alpha) && score < beta && depth > 2 {
-                            score = -self.pvs(depth - 1, ply + 1, -beta, -score);
+                            score = -self.pvs(depth - 1, ply + 1, -beta, -score, m.to);
                         }
                         bscore = score;
                         bmove = Some(m);
@@ -619,14 +607,14 @@ impl Game {
                 alpha = max(bscore, alpha);
                 let mut score = if i == 0 {
                     // full beam
-                    -self.pvs(depth - 1, 1, -beta, -alpha)
+                    -self.pvs(depth - 1, 1, -beta, -alpha, m.to)
                 } else {
-                    -self.pvs(depth - 1, 1, -alpha - 1, -alpha)
+                    -self.pvs(depth - 1, 1, -alpha - 1, -alpha, m.to)
                 };
 
                 if score > bscore {
                     if score > alpha && score < beta && depth > 2 {
-                        score = -self.pvs(depth - 1, 1, -beta, -score);
+                        score = -self.pvs(depth - 1, 1, -beta, -score, m.to);
                     }
                     bscore = score;
                 }
