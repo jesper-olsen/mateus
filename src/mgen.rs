@@ -8,7 +8,7 @@ pub struct Move {
     pub frm: usize,
     pub to: usize,
     pub castle: bool,
-    pub en_passant: Option<u8>,
+    pub en_passant: bool,
     pub transform: Option<(Piece, Piece)>,
     pub val: i32,
     pub hash: u64,
@@ -18,7 +18,7 @@ pub const NULL_MOVE: Move = Move {
     frm: 0,
     to: 0,
     castle: false,
-    en_passant: None,
+    en_passant: false,
     transform: None,
     val: 0,
     hash: 0,
@@ -166,7 +166,7 @@ fn knight_moves(v: &mut Vec<Move>, board: &[Piece; 64], frm: usize, bm_own: u64)
                 frm,
                 to,
                 castle: false,
-                en_passant: None,
+                en_passant: false,
                 transform: None,
                 val: pval(board[frm], to) - pval(board[frm], frm) - pval(board[to], to),
                 hash: phashkey(board[frm], to)
@@ -191,7 +191,7 @@ fn ray_moves(
         frm,
         to,
         castle: false,
-        en_passant: None,
+        en_passant: false,
         transform: None,
         val: pval(board[frm], to) - pval(board[frm], frm) - pval(board[to], to),
         hash: phashkey(board[frm], to) ^ phashkey(board[frm], frm) ^ phashkey(board[to], to),
@@ -218,7 +218,7 @@ fn pawn_moves(
         frm,
         to,
         castle: false,
-        en_passant: None,
+        en_passant: false,
         transform: match to % 8 {
             7 => Some((P1, Q1)),
             0 => Some((P2, Q2)),
@@ -240,7 +240,7 @@ fn pawn_moves(
                     frm,
                     to,
                     castle: false,
-                    en_passant: Some(last.to.try_into().unwrap()),
+                    en_passant: true,
                     transform: None,
                     val: pval(board[frm], to)
                         - pval(board[frm], frm)
@@ -297,7 +297,7 @@ fn king_moves(
                 frm,
                 to,
                 castle: false,
-                en_passant: None,
+                en_passant: false,
                 transform: None,
                 val: pval(p, to) - pval(p, frm) - pval(board[to], to),
                 hash: phashkey(board[frm], to)
@@ -311,7 +311,7 @@ fn king_moves(
                         frm,
                         to: *to,
                         castle: true,
-                        en_passant: None,
+                        en_passant: false,
                         transform: None,
                         val: pval(p, *to) - pval(p, frm) + pval(*r, *rto) - pval(*r, *rfrm),
                         hash: phashkey(*k, *to)

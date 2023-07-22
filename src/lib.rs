@@ -184,10 +184,7 @@ impl Game {
     }
 
     pub fn make_move(&mut self, m: Move) {
-        if m.en_passant.is_some()
-            || self.board[m.to] != NIL
-            || [P1, P2].contains(&self.board[m.frm])
-        {
+        if m.en_passant || self.board[m.to] != NIL || [P1, P2].contains(&self.board[m.frm]) {
             self.rep_clear(); // ireversible move
         }
         self.ttable_clear();
@@ -291,10 +288,16 @@ impl Game {
             self.board[y] = self.board[x];
             self.board[x] = NIL;
         }
-        if let Some(ep) = m.en_passant {
-            self.board[ep as usize] = NIL;
+        if m.en_passant {
+            // +9  +1 -7
+            // +8   0 -8
+            // +7  -1 -9
+            let x = match m.to > m.frm {
+                true => m.frm + 8,  // west
+                false => m.frm - 8, // w east
+            };
+            self.board[x] = NIL;
         }
-        //self.board[m.capture.1] = NIL; // enpassant
 
         if let Some((_, pto)) = m.transform {
             self.board[m.to] = pto;
@@ -365,13 +368,17 @@ impl Game {
         }
         self.board[m.to] = capture;
 
-        if let Some(ep) = m.en_passant {
+        if m.en_passant {
+            let x = match m.to > m.frm {
+                true => m.frm + 8,  // west
+                false => m.frm - 8, // w east
+            };
             let p = if self.board[m.frm].colour == WHITE {
                 P2
             } else {
                 P1
             };
-            self.board[ep as usize] = p;
+            self.board[x] = p;
         }
 
         self.material -= m.val;
@@ -479,9 +486,9 @@ impl Game {
         //   .filter(|m| !quiescent || m.en_passant.is_some() || m.capture.0 != NIL)
         //   .filter(|m| !rfab || m.capture.1 == last_to)
         {
-            if quiescent && m.en_passant.is_none() && self.board[m.to] == NIL {
+            if quiescent && !m.en_passant && self.board[m.to] == NIL {
                 continue;
-            } else if rfab && m.en_passant.is_none() && m.to != last_to {
+            } else if rfab && !m.en_passant && m.to != last_to {
                 continue;
             }
             self.update(&m);
