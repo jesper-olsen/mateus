@@ -78,8 +78,8 @@ fn move2label(board: &[Piece; 64], m: &Move, moves: &Vec<Move>) -> String {
         let n = if l[0] == l[1] { 1 } else { 0 };
         label.push(l[0].chars().nth(n).unwrap());
     }
-
-    if m.capture.0 != NIL {
+    if m.en_passant.is_some() || board[m.to]!=NIL {
+    //if m.capture.0 != NIL {
         if board[m.frm].ptype == PType::Pawn {}
         label.push('x');
     }

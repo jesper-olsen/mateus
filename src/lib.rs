@@ -57,7 +57,7 @@ pub struct Game {
     bm_pawns: u64,
     bm_wking: u64,
     bm_bking: u64,
-    log_bms: Vec<(u64, u64, u64, u64, u64)>,
+    log_bms: Vec<(u64, u64, u64, u64, u64, Piece)>,
 }
 
 impl fmt::Display for Game {
@@ -184,7 +184,10 @@ impl Game {
     }
 
     pub fn make_move(&mut self, m: Move) {
-        if m.capture.0 != NIL || [P1, P2].contains(&self.board[m.frm]) {
+        if m.en_passant.is_some()
+            || self.board[m.to] != NIL
+            || [P1, P2].contains(&self.board[m.frm])
+        {
             self.rep_clear(); // ireversible move
         }
         self.ttable_clear();
@@ -194,9 +197,6 @@ impl Game {
         self.end_game = abs_material(&self.board) < END_GAME_MATERIAL;
 
         //update castling permissions
-        //let n = self.can_castle.len() - 1;
-        //let mut cc = self.can_castle[n];
-        //if let Some(cc) = self.can_castle.last_mut() {
         let cc = self.can_castle.last_mut().unwrap();
         match (*cc, self.board[m.to], m.frm) {
             ([true, _, _, _], K1, 24) => (cc[0], cc[1]) = (false, false),
@@ -272,6 +272,7 @@ impl Game {
             self.bm_black,
             self.bm_wking,
             self.bm_bking,
+            self.board[m.to],
         ));
         self.log.push(*m);
         if m.castle {
@@ -290,7 +291,10 @@ impl Game {
             self.board[y] = self.board[x];
             self.board[x] = NIL;
         }
-        self.board[m.capture.1] = NIL; // enpassant
+        if let Some(ep) = m.en_passant {
+            self.board[ep as usize] = NIL;
+        }
+        //self.board[m.capture.1] = NIL; // enpassant
 
         if let Some((_, pto)) = m.transform {
             self.board[m.to] = pto;
@@ -331,15 +335,16 @@ impl Game {
     }
 
     pub fn backdate(&mut self, m: &Move) {
-        if let Some(bms) = self.log_bms.pop() {
-            (
-                self.bm_pawns,
-                self.bm_white,
-                self.bm_black,
-                self.bm_wking,
-                self.bm_bking,
-            ) = bms;
-        }
+        let bms = self.log_bms.pop().unwrap();
+        let capture;
+        (
+            self.bm_pawns,
+            self.bm_white,
+            self.bm_black,
+            self.bm_wking,
+            self.bm_bking,
+            capture,
+        ) = bms;
         self.log.pop(); // TODO
         self.hash ^= m.hash ^ WHITE_HASH;
         self.rep_dec();
@@ -358,11 +363,17 @@ impl Game {
         } else {
             self.board[m.frm] = self.board[m.to];
         }
-        self.board[m.to] = NIL;
+        self.board[m.to] = capture;
 
-        if m.capture.0 != NIL {
-            self.board[m.capture.1] = m.capture.0;
+        if let Some(ep) = m.en_passant {
+            let p = if self.board[m.frm].colour == WHITE {
+                P2
+            } else {
+                P1
+            };
+            self.board[ep as usize] = p;
         }
+
         self.material -= m.val;
     }
 
@@ -463,13 +474,17 @@ impl Game {
 
         let mut bscore = -INFINITE + ply as i32;
         let mut first = true;
-        for m in self
-            .moves(colour)
-            .iter()
-            .filter(|m| !quiescent || m.capture.0 != NIL)
-            .filter(|m| !rfab || m.capture.1 == last_to)
+        for m in self.moves(colour)
+        //   .iter()
+        //   .filter(|m| !quiescent || m.en_passant.is_some() || m.capture.0 != NIL)
+        //   .filter(|m| !rfab || m.capture.1 == last_to)
         {
-            self.update(m);
+            if quiescent && m.en_passant.is_none() && self.board[m.to] == NIL {
+                continue;
+            } else if rfab && m.en_passant.is_none() && m.to != last_to {
+                continue;
+            }
+            self.update(&m);
             if !self.in_check(colour) {
                 // legal move
                 first = false;
@@ -486,12 +501,12 @@ impl Game {
                 if score > bscore {
                     bscore = score;
                     if bscore >= beta {
-                        self.backdate(m);
+                        self.backdate(&m);
                         return bscore;
                     }
                 }
             }
-            self.backdate(m);
+            self.backdate(&m);
         }
         if first {
             self.eval(colour)
