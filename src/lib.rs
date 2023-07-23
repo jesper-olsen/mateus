@@ -45,6 +45,7 @@ pub struct TTable {
 pub struct Game {
     pub log: Vec<Move>,
     pub board: [Piece; 64],
+    pub colour: bool,
     pub n_searched: usize,
     material: i16,
     rep: HashMap<u64, usize>,
@@ -91,6 +92,7 @@ impl Game {
         let (bm_white, bm_black) = board2bm(&board);
         Game {
             board,
+            colour: WHITE,
             log: vec![],
             n_searched: 0,
             material: material(&board),
@@ -135,7 +137,7 @@ impl Game {
     }
 
     fn rep_clear(&mut self) {
-        let key = board2hash(&self.board, self.turn());
+        let key = board2hash(&self.board, self.colour);
         self.rep = HashMap::from([(key, 1)]);
     }
 
@@ -237,7 +239,7 @@ impl Game {
     }
 
     pub fn legal_moves(&mut self) -> Vec<Move> {
-        let mut moves = self.moves(self.turn());
+        let mut moves = self.moves(self.colour);
         moves.retain(|m| self.legal_move(m));
         moves
     }
@@ -258,11 +260,12 @@ impl Game {
     }
 
     pub fn turn(&self) -> bool {
-        if self.log.len() % 2 == 0 {
-            WHITE
-        } else {
-            BLACK
-        }
+        self.colour
+        // if self.log.len() % 2 == 0 {
+        //     WHITE
+        // } else {
+        //     BLACK
+        // }
     }
 
     pub fn update(&mut self, m: &Move) {
@@ -274,6 +277,7 @@ impl Game {
             self.bm_bking,
             self.board[m.to as usize],
         ));
+        self.colour = !self.colour;
         self.log.push(*m);
         if m.castle {
             let cc = self.can_castle.last().unwrap();
@@ -355,6 +359,7 @@ impl Game {
             self.bm_bking,
             capture,
         ) = bms;
+        self.colour = !self.colour;
         self.log.pop(); // TODO
         self.hash ^= m.hash ^ WHITE_HASH;
         self.rep_dec();
@@ -488,7 +493,7 @@ impl Game {
         quiescent: bool,
         rfab: bool,
     ) -> i16 {
-        let colour = self.turn();
+        let colour = self.colour;
 
         let mut bscore = -INFINITE + ply as i16;
         let mut first = true;
@@ -546,7 +551,7 @@ impl Game {
         let mut beta = bet;
         let mut bscore = -INFINITE + ply as i16;
         let mut bmove = None;
-        let colour = self.turn();
+        let colour = self.colour;
 
         let depth = if self.in_check(colour) { dpt + 1 } else { dpt };
 

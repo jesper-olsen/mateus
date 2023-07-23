@@ -201,7 +201,8 @@ fn benchmark(verbose: bool, search_threshold: usize, max_depth: usize) {
         cc[3]=h.contains('q');
 
         if h.chars().nth(0).unwrap() == 'b' {
-            game.log.push(NULL_MOVE); // dummy to force black
+            game.colour=BLACK;
+            //game.log.push(NULL_MOVE); // dummy to force black
         }
         let moves = game.legal_moves();
         game.n_searched = 0;
@@ -210,7 +211,7 @@ fn benchmark(verbose: bool, search_threshold: usize, max_depth: usize) {
         let (best, score) = l[0];
         n_searched += game.n_searched;
         let clabel = move2label(&game.board, &best, &moves);
-        let colour = if game.turn() { "white" } else { "black" };
+        let colour = if game.colour { "white" } else { "black" };
         println!("{game}");
 
         for (i, (m, score)) in l.iter().enumerate() {
