@@ -116,12 +116,12 @@ impl Game {
         self.ttable.len()
     }
 
-    fn is_quiescent(&self) -> bool {
-        if let Some(m) = self.log.last() {
-            // quiescent unless last move was pawn near promotion
-            self.board[m.to as usize].ptype != PType::Pawn || (m.to % 8 != 6 && m.to % 8 != 1)
-        } else {
-            true
+    fn is_quiescent(&self, lastto: u8) -> bool {
+        // quiescent unless last move was pawn near promotion
+        match self.board[lastto as usize] {
+            P1 => lastto % 8 != 6,
+            P2 => lastto % 8 != 1,
+            _ => true,
         }
     }
 
@@ -506,7 +506,11 @@ impl Game {
             if !self.in_check(colour) {
                 // legal move
                 first = false;
-                let quiescent = if quiescent { true } else { self.is_quiescent() };
+                let quiescent = if quiescent {
+                    true
+                } else {
+                    self.is_quiescent(m.to)
+                };
                 let rfab = quiescent;
                 let score = -self.quiescence_fab(
                     ply + 1,
@@ -565,7 +569,7 @@ impl Game {
         }
 
         if depth == 0 {
-            return self.quiescence_fab(ply, alpha, beta, lastto, self.is_quiescent(), false);
+            return self.quiescence_fab(ply, alpha, beta, lastto, self.is_quiescent(lastto), false);
         }
 
         let mut moves = self.moves(colour);
