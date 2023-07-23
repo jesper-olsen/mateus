@@ -70,7 +70,7 @@ pub const NIL: Piece = Piece {
     colour: BLACK,
 };
 
-pub const fn pval(p: Piece, pos: usize) -> i32 {
+pub const fn pval(p: Piece, pos: usize) -> i16 {
     match p {
         R1 => ROOKVAL1[pos],
         R2 => ROOKVAL2[pos],
@@ -88,11 +88,11 @@ pub const fn pval(p: Piece, pos: usize) -> i32 {
     }
 }
 
-pub const END_GAME_MATERIAL: i32 = abs_material(&ROOT_BOARD) / 3;
+pub const END_GAME_MATERIAL: i16 = abs_material(&ROOT_BOARD) / 3;
 
-pub const fn abs_material(board: &[Piece; 64]) -> i32 {
+pub const fn abs_material(board: &[Piece; 64]) -> i16 {
     let mut i = 0;
-    let mut val: i32 = 0;
+    let mut val: i16 = 0;
     while i < board.len() {
         val += pval(board[i], i).abs();
         i += 1;
@@ -100,9 +100,9 @@ pub const fn abs_material(board: &[Piece; 64]) -> i32 {
     val
 }
 
-pub const fn material(board: &[Piece; 64]) -> i32 {
+pub const fn material(board: &[Piece; 64]) -> i16 {
     let mut i = 0;
-    let mut val: i32 = 0;
+    let mut val: i16 = 0;
     while i < board.len() {
         val += pval(board[i], i);
         i += 1;
@@ -135,17 +135,17 @@ fn feni(i: usize) -> usize {
 
 pub fn fen2board(s: &str) -> [Piece; 64] {
     let mut a = [NIL; 64];
-    let mut offset = 0i32;
+    let mut offset = 0i16;
     for (i, c) in s 
         .chars()
         .enumerate()
     {
         if let Some(d) = c.to_digit(10) {
-            offset += d as i32 - 1;
+            offset += d as i16 - 1;
         } else if c == '/' {
             offset -= 1;
         } else {
-            let k: usize = (i as i32 + offset).try_into().unwrap();
+            let k: usize = (i as i16 + offset).try_into().unwrap();
             let q = feni(k);
             a[q] = match c {
                 'r' => R2,
@@ -188,7 +188,7 @@ impl fmt::Display for Piece {
 }
 
 #[rustfmt::skip]
-pub const KINGVAL1 : [i32;64] = [
+pub const KINGVAL1 : [i16;64] = [
    24,  24,  12,  6,  6,  12,  24,  24, 
    24,  12,  6,   0,  0,  6,   12,  24, 
    12,  6,   0,  -6, -6,  0,   6,  12, 
@@ -197,10 +197,10 @@ pub const KINGVAL1 : [i32;64] = [
    12,  6,   0,  -6, -6,  0,   6,  12, 
    24,  12,  6,   0,  0,  6,   12,  24, 
    24,  24,  12,  6,  6,  12,  24,  24];
-pub const KINGVAL2: [i32; 64] = array_mul(-1, KINGVAL1);
+pub const KINGVAL2: [i16; 64] = array_mul(-1, KINGVAL1);
 
 #[rustfmt::skip]
-pub const PAWNVAL1 : [i32;64] = [
+pub const PAWNVAL1 : [i16;64] = [
   100, 100, 101, 102, 104, 106, 108, 900, 
   100, 100, 102, 104, 106, 109, 112, 900, 
   100, 100, 104, 108, 112, 115, 118, 900, 
@@ -209,10 +209,10 @@ pub const PAWNVAL1 : [i32;64] = [
   100, 100, 104, 108, 112, 116, 120, 900, 
   100, 100, 102, 104, 106, 108, 112, 900, 
   100, 100, 101, 102, 104, 106, 108, 900];
-pub const PAWNVAL2: [i32; 64] = array_reverse(array_mul(-1, PAWNVAL1));
+pub const PAWNVAL2: [i16; 64] = array_reverse(array_mul(-1, PAWNVAL1));
 
 #[rustfmt::skip]
-pub const ROOKVAL1 : [i32;64] = [
+pub const ROOKVAL1 : [i16;64] = [
   500, 500, 500, 500, 500, 500, 522, 500, 
   500, 500, 500, 500, 500, 500, 522, 500, 
   500, 500, 500, 500, 500, 500, 522, 500, 
@@ -221,10 +221,10 @@ pub const ROOKVAL1 : [i32;64] = [
   500, 500, 500, 500, 500, 500, 522, 500, 
   500, 500, 500, 500, 500, 500, 522, 500, 
   500, 500, 500, 500, 500, 500, 522, 500];
-pub const ROOKVAL2: [i32; 64] = array_reverse(array_mul(-1, ROOKVAL1));
+pub const ROOKVAL2: [i16; 64] = array_reverse(array_mul(-1, ROOKVAL1));
 
 #[rustfmt::skip]
-pub const KNIGHTVAL1 : [i32;64] = [
+pub const KNIGHTVAL1 : [i16;64] = [
   315, 315, 315, 315, 315, 315, 315, 315, 
   315, 320, 320, 320, 320, 320, 320, 315, 
   315, 320, 325, 325, 330, 330, 320, 315, 
@@ -233,10 +233,10 @@ pub const KNIGHTVAL1 : [i32;64] = [
   315, 320, 325, 325, 330, 330, 320, 315, 
   315, 320, 320, 320, 320, 320, 320, 315, 
   315, 315, 315, 315, 315, 315, 315, 315];
-pub const KNIGHTVAL2: [i32; 64] = array_reverse(array_mul(-1, KNIGHTVAL1));
+pub const KNIGHTVAL2: [i16; 64] = array_reverse(array_mul(-1, KNIGHTVAL1));
 
 #[rustfmt::skip]
-pub const BISHOPVAL1: [i32;64] = [
+pub const BISHOPVAL1: [i16;64] = [
    339, 350, 350, 350, 350, 350, 350, 350,
    339, 350, 350, 350, 350, 350, 350, 350,
    339, 350, 350, 350, 350, 350, 350, 350,
@@ -245,12 +245,12 @@ pub const BISHOPVAL1: [i32;64] = [
    339, 350, 350, 350, 350, 350, 350, 350,
    339, 350, 350, 350, 350, 350, 350, 350,
    339, 350, 350, 350, 350, 350, 350, 350];
-pub const BISHOPVAL2: [i32; 64] = array_mul(-1, array_reverse(BISHOPVAL1));
+pub const BISHOPVAL2: [i16; 64] = array_mul(-1, array_reverse(BISHOPVAL1));
 
-pub const QUEENVAL1: [i32; 64] = [900; 64];
-pub const QUEENVAL2: [i32; 64] = [-900; 64];
+pub const QUEENVAL1: [i16; 64] = [900; 64];
+pub const QUEENVAL2: [i16; 64] = [-900; 64];
 
-const fn array_mul<const N: usize>(factor: i32, mut a: [i32; N]) -> [i32; N] {
+const fn array_mul<const N: usize>(factor: i16, mut a: [i16; N]) -> [i16; N] {
     let mut i = 0;
     while i < N {
         a[i] *= factor;

@@ -24,7 +24,7 @@ use std::collections::hash_map::{Entry, HashMap};
 use std::fmt;
 use val::*;
 
-pub const INFINITE: i32 = 10000;
+pub const INFINITE: i16 = 10000;
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 enum BType {
@@ -36,7 +36,7 @@ enum BType {
 #[derive(Debug, Copy, Clone)]
 pub struct TTable {
     pub depth: usize,
-    pub score: i32,
+    pub score: i16,
     pub m: Move,
     bound: BType,
 }
@@ -46,7 +46,7 @@ pub struct Game {
     pub log: Vec<Move>,
     pub board: [Piece; 64],
     pub n_searched: usize,
-    material: i32,
+    material: i16,
     rep: HashMap<u64, usize>,
     pub ttable: HashMap<u64, TTable>,
     pub can_castle: Vec<[bool; 4]>, // white short, long, black short, long
@@ -119,7 +119,7 @@ impl Game {
     fn is_quiescent(&self) -> bool {
         if let Some(m) = self.log.last() {
             // quiescent unless last move was pawn near promotion
-            self.board[m.to].ptype != PType::Pawn || (m.to % 8 != 6 && m.to % 8 != 1)
+            self.board[m.to as usize].ptype != PType::Pawn || (m.to % 8 != 6 && m.to % 8 != 1)
         } else {
             true
         }
@@ -184,7 +184,10 @@ impl Game {
     }
 
     pub fn make_move(&mut self, m: Move) {
-        if m.en_passant || self.board[m.to] != NIL || [P1, P2].contains(&self.board[m.frm]) {
+        if m.en_passant
+            || self.board[m.to as usize] != NIL
+            || [P1, P2].contains(&self.board[m.frm as usize])
+        {
             self.rep_clear(); // ireversible move
         }
         self.ttable_clear();
@@ -195,7 +198,7 @@ impl Game {
 
         //update castling permissions
         let cc = self.can_castle.last_mut().unwrap();
-        match (*cc, self.board[m.to], m.frm) {
+        match (*cc, self.board[m.to as usize], m.frm) {
             ([true, _, _, _], K1, 24) => (cc[0], cc[1]) = (false, false),
             ([_, true, _, _], K1, 24) => (cc[0], cc[1]) = (false, false),
             ([_, _, true, _], K2, 31) => (cc[2], cc[3]) = (false, false),
@@ -226,7 +229,7 @@ impl Game {
 
     fn legal_move(&mut self, m: &Move) -> bool {
         // verify move does not expose own king
-        let colour = self.board[m.frm].colour;
+        let colour = self.board[m.frm as usize].colour;
         self.update(m);
         let flag = self.in_check(colour);
         self.backdate(m);
@@ -269,12 +272,12 @@ impl Game {
             self.bm_black,
             self.bm_wking,
             self.bm_bking,
-            self.board[m.to],
+            self.board[m.to as usize],
         ));
         self.log.push(*m);
         if m.castle {
             let cc = self.can_castle.last().unwrap();
-            match self.board[m.frm] {
+            match self.board[m.frm as usize] {
                 K1 => self.can_castle.push([false, false, cc[2], cc[3]]),
                 K2 => self.can_castle.push([cc[0], cc[1], false, false]),
                 _ => (),
@@ -285,8 +288,8 @@ impl Game {
             } else {
                 (m.frm + 32, m.frm + 8) // long
             };
-            self.board[y] = self.board[x];
-            self.board[x] = NIL;
+            self.board[y as usize] = self.board[x as usize];
+            self.board[x as usize] = NIL;
         }
         if m.en_passant {
             // +9  +1 -7
@@ -296,19 +299,19 @@ impl Game {
                 true => m.frm + 8,  // west
                 false => m.frm - 8, // w east
             };
-            self.board[x] = NIL;
+            self.board[x as usize] = NIL;
         }
 
         if m.transform {
-            self.board[m.to] = match m.to % 8 {
+            self.board[m.to as usize] = match m.to % 8 {
                 7 => Q1,
                 0 => Q2,
                 _ => panic!(),
             }
         } else {
-            self.board[m.to] = self.board[m.frm];
+            self.board[m.to as usize] = self.board[m.frm as usize];
         }
-        self.board[m.frm] = NIL;
+        self.board[m.frm as usize] = NIL;
         self.material += m.val;
         self.rep_inc();
         self.hash ^= m.hash ^ WHITE_HASH;
@@ -362,37 +365,37 @@ impl Game {
             } else {
                 (m.frm + 32, m.frm + 8) // long
             };
-            self.board[frm] = self.board[to];
-            self.board[to] = NIL;
+            self.board[frm as usize] = self.board[to as usize];
+            self.board[to as usize] = NIL;
         }
         if m.transform {
-            self.board[m.frm] = match m.to % 8 {
+            self.board[m.frm as usize] = match m.to % 8 {
                 7 => P1,
                 0 => P2,
                 _ => panic!(),
             }
         } else {
-            self.board[m.frm] = self.board[m.to];
+            self.board[m.frm as usize] = self.board[m.to as usize];
         }
-        self.board[m.to] = capture;
+        self.board[m.to as usize] = capture;
 
         if m.en_passant {
             let x = match m.to > m.frm {
                 true => m.frm + 8,  // west
                 false => m.frm - 8, // w east
             };
-            let p = if self.board[m.frm].colour == WHITE {
+            let p = if self.board[m.frm as usize].colour == WHITE {
                 P2
             } else {
                 P1
             };
-            self.board[x] = p;
+            self.board[x as usize] = p;
         }
 
         self.material -= m.val;
     }
 
-    fn ttstore(&mut self, depth: usize, score: i32, alpha: i32, beta: i32, m: &Move) {
+    fn ttstore(&mut self, depth: usize, score: i16, alpha: i16, beta: i16, m: &Move) {
         // TODO - implement more efficient hashing function
         let key = self.hash;
         let e = TTable {
@@ -417,12 +420,12 @@ impl Game {
             .or_insert(e);
     }
 
-    pub fn mobility(&self) -> i32 {
-        count_moves(&self.board, WHITE, self.bm_white, self.bm_black) as i32
-            - count_moves(&self.board, BLACK, self.bm_white, self.bm_black) as i32
+    pub fn mobility(&self) -> i16 {
+        count_moves(&self.board, WHITE, self.bm_white, self.bm_black) as i16
+            - count_moves(&self.board, BLACK, self.bm_white, self.bm_black) as i16
     }
 
-    pub fn eval(&self, colour: bool) -> i32 {
+    pub fn eval(&self, colour: bool) -> i16 {
         let s = self.material + self.score_pawn_structure() + self.mobility();
         if colour {
             s
@@ -431,14 +434,14 @@ impl Game {
         }
     }
 
-    pub fn score_pawn_structure(&self) -> i32 {
-        let mut pen: i32 = 0;
+    pub fn score_pawn_structure(&self) -> i16 {
+        let mut pen: i16 = 0;
         let bm: [u64; 2] = [self.bm_pawns & self.bm_white, self.bm_pawns & self.bm_black];
         for (i, &p) in [P1, P2].iter().enumerate() {
             let nfiles = (0..8)
                 .filter(|&q| 0b11111111 << (q * 8) & bm[i] > 0)
-                .count() as i32;
-            let npawns = bm[i].count_ones() as i32;
+                .count() as i16;
+            let npawns = bm[i].count_ones() as i16;
             let double_pawns = npawns - nfiles;
 
             let l = (0..8)
@@ -450,7 +453,7 @@ impl Game {
                         || (q > 0 && q < 7 && l[q] && !l[q - 1] && !l[q + 1])
                         || (q == 7 && l[7] && !l[6])
                 })
-                .count() as i32;
+                .count() as i16;
 
             let x = 20 * double_pawns + 4 * isolated_pawns;
             pen += if p == P1 { -x } else { x };
@@ -463,12 +466,12 @@ impl Game {
             let b = file & bm[1];
             if w > 0 && w > b {
                 let k = 63 - w.leading_zeros();
-                let q = (k % 8) as i32;
+                let q = (k % 8) as i16;
                 pen += 2 * q * q;
             }
             if b > 0 && (w == 0 || b < w) {
                 let k = b.trailing_zeros();
-                let q = (7 - k % 8) as i32;
+                let q = (7 - k % 8) as i16;
                 pen -= 2 * q * q;
             }
         }
@@ -479,22 +482,22 @@ impl Game {
     fn quiescence_fab(
         &mut self,
         ply: usize,
-        alpha: i32,
-        beta: i32,
-        last_to: usize,
+        alpha: i16,
+        beta: i16,
+        last_to: u8,
         quiescent: bool,
         rfab: bool,
-    ) -> i32 {
+    ) -> i16 {
         let colour = self.turn();
 
-        let mut bscore = -INFINITE + ply as i32;
+        let mut bscore = -INFINITE + ply as i16;
         let mut first = true;
         for m in self.moves(colour)
         //   .iter()
         //   .filter(|m| !quiescent || m.en_passant.is_some() || m.capture.0 != NIL)
         //   .filter(|m| !rfab || m.capture.1 == last_to)
         {
-            if (quiescent && !m.en_passant && self.board[m.to] == NIL)
+            if (quiescent && !m.en_passant && self.board[m.to as usize] == NIL)
                 || (rfab && !m.en_passant && m.to != last_to)
             {
                 continue;
@@ -530,14 +533,14 @@ impl Game {
         }
     } // fn quiescence fab
 
-    pub fn pvs(&mut self, dpt: usize, ply: usize, alp: i32, bet: i32, lastto: usize) -> i32 {
+    pub fn pvs(&mut self, dpt: usize, ply: usize, alp: i16, bet: i16, lastto: u8) -> i16 {
         if self.rep_count() >= 2 {
             return 0;
         }
 
         let mut alpha = alp;
         let mut beta = bet;
-        let mut bscore = -INFINITE + ply as i32;
+        let mut bscore = -INFINITE + ply as i16;
         let mut bmove = None;
         let colour = self.turn();
 
@@ -613,7 +616,7 @@ impl Game {
         max_searched: usize,
         max_depth: usize,
         verbose: bool,
-    ) -> Vec<(Move, i32)> {
+    ) -> Vec<(Move, i16)> {
         // top level pvs - does iterative deepening, sorts moves
         // note that only the best move has exact scoring...
 
@@ -622,12 +625,12 @@ impl Game {
         }
 
         self.n_searched = 0;
-        let mut pq0: Vec<(Move, i32)> = moves.iter().map(|m| (*m, 0)).collect();
+        let mut pq0: Vec<(Move, i16)> = moves.iter().map(|m| (*m, 0)).collect();
         for depth in (2..=max_depth).step_by(1) {
             if depth > 1 && self.n_searched > max_searched {
                 break;
             }
-            let mut pq: Vec<(Move, i32)> = Vec::new();
+            let mut pq: Vec<(Move, i16)> = Vec::new();
             let mut alpha = -INFINITE;
             let beta = INFINITE;
             let mut bscore = alpha;
@@ -659,7 +662,7 @@ impl Game {
                     depth, self.n_searched, pq0[0].0, bscore
                 );
             }
-            if !pq0.is_empty() && pq0[0].1.abs() >= INFINITE - depth as i32 {
+            if !pq0.is_empty() && pq0[0].1.abs() >= INFINITE - depth as i16 {
                 break;
             }
         }

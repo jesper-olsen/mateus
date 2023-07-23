@@ -5,12 +5,12 @@ use std::fmt;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct Move {
-    pub frm: usize,
-    pub to: usize,
+    pub frm: u8,
+    pub to: u8,
     pub castle: bool,
     pub en_passant: bool,
     pub transform: bool,
-    pub val: i32,
+    pub val: i16,
     pub hash: u64,
 }
 
@@ -31,7 +31,7 @@ impl fmt::Display for Move {
         let x2 = 7 - self.to / 8;
         let y2 = self.to % 8 + 1;
         let s = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
-        write!(f, "{}{} {}{}", s[x1], y1, s[x2], y2)
+        write!(f, "{}{} {}{}", s[x1 as usize], y1, s[x2 as usize], y2)
     }
 }
 
@@ -158,8 +158,8 @@ fn knight_moves(v: &mut Vec<Move>, board: &[Piece; 64], frm: usize, bm_own: u64)
         bm2vec(BM_KNIGHT_MOVES[frm] & !bm_own)
             .iter()
             .map(|&to| Move {
-                frm,
-                to,
+                frm: frm as u8,
+                to: to as u8,
                 castle: false,
                 en_passant: false,
                 transform: false,
@@ -183,8 +183,8 @@ fn ray_moves(
         .iter()
         .fold(0, |a, i| a | BM_BLOCKED[frm][*i]);
     v.extend(bm2vec(moves & !bl & !bm_own).iter().map(|&to| Move {
-        frm,
-        to,
+        frm: frm as u8,
+        to: to as u8,
         castle: false,
         en_passant: false,
         transform: false,
@@ -218,8 +218,8 @@ fn pawn_moves(
     let vto = bm2vec(cap | step1 | step2);
 
     v.extend(vto.iter().map(|&to| Move {
-        frm,
-        to,
+        frm: frm as u8,
+        to: to as u8,
         castle: false,
         en_passant: false,
         transform: to % 8 == 7 || to % 8 == 0,
@@ -230,7 +230,7 @@ fn pawn_moves(
     }));
 
     // en passant
-    if matches!(board[last.to], P2 | P1) && last.to.abs_diff(last.frm) == 2 {
+    if matches!(board[last.to as usize], P2 | P1) && last.to.abs_diff(last.frm) == 2 {
         // square attacked if last move was a step-2 pawn move
         let idx = if colour { last.frm - 1 } else { last.frm + 1 };
 
@@ -238,14 +238,14 @@ fn pawn_moves(
             bm2vec(BM_PAWN_CAPTURES[cidx][frm] & 1 << idx)
                 .iter()
                 .map(|&to| Move {
-                    frm,
-                    to,
+                    frm: frm as u8,
+                    to: to as u8,
                     castle: false,
                     en_passant: true,
                     transform: false,
                     val: pval(board[frm], to)
                         - pval(board[frm], frm)
-                        - pval(board[last.to], last.to),
+                        - pval(board[last.to as usize], last.to as usize),
                     hash: phashkey(board[frm], to)
                         ^ phashkey(board[frm], frm)
                         ^ phashkey(board[to], to),
@@ -295,8 +295,8 @@ fn king_moves(
         bm2vec(BM_KING_MOVES[frm] & !bm_own_pieces)
             .iter()
             .map(|&to| Move {
-                frm,
-                to,
+                frm: frm as u8,
+                to: to as u8,
                 castle: false,
                 en_passant: false,
                 transform: false,
@@ -309,13 +309,14 @@ fn king_moves(
                 cc2.iter()
                     .filter(|(c, _, _, _, _, _)| *c)
                     .map(|(_, k, r, to, rfrm, rto)| Move {
-                        frm,
+                        frm: frm as u8,
                         to: *to,
                         castle: true,
                         en_passant: false,
                         transform: false,
-                        val: pval(p, *to) - pval(p, frm) + pval(*r, *rto) - pval(*r, *rfrm),
-                        hash: phashkey(*k, *to)
+                        val: pval(p, *to as usize) - pval(p, frm) + pval(*r, *rto)
+                            - pval(*r, *rfrm),
+                        hash: phashkey(*k, *to as usize)
                             ^ phashkey(*k, frm)
                             ^ phashkey(*r, *rto)
                             ^ phashkey(*r, *rfrm),
