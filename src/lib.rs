@@ -299,8 +299,12 @@ impl Game {
             self.board[x] = NIL;
         }
 
-        if let Some((_, pto)) = m.transform {
-            self.board[m.to] = pto;
+        if m.transform {
+            self.board[m.to] = match m.to % 8 {
+                7 => Q1,
+                0 => Q2,
+                _ => panic!(),
+            }
         } else {
             self.board[m.to] = self.board[m.frm];
         }
@@ -361,8 +365,12 @@ impl Game {
             self.board[frm] = self.board[to];
             self.board[to] = NIL;
         }
-        if let Some((pfrm, _)) = m.transform {
-            self.board[m.frm] = pfrm
+        if m.transform {
+            self.board[m.frm] = match m.to % 8 {
+                7 => P1,
+                0 => P2,
+                _ => panic!(),
+            }
         } else {
             self.board[m.frm] = self.board[m.to];
         }
