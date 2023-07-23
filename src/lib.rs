@@ -191,7 +191,7 @@ impl Game {
         self.update(&m);
 
         //adjust king value in end game
-        self.end_game = abs_material(&self.board) < abs_material(&fen2board(ROOT_FEN)) / 3;
+        self.end_game = abs_material(&self.board) < END_GAME_MATERIAL / 3;
 
         //update castling permissions
         let cc = self.can_castle.last_mut().unwrap();
@@ -486,9 +486,9 @@ impl Game {
         //   .filter(|m| !quiescent || m.en_passant.is_some() || m.capture.0 != NIL)
         //   .filter(|m| !rfab || m.capture.1 == last_to)
         {
-            if quiescent && !m.en_passant && self.board[m.to] == NIL {
-                continue;
-            } else if rfab && !m.en_passant && m.to != last_to {
+            if (quiescent && !m.en_passant && self.board[m.to] == NIL)
+                || (rfab && !m.en_passant && m.to != last_to)
+            {
                 continue;
             }
             self.update(&m);

@@ -59,7 +59,7 @@ fn move2label(board: &[Piece; 64], m: &Move, moves: &Vec<Move>) -> String {
         } else {
             label.push_str("0-0-0 ");
         }
-    } else if m.transform !=None {
+    } else if m.transform.is_some() {
         label.push('*');
     }
     if board[m.frm].ptype != PType::Pawn {

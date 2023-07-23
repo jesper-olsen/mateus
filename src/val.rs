@@ -88,6 +88,8 @@ pub const fn pval(p: Piece, pos: usize) -> i32 {
     }
 }
 
+pub const END_GAME_MATERIAL: i32 = abs_material(&ROOT_BOARD) / 3;
+
 pub const fn abs_material(board: &[Piece; 64]) -> i32 {
     let mut i = 0;
     let mut val: i32 = 0;
@@ -108,12 +110,22 @@ pub const fn material(board: &[Piece; 64]) -> i32 {
     val
 }
 
+#[rustfmt::skip]
+pub const ROOT_BOARD: [Piece; 64] = [
+    R1, P1, NIL, NIL, NIL, NIL, P2, R2, 
+    N1, P1, NIL, NIL, NIL, NIL, P2, N2, 
+    B1, P1, NIL, NIL, NIL, NIL, P2, B2, 
+    K1, P1, NIL, NIL, NIL, NIL, P2, K2, 
+    Q1, P1, NIL, NIL, NIL, NIL, P2, Q2, 
+    B1, P1, NIL, NIL, NIL, NIL, P2, B2, 
+    N1, P1, NIL, NIL, NIL, NIL, P2, N2, 
+    R1, P1, NIL, NIL, NIL, NIL, P2, R2,
+];
+
 pub const ROOT_FEN: &str="rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR";
 
 // Lasker position - test for transposition table - winning move Ka1-b1
 pub const LASKER_FEN: &str="8/k7/3p4/p2P1p2/P2P1P2/8/8/K7"; //, "w - -", "Kb1")
-
-
 
 fn feni(i: usize) -> usize {
     let x = 7 - i % 8;

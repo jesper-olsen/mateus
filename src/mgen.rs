@@ -109,8 +109,6 @@ pub fn in_check(
             _ => unreachable!(),
         })
         .any(|x| x)
-    // .find(|x| *x)
-    // .is_some()
 }
 
 fn ray_check(frm: usize, moves: u64, bm_board: u64, bm_king: u64) -> bool {
@@ -139,22 +137,19 @@ pub fn moves(
     let last = if let Some(m) = last { m } else { &NULL_MOVE };
 
     let mut v = Vec::with_capacity(50);
-    board
-        .iter()
-        .enumerate()
-        .filter(|(_, &p)| p != NIL && p.colour == colour)
-        .map(|(frm, &p)| match p {
-            N1 | N2 => knight_moves(&mut v, board, frm, bm_own),
-            K1 | K2 => king_moves(
-                &mut v, board, frm, bm_own, bm_board, end_game, can_castle, colour,
-            ),
-            P1 | P2 => pawn_moves(&mut v, board, frm, last, bm_opp, bm_board, colour),
-            R1 | R2 => ray_moves(&mut v, board, frm, BM_ROOK_MOVES[frm], bm_board, bm_own),
-            B1 | B2 => ray_moves(&mut v, board, frm, BM_BISHOP_MOVES[frm], bm_board, bm_own),
-            Q1 | Q2 => ray_moves(&mut v, board, frm, BM_QUEEN_MOVES[frm], bm_board, bm_own),
-            _ => unreachable!(),
-        })
-        .for_each(drop);
+    board.iter().enumerate().for_each(|(frm, &p)| {
+        if p.colour == colour {
+            match p {
+                N1 | N2 => knight_moves(&mut v, board, frm, bm_own),
+                K1 | K2 => king_moves(&mut v, board, frm, bm_own, bm_board, end_game, can_castle),
+                P1 | P2 => pawn_moves(&mut v, board, frm, last, bm_opp, bm_board, colour),
+                R1 | R2 => ray_moves(&mut v, board, frm, BM_ROOK_MOVES[frm], bm_board, bm_own),
+                B1 | B2 => ray_moves(&mut v, board, frm, BM_BISHOP_MOVES[frm], bm_board, bm_own),
+                Q1 | Q2 => ray_moves(&mut v, board, frm, BM_QUEEN_MOVES[frm], bm_board, bm_own),
+                _ => (),
+            }
+        }
+    });
     v
 }
 
@@ -261,14 +256,14 @@ fn king_moves(
     bm_board: u64,
     end_game: bool,
     can_castle: &[bool; 4],
-    colour: bool,
 ) {
     // change king valuation in end_game
-    let p = match (colour, end_game) {
-        (WHITE, false) => K1,
-        (WHITE, true) => K2,
-        (BLACK, false) => K2,
-        (BLACK, true) => K1,
+    let p = match (board[frm], end_game) {
+        (K1, false) => K1,
+        (K1, true) => K2,
+        (K2, false) => K2,
+        (K2, true) => K1,
+        _ => panic!(),
     };
 
     // castling
