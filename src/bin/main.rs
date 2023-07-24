@@ -104,13 +104,13 @@ fn pick_move(moves: &[Move], label: &str) -> Vec<(Move, i16)> {
     }
 }
 
-fn check_game_over(game: &Game, moves: &Vec<Move>, half_moves: isize) -> String {
+fn check_game_over(game: &Game, moves: &Vec<Move>, half_moves: isize, log: &Vec<Move>) -> String {
     if game.rep_count() >= 3 {
         "1/2-1/2 Draw by repetition".to_string()
     } else if game.check_50_move_rule() {
         "1/2-1/2 Draw by the 50-move rule".to_string()
-    } else if half_moves != -1 && half_moves <= game.log.len() as isize {
-        format!("stopping after {} half move(s)", game.log.len())
+    } else if half_moves != -1 && half_moves <= log.len() as isize {
+        format!("stopping after {} half move(s)", log.len())
     } else if moves.is_empty() {
         (match (game.in_check(game.turn()), game.turn()) {
             (true, BLACK) => "1-0",
@@ -200,11 +200,10 @@ fn benchmark(verbose: bool, search_threshold: usize, max_depth: usize) {
         cc[2]=h.contains('k');
         cc[3]=h.contains('q');
 
-        if h.chars().nth(0).unwrap() == 'b' {
+        if h.starts_with('b') {
             game.colour=BLACK;
-            //game.log.push(NULL_MOVE); // dummy to force black
         }
-        let moves = game.legal_moves();
+        let moves = game.legal_moves(None);
         game.n_searched = 0;
 
         let l = game.score_moves(&moves, search_threshold, max_depth, verbose);
@@ -270,11 +269,12 @@ fn play(
     println!("{}", game);
 
     let mut tot = 0;
-    let mut moves = game.legal_moves();
+    let mut moves = game.legal_moves(None);
+    let mut log = Vec::new();
 
     let start = Instant::now();
     loop {
-        let msg = check_game_over(&game, &moves, half_moves);
+        let msg = check_game_over(&game, &moves, half_moves, &log);
         if !msg.is_empty() {
             println!("{}", msg);
             std::process::exit(1);
@@ -332,14 +332,15 @@ fn play(
 
         let label = move2label(&game.board, &m, &moves);
         game.make_move(m);
+        log.push(m);
         println!("{}", game);
-        moves = game.legal_moves();
+        moves = game.legal_moves(Some(&m));
         let s = match (game.in_check(game.turn()), moves.is_empty()) {
             (true, true) => "#",
             (true, false) => "+",
             (false, _) => "",
         };
-        println!("{}. {}{}", game.log.len() / 2 + 1, label, s);
+        println!("{}. {}{}", log.len() / 2 + 1, label, s);
 
         if verbose {
             if game.rep_count() > 1 {

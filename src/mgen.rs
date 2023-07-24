@@ -5,11 +5,11 @@ use std::fmt;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct Move {
-    pub frm: u8,
-    pub to: u8,
     pub castle: bool,
     pub en_passant: bool,
     pub transform: bool,
+    pub frm: u8,
+    pub to: u8,
     pub val: i16,
     pub hash: u64,
 }

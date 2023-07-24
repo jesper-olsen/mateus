@@ -71,13 +71,15 @@ const OPENINGS: [&str;107]=[
 fn main() {
     let mut game = Game::new(fen2board(ROOT_FEN));
     let mut h: HashMap<u64, Vec<(u8, u8)>> = HashMap::new();
+    let mut log = vec![];
     for s in &OPENINGS {
         if &s[0..1] == "#" {
             //println!("Opening: {s}");
             game = Game::new(fen2board(ROOT_FEN));
+            log = vec![];
         } else {
             let (frm, to) = str2move(s);
-            let moves = game.legal_moves();
+            let moves = game.legal_moves(log.last());
             if let Some(m) = moves.iter().find(|m| (m.frm, m.to) == (frm, to)) {
                 h.entry(game.hash)
                     .and_modify(|x| {
@@ -87,6 +89,7 @@ fn main() {
                     })
                     .or_insert(vec![(m.frm, m.to)]);
                 game.update(m);
+                log.push(*m);
             } else {
                 panic!("Not a legal move");
             }

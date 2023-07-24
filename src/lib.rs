@@ -43,7 +43,6 @@ pub struct TTable {
 
 #[derive(Debug)]
 pub struct Game {
-    pub log: Vec<Move>,
     pub board: [Piece; 64],
     pub colour: bool,
     pub n_searched: usize,
@@ -93,7 +92,6 @@ impl Game {
         Game {
             board,
             colour: WHITE,
-            log: vec![],
             n_searched: 0,
             material: material(&board),
             rep: HashMap::from([(key, 1)]),
@@ -118,12 +116,17 @@ impl Game {
         self.ttable.len()
     }
 
-    fn is_quiescent(&self, lastto: u8) -> bool {
+    fn is_quiescent(&self, last: Option<&Move>) -> bool {
         // quiescent unless last move was pawn near promotion
-        match self.board[lastto as usize] {
-            P1 => lastto % 8 != 6,
-            P2 => lastto % 8 != 1,
-            _ => true,
+        if let Some(p) = last {
+            // !self.in_check(self.colour) &&
+            match self.board[p.to as usize] {
+                P1 => p.to % 8 != 6,
+                P2 => p.to % 8 != 1,
+                _ => true,
+            }
+        } else {
+            panic!()
         }
     }
 
@@ -238,19 +241,19 @@ impl Game {
         !flag
     }
 
-    pub fn legal_moves(&mut self) -> Vec<Move> {
-        let mut moves = self.moves(self.colour);
+    pub fn legal_moves(&mut self, last: Option<&Move>) -> Vec<Move> {
+        let mut moves = self.moves(self.colour, last);
         moves.retain(|m| self.legal_move(m));
         moves
     }
 
-    fn moves(&mut self, colour: bool) -> Vec<Move> {
+    fn moves(&mut self, colour: bool, last: Option<&Move>) -> Vec<Move> {
         let mut l = moves(
             &self.board,
             colour,
             self.end_game,
             self.can_castle.last().unwrap(),
-            self.log.last(),
+            last,
             self.bm_white,
             self.bm_black,
         );
@@ -261,11 +264,6 @@ impl Game {
 
     pub fn turn(&self) -> bool {
         self.colour
-        // if self.log.len() % 2 == 0 {
-        //     WHITE
-        // } else {
-        //     BLACK
-        // }
     }
 
     pub fn update(&mut self, m: &Move) {
@@ -278,7 +276,6 @@ impl Game {
             self.board[m.to as usize],
         ));
         self.colour = !self.colour;
-        self.log.push(*m);
         if m.castle {
             let cc = self.can_castle.last().unwrap();
             match self.board[m.frm as usize] {
@@ -320,6 +317,7 @@ impl Game {
         self.rep_inc();
         self.hash ^= m.hash ^ WHITE_HASH;
 
+        // update bitmaps - TODO calculate incrementally; ~6% faster?
         self.bm_pawns = 0;
         self.bm_white = 0;
         self.bm_black = 0;
@@ -360,7 +358,6 @@ impl Game {
             capture,
         ) = bms;
         self.colour = !self.colour;
-        self.log.pop(); // TODO
         self.hash ^= m.hash ^ WHITE_HASH;
         self.rep_dec();
         if m.castle {
@@ -489,7 +486,7 @@ impl Game {
         ply: usize,
         alpha: i16,
         beta: i16,
-        last_to: u8,
+        last: Option<&Move>,
         quiescent: bool,
         rfab: bool,
     ) -> i16 {
@@ -497,15 +494,19 @@ impl Game {
 
         let mut bscore = -INFINITE + ply as i16;
         let mut first = true;
-        for m in self.moves(colour)
+        for m in self.moves(colour, last)
         //   .iter()
         //   .filter(|m| !quiescent || m.en_passant.is_some() || m.capture.0 != NIL)
         //   .filter(|m| !rfab || m.capture.1 == last_to)
         {
-            if (quiescent && !m.en_passant && self.board[m.to as usize] == NIL)
-                || (rfab && !m.en_passant && m.to != last_to)
-            {
-                continue;
+            if let Some(p) = last {
+                //let ic = self.in_check(colour);
+                let ncap = quiescent && !m.en_passant && self.board[m.to as usize] == NIL;
+                let nreply = rfab && !m.en_passant && m.to != p.to;
+                //if !ic && (ncap || nreply) {
+                if ncap || nreply {
+                    continue;
+                }
             }
             self.update(&m);
             if !self.in_check(colour) {
@@ -514,14 +515,14 @@ impl Game {
                 let quiescent = if quiescent {
                     true
                 } else {
-                    self.is_quiescent(m.to)
+                    self.is_quiescent(Some(&m))
                 };
                 let rfab = quiescent;
                 let score = -self.quiescence_fab(
                     ply + 1,
                     -beta,
                     -max(alpha, bscore),
-                    m.to,
+                    Some(&m),
                     quiescent,
                     rfab,
                 );
@@ -542,7 +543,7 @@ impl Game {
         }
     } // fn quiescence fab
 
-    pub fn pvs(&mut self, dpt: usize, ply: usize, alp: i16, bet: i16, lastto: u8) -> i16 {
+    pub fn pvs(&mut self, dpt: usize, ply: usize, alp: i16, bet: i16, last: Option<&Move>) -> i16 {
         if self.rep_count() >= 2 {
             return 0;
         }
@@ -553,7 +554,7 @@ impl Game {
         let mut bmove = None;
         let colour = self.colour;
 
-        let depth = if self.in_check(colour) { dpt + 1 } else { dpt };
+        let mut depth = if self.in_check(colour) { dpt + 1 } else { dpt };
 
         let mut kmove = None;
         let key = self.hash;
@@ -574,10 +575,14 @@ impl Game {
         }
 
         if depth == 0 {
-            return self.quiescence_fab(ply, alpha, beta, lastto, self.is_quiescent(lastto), false);
+            if self.is_quiescent(last) {
+                return self.quiescence_fab(ply, alpha, beta, last, self.is_quiescent(last), false);
+            } else {
+                depth = 1;
+            }
         }
 
-        let mut moves = self.moves(colour);
+        let mut moves = self.moves(colour, last);
         if let Some(k) = kmove {
             move_to_head(&mut moves, &k);
         }
@@ -586,14 +591,14 @@ impl Game {
             if !self.in_check(colour) {
                 // legal move
                 if bmove.is_none() {
-                    bscore = -self.pvs(depth - 1, ply + 1, -beta, -alpha, m.to); // full beam
+                    bscore = -self.pvs(depth - 1, ply + 1, -beta, -alpha, Some(m)); // full beam
                     bmove = Some(m);
                 } else {
                     let mut score =
-                        -self.pvs(depth - 1, ply + 1, -alpha - 1, -max(bscore, alpha), m.to);
+                        -self.pvs(depth - 1, ply + 1, -alpha - 1, -max(bscore, alpha), Some(m));
                     if score > bscore {
                         if score > max(bscore, alpha) && score < beta && depth > 2 {
-                            score = -self.pvs(depth - 1, ply + 1, -beta, -score, m.to);
+                            score = -self.pvs(depth - 1, ply + 1, -beta, -score, Some(m));
                         }
                         bscore = score;
                         bmove = Some(m);
@@ -649,14 +654,14 @@ impl Game {
                 alpha = max(bscore, alpha);
                 let mut score = if i == 0 {
                     // full beam
-                    -self.pvs(depth - 1, 1, -beta, -alpha, m.to)
+                    -self.pvs(depth - 1, 1, -beta, -alpha, Some(m))
                 } else {
-                    -self.pvs(depth - 1, 1, -alpha - 1, -alpha, m.to)
+                    -self.pvs(depth - 1, 1, -alpha - 1, -alpha, Some(m))
                 };
 
                 if score > bscore {
                     if score > alpha && score < beta && depth > 2 {
-                        score = -self.pvs(depth - 1, 1, -beta, -score, m.to);
+                        score = -self.pvs(depth - 1, 1, -beta, -score, Some(m));
                     }
                     bscore = score;
                 }
