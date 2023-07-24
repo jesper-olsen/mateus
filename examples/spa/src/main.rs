@@ -1,5 +1,6 @@
 use gloo::console;
 use js_sys::Date;
+use puccinia_s_checkmate::mgen::Move;
 use puccinia_s_checkmate::openings::*;
 use puccinia_s_checkmate::val::*;
 use puccinia_s_checkmate::Game;
@@ -15,6 +16,7 @@ pub struct App {
     value: i64,
     status: String,
     game: Game, // chess game
+    log: Vec<Move>,
 }
 
 impl Component for App {
@@ -26,6 +28,7 @@ impl Component for App {
             value: 0,
             status: String::from("Fancy a nice game of chess?"),
             game: Game::new(ROOT_BOARD),
+            log: Vec::new(),
         }
     }
 
@@ -33,12 +36,13 @@ impl Component for App {
         match msg {
             Msg::Step => {
                 self.value += 1;
-                console::log!("plus one"); // Will output a string to the browser console
-                let moves = self.game.legal_moves();
+                console::log!("step");
+                let moves = self.game.legal_moves(self.log.last());
                 let l = self.game.score_moves(&moves, 100000, 25, false);
                 if l.len() > 0 {
                     let (m, _score) = l[0];
                     self.game.make_move(m);
+                    self.log.push(m);
                 }
                 self.status = match self.game.turn() {
                     WHITE => String::from("White's Turn"),
@@ -50,6 +54,7 @@ impl Component for App {
             Msg::NewGame => {
                 self.game = Game::new(ROOT_BOARD);
                 self.status = String::from("Let's play chess");
+                self.log.retain(|_| false);
                 console::log!("new game");
                 true // true=>update display
             }
