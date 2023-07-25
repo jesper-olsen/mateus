@@ -257,7 +257,7 @@ impl Game {
             self.bm_white,
             self.bm_black,
         );
-        l.sort_by(|b, a| a.val.cmp(&b.val)); // slower but less search
+        l.sort_by(|b, a| a.val.cmp(&b.val)); // decreasing
         self.n_searched += l.len();
         l
     }
@@ -494,20 +494,19 @@ impl Game {
 
         let mut bscore = -INFINITE + ply as i16;
         let mut first = true;
-        for m in self.moves(colour, last)
-        //   .iter()
-        //   .filter(|m| !quiescent || m.en_passant.is_some() || m.capture.0 != NIL)
-        //   .filter(|m| !rfab || m.capture.1 == last_to)
-        {
-            if let Some(p) = last {
+        let mut moves = self.moves(colour, last);
+        if let Some(p) = last {
+            moves.retain(|m| 
                 //let ic = self.in_check(colour);
-                let ncap = quiescent && !m.en_passant && self.board[m.to as usize] == NIL;
-                let nreply = rfab && !m.en_passant && m.to != p.to;
-                //if !ic && (ncap || nreply) {
-                if ncap || nreply {
-                    continue;
+                if rfab {
+                    m.en_passant || m.to == p.to
+                } else {
+                    m.en_passant || self.board[m.to as usize] != NIL
                 }
-            }
+            )
+        }
+        for m in moves
+        {
             self.update(&m);
             if !self.in_check(colour) {
                 // legal move
@@ -668,7 +667,7 @@ impl Game {
                 self.backdate(m);
                 pq.push((*m, score));
             }
-            pq.sort_by(|b, a| a.1.cmp(&b.1));
+            pq.sort_by(|b, a| a.1.cmp(&b.1)); // decreasing
             pq0 = pq;
             if verbose {
                 println!(

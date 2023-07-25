@@ -118,6 +118,12 @@ fn ray_check(frm: usize, moves: u64, bm_board: u64, bm_king: u64) -> bool {
     (moves & !bl & bm_king) != 0
 }
 
+struct Bitmaps {
+    bm_board: u64,
+    bm_own: u64,
+    bm_opp: u64,
+}
+
 pub fn moves(
     board: &[Piece; 64],
     colour: bool,
@@ -134,18 +140,24 @@ pub fn moves(
     };
     let bm_board = bm_white | bm_black;
 
+    let bitmaps = Bitmaps {
+        bm_board,
+        bm_own,
+        bm_opp,
+    };
+
     let last = if let Some(m) = last { m } else { &NULL_MOVE };
 
     let mut v = Vec::with_capacity(50);
     board.iter().enumerate().for_each(|(frm, &p)| {
         if p.colour == colour {
             match p {
-                N1 | N2 => knight_moves(&mut v, board, frm, bm_own),
-                K1 | K2 => king_moves(&mut v, board, frm, bm_own, bm_board, end_game, can_castle),
-                P1 | P2 => pawn_moves(&mut v, board, frm, last, bm_opp, bm_board, colour),
-                R1 | R2 => ray_moves(&mut v, board, frm, BM_ROOK_MOVES[frm], bm_board, bm_own),
-                B1 | B2 => ray_moves(&mut v, board, frm, BM_BISHOP_MOVES[frm], bm_board, bm_own),
-                Q1 | Q2 => ray_moves(&mut v, board, frm, BM_QUEEN_MOVES[frm], bm_board, bm_own),
+                N1 | N2 => knight_moves(&mut v, board, frm, &bitmaps),
+                K1 | K2 => king_moves(&mut v, board, frm, &bitmaps, end_game, can_castle),
+                P1 | P2 => pawn_moves(&mut v, board, frm, last, &bitmaps, colour),
+                R1 | R2 => ray_moves(&mut v, board, frm, BM_ROOK_MOVES[frm], &bitmaps),
+                B1 | B2 => ray_moves(&mut v, board, frm, BM_BISHOP_MOVES[frm], &bitmaps),
+                Q1 | Q2 => ray_moves(&mut v, board, frm, BM_QUEEN_MOVES[frm], &bitmaps),
                 _ => (),
             }
         }
@@ -153,9 +165,9 @@ pub fn moves(
     v
 }
 
-fn knight_moves(v: &mut Vec<Move>, board: &[Piece; 64], frm: usize, bm_own: u64) {
+fn knight_moves(v: &mut Vec<Move>, board: &[Piece; 64], frm: usize, bitmaps: &Bitmaps) {
     v.extend(
-        bm2vec(BM_KNIGHT_MOVES[frm] & !bm_own)
+        bm2vec(BM_KNIGHT_MOVES[frm] & !bitmaps.bm_own)
             .iter()
             .map(|&to| Move {
                 frm: frm as u8,
@@ -171,26 +183,25 @@ fn knight_moves(v: &mut Vec<Move>, board: &[Piece; 64], frm: usize, bm_own: u64)
     );
 }
 
-fn ray_moves(
-    v: &mut Vec<Move>,
-    board: &[Piece; 64],
-    frm: usize,
-    moves: u64,
-    bm_board: u64,
-    bm_own: u64,
-) {
-    let bl: u64 = bm2vec(moves & bm_board)
+fn ray_moves(v: &mut Vec<Move>, board: &[Piece; 64], frm: usize, moves: u64, bitmaps: &Bitmaps) {
+    let bl: u64 = bm2vec(moves & bitmaps.bm_board)
         .iter()
         .fold(0, |a, i| a | BM_BLOCKED[frm][*i]);
-    v.extend(bm2vec(moves & !bl & !bm_own).iter().map(|&to| Move {
-        frm: frm as u8,
-        to: to as u8,
-        castle: false,
-        en_passant: false,
-        transform: false,
-        val: pval(board[frm], to) - pval(board[frm], frm) - pval(board[to], to),
-        hash: phashkey(board[frm], to) ^ phashkey(board[frm], frm) ^ phashkey(board[to], to),
-    }));
+    v.extend(
+        bm2vec(moves & !bl & !bitmaps.bm_own)
+            .iter()
+            .map(|&to| Move {
+                frm: frm as u8,
+                to: to as u8,
+                castle: false,
+                en_passant: false,
+                transform: false,
+                val: pval(board[frm], to) - pval(board[frm], frm) - pval(board[to], to),
+                hash: phashkey(board[frm], to)
+                    ^ phashkey(board[frm], frm)
+                    ^ phashkey(board[to], to),
+            }),
+    );
 }
 
 fn pt(p: Piece, to: usize) -> Piece {
@@ -206,15 +217,14 @@ fn pawn_moves(
     board: &[Piece; 64],
     frm: usize,
     last: &Move,
-    bm_opp: u64,
-    bm_board: u64,
+    bitmaps: &Bitmaps,
     colour: bool,
 ) {
     let cidx = if colour { 0 } else { 1 };
-    let cap = BM_PAWN_CAPTURES[cidx][frm] & bm_opp;
-    let step1: u64 = BM_PAWN_STEP1[cidx][frm] & !bm_board;
+    let cap = BM_PAWN_CAPTURES[cidx][frm] & bitmaps.bm_opp;
+    let step1: u64 = BM_PAWN_STEP1[cidx][frm] & !bitmaps.bm_board;
     let step2: u64 = if colour { step1 << 1 } else { step1 >> 1 };
-    let step2: u64 = step2 & BM_PAWN_STEP2[cidx][frm] & !bm_board;
+    let step2: u64 = step2 & BM_PAWN_STEP2[cidx][frm] & !bitmaps.bm_board;
     let vto = bm2vec(cap | step1 | step2);
 
     v.extend(vto.iter().map(|&to| Move {
@@ -258,8 +268,7 @@ fn king_moves(
     v: &mut Vec<Move>,
     board: &[Piece; 64],
     frm: usize,
-    bm_own_pieces: u64,
-    bm_board: u64,
+    bitmaps: &Bitmaps,
     end_game: bool,
     can_castle: &[bool; 4],
 ) {
@@ -281,18 +290,18 @@ fn king_moves(
 
     #[rustfmt::skip]
     let cc2 = [
-        (can_castle[0] && frm == 24 && board[0] == R1 && bm_board & WSHORT == 0,
+        (can_castle[0] && frm == 24 && board[0] == R1 && bitmaps.bm_board & WSHORT == 0,
          K1, R1, 8, 0, 16,),
-        (can_castle[1] && frm == 24 && board[56] == R1 && bm_board & WLONG == 0,
+        (can_castle[1] && frm == 24 && board[56] == R1 && bitmaps.bm_board & WLONG == 0,
          K1, R1, 48, 56, 32,),
-        (can_castle[2] && frm == 31 && board[7] == R2 && bm_board & BSHORT == 0,
+        (can_castle[2] && frm == 31 && board[7] == R2 && bitmaps.bm_board & BSHORT == 0,
          K2, R2, 15, 7, 23,),
-        (can_castle[3] && frm == 31 && board[63] == R2 && bm_board & BLONG == 0,
+        (can_castle[3] && frm == 31 && board[63] == R2 && bitmaps.bm_board & BLONG == 0,
          K2, R2, 55, 63, 39,),
     ];
 
     v.extend(
-        bm2vec(BM_KING_MOVES[frm] & !bm_own_pieces)
+        bm2vec(BM_KING_MOVES[frm] & !bitmaps.bm_own)
             .iter()
             .map(|&to| Move {
                 frm: frm as u8,
