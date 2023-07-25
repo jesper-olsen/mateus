@@ -487,7 +487,6 @@ impl Game {
         alpha: i16,
         beta: i16,
         last: Option<&Move>,
-        quiescent: bool,
         rfab: bool,
     ) -> i16 {
         let colour = self.colour;
@@ -499,7 +498,7 @@ impl Game {
             moves.retain(|m| 
                 //let ic = self.in_check(colour);
                 if rfab {
-                    m.en_passant || m.to == p.to
+                    m.to == p.to
                 } else {
                     m.en_passant || self.board[m.to as usize] != NIL
                 }
@@ -511,19 +510,12 @@ impl Game {
             if !self.in_check(colour) {
                 // legal move
                 first = false;
-                let quiescent = if quiescent {
-                    true
-                } else {
-                    self.is_quiescent(Some(&m))
-                };
-                let rfab = quiescent;
                 let score = -self.quiescence_fab(
                     ply + 1,
                     -beta,
                     -max(alpha, bscore),
                     Some(&m),
-                    quiescent,
-                    rfab,
+                    true,
                 );
                 if score > bscore {
                     bscore = score;
@@ -575,7 +567,7 @@ impl Game {
 
         if depth == 0 {
             if self.is_quiescent(last) {
-                return self.quiescence_fab(ply, alpha, beta, last, self.is_quiescent(last), false);
+                return self.quiescence_fab(ply, alpha, beta, last, false);
             } else {
                 depth = 1;
             }

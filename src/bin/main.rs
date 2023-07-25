@@ -78,7 +78,7 @@ fn move2label(board: &[Piece; 64], m: &Move, moves: &Vec<Move>) -> String {
         let n = if l[0] == l[1] { 1 } else { 0 };
         label.push(l[0].chars().nth(n).unwrap());
     }
-    if m.en_passant || board[m.to as usize]!=NIL {
+    if m.en_passant || board[m.to as usize] != NIL {
         // TODO ?
         if board[m.frm as usize].ptype == PType::Pawn {}
         label.push('x');
@@ -194,14 +194,14 @@ fn benchmark(verbose: bool, search_threshold: usize, max_depth: usize) {
     for (i, (fen, h, label)) in a.iter().enumerate() {
         let board = fen2board(fen);
         let mut game = Game::new(board);
-        let cc=game.can_castle.last_mut().unwrap();
-        cc[0]=h.contains('K');
-        cc[1]=h.contains('Q');
-        cc[2]=h.contains('k');
-        cc[3]=h.contains('q');
+        let cc = game.can_castle.last_mut().unwrap();
+        cc[0] = h.contains('K');
+        cc[1] = h.contains('Q');
+        cc[2] = h.contains('k');
+        cc[3] = h.contains('q');
 
         if h.starts_with('b') {
-            game.colour=BLACK;
+            game.colour = BLACK;
         }
         let moves = game.legal_moves(None);
         game.n_searched = 0;
@@ -242,9 +242,7 @@ fn benchmark(verbose: bool, search_threshold: usize, max_depth: usize) {
         println!("Points: {points}");
 
         let dur = (Instant::now() - start).as_millis();
-        println!(
-            "Time: {dur} ms => {} ms/position", dur / (i + 1) as u128
-        );
+        println!("Time: {dur} ms => {} ms/position", dur / (i + 1) as u128);
         let speed = if let Some(speed) = (n_searched as u128).checked_div(dur) {
             speed as usize
         } else {
@@ -297,7 +295,7 @@ fn play(
                 };
                 let i = random::<usize>() % lmoves.len();
                 let (frm, to) = lmoves[i];
-                if let Some(m) = moves.iter().find(|m| (m.frm, m.to) == (frm,to)) {
+                if let Some(m) = moves.iter().find(|m| (m.frm, m.to) == (frm, to)) {
                     println!("Library Move {} ", m);
                     vec![(*m, 0i16)]
                 } else {
