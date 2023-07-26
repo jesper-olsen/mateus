@@ -257,7 +257,11 @@ impl Game {
             self.bm_white,
             self.bm_black,
         );
-        l.sort_by(|b, a| a.val.cmp(&b.val)); // decreasing
+        if colour {
+            l.sort_by(|b, a| a.val.cmp(&b.val)); // decreasing
+        } else {
+            l.sort_by(|a, b| a.val.cmp(&b.val)); // increasing
+        }
         self.n_searched += l.len();
         l
     }
@@ -495,7 +499,7 @@ impl Game {
         let mut first = true;
         let mut moves = self.moves(colour, last);
         if let Some(p) = last {
-            moves.retain(|m| 
+            moves.retain(|m|
                 //let ic = self.in_check(colour);
                 if rfab {
                     m.to == p.to
@@ -504,19 +508,13 @@ impl Game {
                 }
             )
         }
-        for m in moves
-        {
+        for m in moves {
             self.update(&m);
             if !self.in_check(colour) {
                 // legal move
                 first = false;
-                let score = -self.quiescence_fab(
-                    ply + 1,
-                    -beta,
-                    -max(alpha, bscore),
-                    Some(&m),
-                    true,
-                );
+                let score =
+                    -self.quiescence_fab(ply + 1, -beta, -max(alpha, bscore), Some(&m), true);
                 if score > bscore {
                     bscore = score;
                     if bscore >= beta {
@@ -583,6 +581,7 @@ impl Game {
                 // legal move
                 if bmove.is_none() {
                     bscore = -self.pvs(depth - 1, ply + 1, -beta, -alpha, Some(m)); // full beam
+                    alpha = max(bscore, alpha);
                     bmove = Some(m);
                 } else {
                     let mut score =
@@ -592,6 +591,7 @@ impl Game {
                             score = -self.pvs(depth - 1, ply + 1, -beta, -score, Some(m));
                         }
                         bscore = score;
+                        alpha = max(bscore, alpha);
                         bmove = Some(m);
                     }
                 }
