@@ -3,25 +3,13 @@ use crate::hashkeys::phashkey;
 use crate::val::*;
 use std::fmt;
 
-//const CASTLE_BIT: u8 = 0;
-//const EN_PASSANT_BIT: u8 = 1;
-//const TRANSFORM_BIT: u8 = 2;
-//
-//const fn pack_flags(castle: bool, en_passant: bool, transform: bool) -> u8 {
-//    ((castle as u8) << CASTLE_BIT)
-//        | ((en_passant as u8) << EN_PASSANT_BIT)
-//        | ((transform as u8) << TRANSFORM_BIT)
-//}
-
-const fn pack_flags(castle: bool, en_passant: bool, transform: bool) -> (bool,bool,bool) {
-    (castle,en_passant,transform)
+const fn pack_flags(castle: bool, en_passant: bool, transform: bool) -> (bool, bool, bool) {
+    (castle, en_passant, transform)
 }
-
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct Move {
-    //flags: u8,
-    flags: (bool,bool,bool),
+    flags: (bool, bool, bool),
     frmto: (u8, u8),
     pub val: i16,
     pub hash: u64,
@@ -29,15 +17,12 @@ pub struct Move {
 
 impl Move {
     pub fn castle(&self) -> bool {
-        //(self.flags & 1 << CASTLE_BIT) != 0
         self.flags.0
     }
     pub fn en_passant(&self) -> bool {
-        //(self.flags & 1 << EN_PASSANT_BIT) != 0
         self.flags.1
     }
     pub fn transform(&self) -> bool {
-        //(self.flags & 1 << TRANSFORM_BIT) != 0
         self.flags.2
     }
     pub fn frm(&self) -> usize {

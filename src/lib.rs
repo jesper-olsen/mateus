@@ -192,10 +192,7 @@ impl Game {
     }
 
     pub fn make_move(&mut self, m: Move) {
-        if m.en_passant()
-            || self.board[m.to()] != NIL
-            || [P1, P2].contains(&self.board[m.frm()])
-        {
+        if m.en_passant() || self.board[m.to()] != NIL || [P1, P2].contains(&self.board[m.frm()]) {
             self.rep_clear(); // ireversible move
         }
         self.ttable_clear();
@@ -567,12 +564,10 @@ impl Game {
             kmove = Some(e.m);
         }
 
-        if depth == 0 {
-            if self.is_quiescent(last) {
-                return self.quiescence_fab(ply, alpha, beta, last, false);
-            } else {
-                depth = 1;
-            }
+        match depth {
+            0 if self.is_quiescent(last) => return self.quiescence_fab(ply, alpha, beta, last, false),
+            0 => depth = 1,
+            _ => (),
         }
 
         let mut moves = self.moves(colour, last);
