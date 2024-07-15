@@ -219,7 +219,7 @@ impl Game {
     pub fn in_check(&self, colour: bool) -> bool {
         // true if other side can capture king
 
-        in_check(
+        mgen::in_check(
             &self.board,
             colour,
             self.bm_wking,
@@ -485,7 +485,6 @@ impl Game {
     fn quiescence_fab(&mut self, ply: usize, alp: i16, beta: i16, last: &Move, rfab: bool) -> i16 {
         let colour = self.colour;
 
-        //let mut bscore = -INFINITE + ply as i16;
         let mut bscore = None;
         let mut alpha = alp;
         let mut moves = self.moves(colour, Some(last));
@@ -534,7 +533,8 @@ impl Game {
         let mut bmove = None;
         let colour = self.colour;
 
-        let mut depth = if self.in_check(colour) { dpt + 1 } else { dpt };
+        let in_check = self.in_check(colour);
+        let mut depth = if in_check { dpt + 1 } else { dpt };
 
         let mut kmove = None;
         let key = self.hash;
@@ -599,11 +599,18 @@ impl Game {
             self.ttstore(depth, bscore, alp, beta, m);
         }
 
-        if bmove.is_none() && !self.in_check(colour) {
-            0
-        } else {
-            bscore
+        match (bmove, in_check) {
+            (None, false) => 0,
+            (None, true) if colour => bscore,
+            (None, true) => -bscore,
+            _ => bscore,
         }
+
+        //        if bmove.is_none() && !in_check {
+        //            0
+        //        } else {
+        //            bscore
+        //        }
     }
 
     pub fn score_moves(
