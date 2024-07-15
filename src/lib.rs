@@ -119,17 +119,13 @@ impl Game {
         self.ttable.len()
     }
 
-    fn is_quiescent(&self, last: Option<&Move>) -> bool {
+    fn is_quiescent(&self, last: &Move) -> bool {
         // quiescent unless last move was pawn near promotion
-        if let Some(p) = last {
-            // !self.in_check(self.colour) &&
-            match self.board[p.to()] {
-                P1 => p.to() % 8 != 6,
-                P2 => p.to() % 8 != 1,
-                _ => true,
-            }
-        } else {
-            panic!()
+        // !self.in_check(self.colour) &&
+        match self.board[last.to()] {
+            P1 => last.to() % 8 != 6,
+            P2 => last.to() % 8 != 1,
+            _ => true,
         }
     }
 
@@ -491,31 +487,29 @@ impl Game {
         ply: usize,
         alpha: i16,
         beta: i16,
-        last: Option<&Move>,
+        last: &Move,
         rfab: bool,
     ) -> i16 {
         let colour = self.colour;
 
         let mut bscore = -INFINITE + ply as i16;
         let mut first = true;
-        let mut moves = self.moves(colour, last);
-        if let Some(p) = last {
-            moves.retain(|m|
-                //let ic = self.in_check(colour);
-                if rfab {
-                    m.to() == p.to()
-                } else {
-                    m.en_passant() || self.board[m.to()] != NIL
-                }
-            )
-        }
+        let mut moves = self.moves(colour, Some(last));
+        moves.retain(|m|
+            //let ic = self.in_check(colour);
+            if rfab {
+                m.to() == last.to()
+            } else {
+                m.en_passant() || self.board[m.to()] != NIL
+            }
+        );
         for m in moves {
             self.update(&m);
             if !self.in_check(colour) {
                 // legal move
                 first = false;
                 let score =
-                    -self.quiescence_fab(ply + 1, -beta, -max(alpha, bscore), Some(&m), true);
+                    -self.quiescence_fab(ply + 1, -beta, -max(alpha, bscore), &m, true);
                 if score > bscore {
                     bscore = score;
                     if bscore >= beta {
@@ -533,7 +527,7 @@ impl Game {
         }
     } // fn quiescence fab
 
-    pub fn pvs(&mut self, dpt: usize, ply: usize, alp: i16, bet: i16, last: Option<&Move>) -> i16 {
+    pub fn pvs(&mut self, dpt: usize, ply: usize, alp: i16, bet: i16, last: &Move) -> i16 {
         if self.rep_count() >= 2 {
             return 0;
         }
@@ -570,7 +564,7 @@ impl Game {
             _ => (),
         }
 
-        let mut moves = self.moves(colour, last);
+        let mut moves = self.moves(colour, Some(last));
         if let Some(k) = kmove {
             move_to_head(&mut moves, &k);
         }
@@ -579,15 +573,15 @@ impl Game {
             if !self.in_check(colour) {
                 // legal move
                 if bmove.is_none() {
-                    bscore = -self.pvs(depth - 1, ply + 1, -beta, -alpha, Some(m)); // full beam
+                    bscore = -self.pvs(depth - 1, ply + 1, -beta, -alpha, m); // full beam
                     alpha = max(bscore, alpha);
                     bmove = Some(m);
                 } else {
                     let mut score =
-                        -self.pvs(depth - 1, ply + 1, -alpha - 1, -max(bscore, alpha), Some(m));
+                        -self.pvs(depth - 1, ply + 1, -alpha - 1, -max(bscore, alpha), m);
                     if score > bscore {
                         if score > max(bscore, alpha) && score < beta && depth > 2 {
-                            score = -self.pvs(depth - 1, ply + 1, -beta, -score, Some(m));
+                            score = -self.pvs(depth - 1, ply + 1, -beta, -score, m);
                         }
                         bscore = score;
                         alpha = max(bscore, alpha);
@@ -644,14 +638,14 @@ impl Game {
                 alpha = max(bscore, alpha);
                 let mut score = if i == 0 {
                     // full beam
-                    -self.pvs(depth - 1, 1, -beta, -alpha, Some(m))
+                    -self.pvs(depth - 1, 1, -beta, -alpha, m)
                 } else {
-                    -self.pvs(depth - 1, 1, -alpha - 1, -alpha, Some(m))
+                    -self.pvs(depth - 1, 1, -alpha - 1, -alpha, m)
                 };
 
                 if score > bscore {
                     if score > alpha && score < beta && depth > 2 {
-                        score = -self.pvs(depth - 1, 1, -beta, -score, Some(m));
+                        score = -self.pvs(depth - 1, 1, -beta, -score, m);
                     }
                     bscore = score;
                 }
