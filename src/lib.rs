@@ -75,7 +75,7 @@ impl fmt::Display for Game {
 }
 
 fn move_to_head(moves: &mut Vec<Move>, k: &Move) {
-    if let Some(q) = moves.iter().position(|m| (m.frm, m.to) == (k.frm, k.to)) {
+    if let Some(q) = moves.iter().position(|m| (m.frm(), m.to()) == (k.frm(), k.to())) {
         if q != 0 {
             let m = moves.remove(q);
             //let m = moves.swap_remove(q);
@@ -120,9 +120,9 @@ impl Game {
         // quiescent unless last move was pawn near promotion
         if let Some(p) = last {
             // !self.in_check(self.colour) &&
-            match self.board[p.to as usize] {
-                P1 => p.to % 8 != 6,
-                P2 => p.to % 8 != 1,
+            match self.board[p.to() as usize] {
+                P1 => p.to() % 8 != 6,
+                P2 => p.to() % 8 != 1,
                 _ => true,
             }
         } else {
@@ -189,9 +189,9 @@ impl Game {
     }
 
     pub fn make_move(&mut self, m: Move) {
-        if m.en_passant
-            || self.board[m.to as usize] != NIL
-            || [P1, P2].contains(&self.board[m.frm as usize])
+        if m.en_passant()
+            || self.board[m.to() as usize] != NIL
+            || [P1, P2].contains(&self.board[m.frm() as usize])
         {
             self.rep_clear(); // ireversible move
         }
@@ -203,7 +203,7 @@ impl Game {
 
         //update castling permissions
         let cc = self.can_castle.last_mut().unwrap();
-        match (*cc, self.board[m.to as usize], m.frm) {
+        match (*cc, self.board[m.to() as usize], m.frm()) {
             ([true, _, _, _], K1, 24) => (cc[0], cc[1]) = (false, false),
             ([_, true, _, _], K1, 24) => (cc[0], cc[1]) = (false, false),
             ([_, _, true, _], K2, 31) => (cc[2], cc[3]) = (false, false),
@@ -234,7 +234,7 @@ impl Game {
 
     fn legal_move(&mut self, m: &Move) -> bool {
         // verify move does not expose own king
-        let colour = self.board[m.frm as usize].colour;
+        let colour = self.board[m.frm() as usize].colour;
         self.update(m);
         let flag = self.in_check(colour);
         self.backdate(m);
@@ -277,46 +277,46 @@ impl Game {
             self.bm_black,
             self.bm_wking,
             self.bm_bking,
-            self.board[m.to as usize],
+            self.board[m.to() as usize],
         ));
         self.colour = !self.colour;
-        if m.castle {
+        if m.castle() {
             let cc = self.can_castle.last().unwrap();
-            match self.board[m.frm as usize] {
+            match self.board[m.frm() as usize] {
                 K1 => self.can_castle.push([false, false, cc[2], cc[3]]),
                 K2 => self.can_castle.push([cc[0], cc[1], false, false]),
                 _ => (),
             }
 
-            let (x, y) = if m.to <= 15 {
-                (m.frm - 24, m.frm - 8) // short
+            let (x, y) = if m.to() <= 15 {
+                (m.frm() - 24, m.frm() - 8) // short
             } else {
-                (m.frm + 32, m.frm + 8) // long
+                (m.frm() + 32, m.frm() + 8) // long
             };
             self.board[y as usize] = self.board[x as usize];
             self.board[x as usize] = NIL;
         }
-        if m.en_passant {
+        if m.en_passant() {
             // +9  +1 -7
             // +8   0 -8
             // +7  -1 -9
-            let x = match m.to > m.frm {
-                true => m.frm + 8,  // west
-                false => m.frm - 8, // w east
+            let x = match m.to() > m.frm() {
+                true => m.frm() + 8,  // west
+                false => m.frm() - 8, // w east
             };
             self.board[x as usize] = NIL;
         }
 
-        if m.transform {
-            self.board[m.to as usize] = match m.to % 8 {
+        if m.transform() {
+            self.board[m.to() as usize] = match m.to() % 8 {
                 7 => Q1,
                 0 => Q2,
                 _ => panic!(),
             }
         } else {
-            self.board[m.to as usize] = self.board[m.frm as usize];
+            self.board[m.to() as usize] = self.board[m.frm() as usize];
         }
-        self.board[m.frm as usize] = NIL;
+        self.board[m.frm() as usize] = NIL;
         self.material += m.val;
         self.rep_inc();
         self.hash ^= m.hash ^ WHITE_HASH;
@@ -364,33 +364,33 @@ impl Game {
         self.colour = !self.colour;
         self.hash ^= m.hash ^ WHITE_HASH;
         self.rep_dec();
-        if m.castle {
+        if m.castle() {
             self.can_castle.pop();
-            let (frm, to) = if m.to <= 15 {
-                (m.frm - 24, m.frm - 8) // short
+            let (frm, to) = if m.to() <= 15 {
+                (m.frm() - 24, m.frm() - 8) // short
             } else {
-                (m.frm + 32, m.frm + 8) // long
+                (m.frm() + 32, m.frm() + 8) // long
             };
             self.board[frm as usize] = self.board[to as usize];
             self.board[to as usize] = NIL;
         }
-        if m.transform {
-            self.board[m.frm as usize] = match m.to % 8 {
+        if m.transform() {
+            self.board[m.frm() as usize] = match m.to() % 8 {
                 7 => P1,
                 0 => P2,
                 _ => panic!(),
             }
         } else {
-            self.board[m.frm as usize] = self.board[m.to as usize];
+            self.board[m.frm() as usize] = self.board[m.to() as usize];
         }
-        self.board[m.to as usize] = capture;
+        self.board[m.to() as usize] = capture;
 
-        if m.en_passant {
-            let x = match m.to > m.frm {
-                true => m.frm + 8,  // west
-                false => m.frm - 8, // w east
+        if m.en_passant() {
+            let x = match m.to() > m.frm() {
+                true => m.frm() + 8,  // west
+                false => m.frm() - 8, // w east
             };
-            let p = if self.board[m.frm as usize].colour == WHITE {
+            let p = if self.board[m.frm() as usize].colour == WHITE {
                 P2
             } else {
                 P1
@@ -502,9 +502,9 @@ impl Game {
             moves.retain(|m|
                 //let ic = self.in_check(colour);
                 if rfab {
-                    m.to == p.to
+                    m.to() == p.to()
                 } else {
-                    m.en_passant || self.board[m.to as usize] != NIL
+                    m.en_passant() || self.board[m.to() as usize] != NIL
                 }
             )
         }
@@ -617,7 +617,7 @@ impl Game {
 
     pub fn score_moves(
         &mut self,
-        moves: &Vec<Move>,
+        moves: &[Move],
         max_searched: usize,
         max_depth: usize,
         verbose: bool,

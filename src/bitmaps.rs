@@ -210,7 +210,6 @@ const fn bm_black_pawn_step2_from(frm: usize) -> u64 {
     }
 }
 
-///
 const fn bm_pawn_step1() -> [[u64; 64]; 2] {
     let mut bm = [[0u64; 64]; 2];
     let mut i = 0;

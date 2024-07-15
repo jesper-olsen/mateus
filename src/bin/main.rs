@@ -53,24 +53,24 @@ fn i2str(i: u8) -> String {
 //https://cheatography.com/davechild/cheat-sheets/chess-algebraic-notation/
 fn move2label(board: &[Piece; 64], m: &Move, moves: &Vec<Move>) -> String {
     let mut label = String::new();
-    if m.castle {
-        if m.to < 31 {
+    if m.castle() {
+        if m.to() < 31 {
             label.push_str("0-0 ");
         } else {
             label.push_str("0-0-0 ");
         }
-    } else if m.transform {
+    } else if m.transform() {
         label.push('*');
     }
-    if board[m.frm as usize].ptype != PType::Pawn {
-        let p = format!("{}", board[m.frm as usize]).to_uppercase();
+    if board[m.frm() as usize].ptype != PType::Pawn {
+        let p = format!("{}", board[m.frm() as usize]).to_uppercase();
         label.push_str(&p);
     }
 
     let mut l = Vec::new();
     for m2 in moves {
-        if m2.to == m.to && board[m.frm as usize].ptype == board[m2.frm as usize].ptype {
-            l.push(i2str(m2.to));
+        if m2.to() == m.to() && board[m.frm() as usize].ptype == board[m2.frm() as usize].ptype {
+            l.push(i2str(m2.to()));
         }
     }
     if l.len() > 1 {
@@ -78,12 +78,12 @@ fn move2label(board: &[Piece; 64], m: &Move, moves: &Vec<Move>) -> String {
         let n = if l[0] == l[1] { 1 } else { 0 };
         label.push(l[0].chars().nth(n).unwrap());
     }
-    if m.en_passant || board[m.to as usize] != NIL {
+    if m.en_passant() || board[m.to() as usize] != NIL {
         // TODO ?
-        if board[m.frm as usize].ptype == PType::Pawn {}
+        if board[m.frm() as usize].ptype == PType::Pawn {}
         label.push('x');
     }
-    label.push_str(&i2str(m.to));
+    label.push_str(&i2str(m.to()));
     label
 }
 
@@ -95,7 +95,7 @@ fn pick_move(moves: &[Move], label: &str) -> Vec<(Move, i16)> {
             std::process::exit(1);
         } else {
             let (frm, to) = str2move(s.as_str());
-            if let Some(m) = moves.iter().find(|m| (m.frm, m.to) == (frm, to)) {
+            if let Some(m) = moves.iter().find(|m| (m.frm(), m.to()) == (frm, to)) {
                 return vec![(*m, 0)];
             } else {
                 println!("Not valid");
@@ -104,7 +104,7 @@ fn pick_move(moves: &[Move], label: &str) -> Vec<(Move, i16)> {
     }
 }
 
-fn check_game_over(game: &Game, moves: &Vec<Move>, half_moves: isize, log: &Vec<Move>) -> String {
+fn check_game_over(game: &Game, moves: &[Move], half_moves: isize, log: &[Move]) -> String {
     if game.rep_count() >= 3 {
         "1/2-1/2 Draw by repetition".to_string()
     } else if game.check_50_move_rule() {
@@ -248,7 +248,7 @@ fn benchmark(verbose: bool, search_threshold: usize, max_depth: usize) {
             0
         };
         println!(
-            "Search total: {n_searched}; Time {} ms => {speed} nodes/ms ",
+            "Search total: {n_searched:}; Time {} ms => {speed:} nodes/ms ",
             (Instant::now() - start).as_millis() as usize,
         );
     }
@@ -294,7 +294,7 @@ fn play(
                 };
                 let i = random::<usize>() % lmoves.len();
                 let (frm, to) = lmoves[i];
-                if let Some(m) = moves.iter().find(|m| (m.frm, m.to) == (frm, to)) {
+                if let Some(m) = moves.iter().find(|m| (m.frm(), m.to()) == (frm, to)) {
                     println!("Library Move {} ", m);
                     vec![(*m, 0i16)]
                 } else {
