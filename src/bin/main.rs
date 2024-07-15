@@ -43,11 +43,11 @@ struct Args {
     v: bool,
 }
 
-fn i2str(i: u8) -> String {
+fn i2str(i: usize) -> String {
     let s = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
     let x = 7 - i / 8;
     let y = i % 8 + 1;
-    format!("{}{}", s[x as usize], y)
+    format!("{}{}", s[x], y)
 }
 
 //https://cheatography.com/davechild/cheat-sheets/chess-algebraic-notation/
@@ -62,14 +62,14 @@ fn move2label(board: &[Piece; 64], m: &Move, moves: &Vec<Move>) -> String {
     } else if m.transform() {
         label.push('*');
     }
-    if board[m.frm() as usize].ptype != PType::Pawn {
-        let p = format!("{}", board[m.frm() as usize]).to_uppercase();
+    if board[m.frm()].ptype != PType::Pawn {
+        let p = format!("{}", board[m.frm()]).to_uppercase();
         label.push_str(&p);
     }
 
     let mut l = Vec::new();
     for m2 in moves {
-        if m2.to() == m.to() && board[m.frm() as usize].ptype == board[m2.frm() as usize].ptype {
+        if m2.to() == m.to() && board[m.frm()].ptype == board[m2.frm()].ptype {
             l.push(i2str(m2.to()));
         }
     }
@@ -78,9 +78,9 @@ fn move2label(board: &[Piece; 64], m: &Move, moves: &Vec<Move>) -> String {
         let n = if l[0] == l[1] { 1 } else { 0 };
         label.push(l[0].chars().nth(n).unwrap());
     }
-    if m.en_passant() || board[m.to() as usize] != NIL {
+    if m.en_passant() || board[m.to()] != NIL {
         // TODO ?
-        if board[m.frm() as usize].ptype == PType::Pawn {}
+        if board[m.frm()].ptype == PType::Pawn {}
         label.push('x');
     }
     label.push_str(&i2str(m.to()));

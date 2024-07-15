@@ -123,7 +123,7 @@ impl Game {
         // quiescent unless last move was pawn near promotion
         if let Some(p) = last {
             // !self.in_check(self.colour) &&
-            match self.board[p.to() as usize] {
+            match self.board[p.to()] {
                 P1 => p.to() % 8 != 6,
                 P2 => p.to() % 8 != 1,
                 _ => true,
@@ -193,8 +193,8 @@ impl Game {
 
     pub fn make_move(&mut self, m: Move) {
         if m.en_passant()
-            || self.board[m.to() as usize] != NIL
-            || [P1, P2].contains(&self.board[m.frm() as usize])
+            || self.board[m.to()] != NIL
+            || [P1, P2].contains(&self.board[m.frm()])
         {
             self.rep_clear(); // ireversible move
         }
@@ -206,7 +206,7 @@ impl Game {
 
         //update castling permissions
         let cc = self.can_castle.last_mut().unwrap();
-        match (*cc, self.board[m.to() as usize], m.frm()) {
+        match (*cc, self.board[m.to()], m.frm()) {
             ([true, _, _, _], K1, 24) => (cc[0], cc[1]) = (false, false),
             ([_, true, _, _], K1, 24) => (cc[0], cc[1]) = (false, false),
             ([_, _, true, _], K2, 31) => (cc[2], cc[3]) = (false, false),
@@ -237,7 +237,7 @@ impl Game {
 
     fn legal_move(&mut self, m: &Move) -> bool {
         // verify move does not expose own king
-        let colour = self.board[m.frm() as usize].colour;
+        let colour = self.board[m.frm()].colour;
         self.update(m);
         let flag = self.in_check(colour);
         self.backdate(m);
@@ -280,12 +280,12 @@ impl Game {
             self.bm_black,
             self.bm_wking,
             self.bm_bking,
-            self.board[m.to() as usize],
+            self.board[m.to()],
         ));
         self.colour = !self.colour;
         if m.castle() {
             let cc = self.can_castle.last().unwrap();
-            match self.board[m.frm() as usize] {
+            match self.board[m.frm()] {
                 K1 => self.can_castle.push([false, false, cc[2], cc[3]]),
                 K2 => self.can_castle.push([cc[0], cc[1], false, false]),
                 _ => (),
@@ -296,8 +296,8 @@ impl Game {
             } else {
                 (m.frm() + 32, m.frm() + 8) // long
             };
-            self.board[y as usize] = self.board[x as usize];
-            self.board[x as usize] = NIL;
+            self.board[y] = self.board[x];
+            self.board[x] = NIL;
         }
         if m.en_passant() {
             // +9  +1 -7
@@ -307,19 +307,19 @@ impl Game {
                 true => m.frm() + 8,  // west
                 false => m.frm() - 8, // w east
             };
-            self.board[x as usize] = NIL;
+            self.board[x] = NIL;
         }
 
-        self.board[m.to() as usize] = if m.transform() {
+        self.board[m.to()] = if m.transform() {
             match m.to() % 8 {
                 7 => Q1,
                 0 => Q2,
                 _ => panic!(),
             }
         } else {
-            self.board[m.frm() as usize]
+            self.board[m.frm()]
         };
-        self.board[m.frm() as usize] = NIL;
+        self.board[m.frm()] = NIL;
         self.material += m.val;
         self.rep_inc();
         self.hash ^= m.hash ^ WHITE_HASH;
@@ -374,31 +374,31 @@ impl Game {
             } else {
                 (m.frm() + 32, m.frm() + 8) // long
             };
-            self.board[frm as usize] = self.board[to as usize];
-            self.board[to as usize] = NIL;
+            self.board[frm] = self.board[to];
+            self.board[to] = NIL;
         }
-        self.board[m.frm() as usize] = if m.transform() {
+        self.board[m.frm()] = if m.transform() {
             match m.to() % 8 {
                 7 => P1,
                 0 => P2,
                 _ => panic!(),
             }
         } else {
-            self.board[m.to() as usize]
+            self.board[m.to()]
         };
-        self.board[m.to() as usize] = capture;
+        self.board[m.to()] = capture;
 
         if m.en_passant() {
             let x = match m.to() > m.frm() {
                 true => m.frm() + 8,  // west
                 false => m.frm() - 8, // w east
             };
-            let p = if self.board[m.frm() as usize].colour == WHITE {
+            let p = if self.board[m.frm()].colour == WHITE {
                 P2
             } else {
                 P1
             };
-            self.board[x as usize] = p;
+            self.board[x] = p;
         }
 
         self.material -= m.val;
@@ -436,12 +436,12 @@ impl Game {
 
     pub fn eval(&self, colour: bool) -> i16 {
         let s = self.material + self.score_pawn_structure() + self.mobility();
-        //if colour {
-        //    s
-        //} else {
-        //    -s
-        //}
-        s * (2 * (colour as i16) - 1)
+        if colour {
+            s
+        } else {
+            -s
+        }
+        //s * (2 * (colour as i16) - 1)
     }
 
     pub fn score_pawn_structure(&self) -> i16 {
@@ -508,7 +508,7 @@ impl Game {
                 if rfab {
                     m.to() == p.to()
                 } else {
-                    m.en_passant() || self.board[m.to() as usize] != NIL
+                    m.en_passant() || self.board[m.to()] != NIL
                 }
             )
         }
