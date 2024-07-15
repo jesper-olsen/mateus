@@ -8,26 +8,28 @@ const EN_PASSANT_BIT: u8 = 1;
 const TRANSFORM_BIT: u8 = 2;
 
 const fn pack_flags(castle: bool, en_passant: bool, transform: bool) -> u8 {
-    ((castle as u8) << CASTLE_BIT) | ((en_passant as u8) << EN_PASSANT_BIT) | ((transform as u8) << TRANSFORM_BIT)
+    ((castle as u8) << CASTLE_BIT)
+        | ((en_passant as u8) << EN_PASSANT_BIT)
+        | ((transform as u8) << TRANSFORM_BIT)
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct Move {
-    flags: u8, 
-    frmto: (u8,u8),
+    flags: u8,
+    frmto: (u8, u8),
     pub val: i16,
     pub hash: u64,
 }
 
 impl Move {
     pub fn castle(&self) -> bool {
-        (self.flags & 1<<CASTLE_BIT) !=0
+        (self.flags & 1 << CASTLE_BIT) != 0
     }
     pub fn en_passant(&self) -> bool {
-        (self.flags & 1<<EN_PASSANT_BIT) !=0
+        (self.flags & 1 << EN_PASSANT_BIT) != 0
     }
     pub fn transform(&self) -> bool {
-        (self.flags & 1<<TRANSFORM_BIT) !=0
+        (self.flags & 1 << TRANSFORM_BIT) != 0
     }
     pub fn frm(&self) -> u8 {
         self.frmto.0
@@ -38,15 +40,15 @@ impl Move {
 }
 
 pub const NULL_MOVE: Move = Move {
-    frmto: (0,0),
-    flags: pack_flags(false,false,false),
+    frmto: (0, 0),
+    flags: pack_flags(false, false, false),
     val: 0,
     hash: 0,
 };
 
 impl fmt::Display for Move {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let (frm,to) = self.frmto;
+        let (frm, to) = self.frmto;
         let x1 = 7 - frm / 8;
         let y1 = frm % 8 + 1;
         let x2 = 7 - to / 8;
@@ -192,7 +194,7 @@ fn knight_moves(v: &mut Vec<Move>, board: &[Piece; 64], frm: usize, bitmaps: &Bi
             .iter()
             .map(|&to| Move {
                 frmto: (frm as u8, to as u8),
-                flags: pack_flags(false,false,false),
+                flags: pack_flags(false, false, false),
                 val: pval(board[frm], to) - pval(board[frm], frm) - pval(board[to], to),
                 hash: phashkey(board[frm], to)
                     ^ phashkey(board[frm], frm)
@@ -210,7 +212,7 @@ fn ray_moves(v: &mut Vec<Move>, board: &[Piece; 64], frm: usize, moves: u64, bit
             .iter()
             .map(|&to| Move {
                 frmto: (frm as u8, to as u8),
-                flags: pack_flags(false,false,false),
+                flags: pack_flags(false, false, false),
                 val: pval(board[frm], to) - pval(board[frm], frm) - pval(board[to], to),
                 hash: phashkey(board[frm], to)
                     ^ phashkey(board[frm], frm)
@@ -244,7 +246,7 @@ fn pawn_moves(
 
     v.extend(vto.iter().map(|&to| Move {
         frmto: (frm as u8, to as u8),
-        flags: pack_flags(false,false,to % 8 == 7 || to % 8 == 0),
+        flags: pack_flags(false, false, to % 8 == 7 || to % 8 == 0),
         val: pval(pt(board[frm], to), to) - pval(board[frm], frm) - pval(board[to], to),
         hash: phashkey(pt(board[frm], to), to)
             ^ phashkey(board[frm], frm)
@@ -254,14 +256,18 @@ fn pawn_moves(
     // en passant
     if matches!(board[last.to() as usize], P2 | P1) && last.to().abs_diff(last.frm()) == 2 {
         // square attacked if last move was a step-2 pawn move
-        let idx = if colour { last.frm() - 1 } else { last.frm() + 1 };
+        let idx = if colour {
+            last.frm() - 1
+        } else {
+            last.frm() + 1
+        };
 
         v.extend(
             bm2vec(BM_PAWN_CAPTURES[cidx][frm] & 1 << idx)
                 .iter()
                 .map(|&to| Move {
                     frmto: (frm as u8, to as u8),
-                    flags: pack_flags(false,true,false),
+                    flags: pack_flags(false, true, false),
                     val: pval(board[frm], to)
                         - pval(board[frm], frm)
                         - pval(board[last.to() as usize], last.to() as usize),
@@ -314,7 +320,7 @@ fn king_moves(
             .iter()
             .map(|&to| Move {
                 frmto: (frm as u8, to as u8),
-                flags: pack_flags(false,false,false),
+                flags: pack_flags(false, false, false),
                 //castle: false,
                 //en_passant: false,
                 //transform: false,
@@ -328,7 +334,7 @@ fn king_moves(
                     .filter(|(c, _, _, _, _, _)| *c)
                     .map(|(_, k, r, to, rfrm, rto)| Move {
                         frmto: (frm as u8, *to),
-                        flags: pack_flags(true,false,false),
+                        flags: pack_flags(true, false, false),
                         //castle: true,
                         //en_passant: false,
                         //transform: false,

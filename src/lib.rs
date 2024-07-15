@@ -75,7 +75,10 @@ impl fmt::Display for Game {
 }
 
 fn move_to_head(moves: &mut Vec<Move>, k: &Move) {
-    if let Some(q) = moves.iter().position(|m| (m.frm(), m.to()) == (k.frm(), k.to())) {
+    if let Some(q) = moves
+        .iter()
+        .position(|m| (m.frm(), m.to()) == (k.frm(), k.to()))
+    {
         if q != 0 {
             let m = moves.remove(q);
             //let m = moves.swap_remove(q);
@@ -307,15 +310,15 @@ impl Game {
             self.board[x as usize] = NIL;
         }
 
-        if m.transform() {
-            self.board[m.to() as usize] = match m.to() % 8 {
+        self.board[m.to() as usize] = if m.transform() {
+            match m.to() % 8 {
                 7 => Q1,
                 0 => Q2,
                 _ => panic!(),
             }
         } else {
-            self.board[m.to() as usize] = self.board[m.frm() as usize];
-        }
+            self.board[m.frm() as usize]
+        };
         self.board[m.frm() as usize] = NIL;
         self.material += m.val;
         self.rep_inc();
@@ -374,15 +377,15 @@ impl Game {
             self.board[frm as usize] = self.board[to as usize];
             self.board[to as usize] = NIL;
         }
-        if m.transform() {
-            self.board[m.frm() as usize] = match m.to() % 8 {
+        self.board[m.frm() as usize] = if m.transform() {
+            match m.to() % 8 {
                 7 => P1,
                 0 => P2,
                 _ => panic!(),
             }
         } else {
-            self.board[m.frm() as usize] = self.board[m.to() as usize];
-        }
+            self.board[m.to() as usize]
+        };
         self.board[m.to() as usize] = capture;
 
         if m.en_passant() {
@@ -433,11 +436,12 @@ impl Game {
 
     pub fn eval(&self, colour: bool) -> i16 {
         let s = self.material + self.score_pawn_structure() + self.mobility();
-        if colour {
-            s
-        } else {
-            -s
-        }
+        //if colour {
+        //    s
+        //} else {
+        //    -s
+        //}
+        s * (2 * (colour as i16) - 1)
     }
 
     pub fn score_pawn_structure(&self) -> i16 {
