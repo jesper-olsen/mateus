@@ -482,18 +482,12 @@ impl Game {
         pen
     }
 
-    fn quiescence_fab(
-        &mut self,
-        ply: usize,
-        alpha: i16,
-        beta: i16,
-        last: &Move,
-        rfab: bool,
-    ) -> i16 {
+    fn quiescence_fab(&mut self, ply: usize, alp: i16, beta: i16, last: &Move, rfab: bool) -> i16 {
         let colour = self.colour;
 
-        let mut bscore = -INFINITE + ply as i16;
-        let mut first = true;
+        //let mut bscore = -INFINITE + ply as i16;
+        let mut bscore = None;
+        let mut alpha = alp;
         let mut moves = self.moves(colour, Some(last));
         moves.retain(|m|
             //let ic = self.in_check(colour);
@@ -507,23 +501,25 @@ impl Game {
             self.update(&m);
             if !self.in_check(colour) {
                 // legal move
-                first = false;
-                let score =
-                    -self.quiescence_fab(ply + 1, -beta, -max(alpha, bscore), &m, true);
-                if score > bscore {
-                    bscore = score;
-                    if bscore >= beta {
-                        self.backdate(&m);
-                        return bscore;
+                let score = -self.quiescence_fab(ply + 1, -beta, -alpha, &m, true);
+                match bscore {
+                    Some(bs) if score <= bs => (),
+                    _ => {
+                        if score >= beta {
+                            self.backdate(&m);
+                            return score;
+                        }
+                        bscore = Some(score);
+                        alpha = max(alpha, score);
                     }
                 }
             }
             self.backdate(&m);
         }
-        if first {
-            self.eval(colour)
+        if let Some(bs) = bscore {
+            bs
         } else {
-            bscore
+            self.eval(colour)
         }
     } // fn quiescence fab
 
@@ -559,7 +555,9 @@ impl Game {
         }
 
         match depth {
-            0 if self.is_quiescent(last) => return self.quiescence_fab(ply, alpha, beta, last, false),
+            0 if self.is_quiescent(last) => {
+                return self.quiescence_fab(ply, alpha, beta, last, false)
+            }
             0 => depth = 1,
             _ => (),
         }
