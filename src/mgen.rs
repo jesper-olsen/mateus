@@ -7,8 +7,9 @@ const fn pack_flags(castle: bool, en_passant: bool, transform: bool) -> (bool, b
     (castle, en_passant, transform)
 }
 
+// 16 bytes - flags can be packed, but no saving due to alignment
 #[derive(Debug, Copy, Clone, PartialEq)]
-pub struct Move {
+pub struct Move { 
     flags: (bool, bool, bool),
     frmto: (u8, u8),
     pub val: i16,
@@ -156,7 +157,6 @@ pub fn moves(
         (bm_black, bm_white)
     };
     let bm_board = bm_white | bm_black;
-
     let bitmaps = Bitmaps {
         bm_board,
         bm_own,
@@ -348,9 +348,8 @@ pub const fn board2bm_pawns(board: &[Piece; 64]) -> u64 {
     let mut b: u64 = 0;
     let mut i = 0;
     while i < 64 {
-        match board[i] {
-            Pawn(_) => b |= 1 << i,
-            _ => (),
+        if let Pawn(_) = board[i] {
+            b |= 1 << i;
         }
         i += 1;
     }
