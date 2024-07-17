@@ -295,22 +295,21 @@ impl Game {
             } else {
                 (m.frm() + 32, m.frm() + 8) // long
             };
-            self.board[y] = self.board[x];
+            self.board[y] = self.board[x]; // move rook
             self.board[x] = Nil;
-        }
-        if m.en_passant() {
+        } else if m.en_passant() {
             // +9  +1 -7
             // +8   0 -8
             // +7  -1 -9
             let x = match m.to() > m.frm() {
                 true => m.frm() + 8,  // west
-                false => m.frm() - 8, // w east
+                false => m.frm() - 8, // east
             };
             self.board[x] = Nil;
         }
 
         self.board[m.to()] = if m.transform() {
-            self.board[m.to()].transform(m.to())
+            self.board[m.frm()].transform(m.to())
         } else {
             self.board[m.frm()]
         };
@@ -374,7 +373,7 @@ impl Game {
             } else {
                 (m.frm() + 32, m.frm() + 8) // long
             };
-            self.board[frm] = self.board[to];
+            self.board[frm] = self.board[to]; // move rook
             self.board[to] = Nil;
         }
         self.board[m.frm()] = if m.transform() {
