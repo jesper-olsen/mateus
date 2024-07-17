@@ -187,54 +187,22 @@ const fn bm_pawn_step2() -> [[u64; 64]; 2] {
     let mut bm = [[0u64; 64]; 2];
     let mut i = 0;
     while i < 64 {
-        bm[0][i] = bm_white_pawn_step2_from(i);
-        bm[1][i] = bm_black_pawn_step2_from(i);
+        bm[0][i] = if i % 8 == 1 { 1 << (i + 2) } else { 0 };
+        bm[1][i] = if i % 8 == 6 { 1 << (i - 2) } else { 0 };
         i += 1;
     }
     bm
-}
-
-const fn bm_white_pawn_step2_from(frm: usize) -> u64 {
-    if frm % 8 == 1 {
-        1 << (frm + 2)
-    } else {
-        0
-    }
-}
-
-const fn bm_black_pawn_step2_from(frm: usize) -> u64 {
-    if frm % 8 == 6 {
-        1 << (frm - 2)
-    } else {
-        0
-    }
 }
 
 const fn bm_pawn_step1() -> [[u64; 64]; 2] {
     let mut bm = [[0u64; 64]; 2];
     let mut i = 0;
     while i < 64 {
-        bm[0][i] = bm_white_pawn_step1_from(i);
-        bm[1][i] = bm_black_pawn_step1_from(i);
+        bm[0][i] = if i % 8 != 7 { 1 << (i + 1) } else { 0 };
+        bm[1][i] = if i % 8 != 0 { 1 << (i - 1) } else { 0 };
         i += 1;
     }
     bm
-}
-
-const fn bm_white_pawn_step1_from(frm: usize) -> u64 {
-    if frm % 8 != 7 {
-        1 << (frm + 1)
-    } else {
-        0
-    }
-}
-
-const fn bm_black_pawn_step1_from(frm: usize) -> u64 {
-    if frm % 8 != 0 {
-        1 << (frm - 1)
-    } else {
-        0
-    }
 }
 
 const fn bm_pawn_captures() -> [[u64; 64]; 2] {
