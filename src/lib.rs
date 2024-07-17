@@ -318,6 +318,7 @@ impl Game {
         self.material += m.val;
         self.rep_inc();
         self.hash ^= m.hash ^ WHITE_HASH;
+        // TODO - calc move hash here: save space (struct Move) and avoid calculating for moves not explored
 
         // update bitmaps - TODO calculate incrementally; ~6% faster?
         self.bm_pawns = 0;
@@ -545,12 +546,10 @@ impl Game {
         let key = self.hash;
         if let Some(e) = self.ttable.get(&key) {
             if e.depth >= depth {
-                if e.bound == BType::Exact {
-                    return e.score;
-                } else if e.bound == BType::Lower {
-                    alpha = max(alpha, e.score);
-                } else if e.bound == BType::Upper {
-                    beta = min(beta, e.score);
+                match e.bound {
+                    BType::Exact => return e.score,
+                    BType::Lower => alpha = max(alpha, e.score),
+                    BType::Upper => beta = min(beta, e.score),
                 }
                 if alpha >= beta {
                     return e.score;
@@ -610,12 +609,6 @@ impl Game {
             (None, true) => -bscore,
             _ => bscore,
         }
-
-        //        if bmove.is_none() && !in_check {
-        //            0
-        //        } else {
-        //            bscore
-        //        }
     }
 
     pub fn score_moves(
