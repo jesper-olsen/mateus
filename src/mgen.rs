@@ -1,5 +1,4 @@
 use crate::bitmaps::*;
-use crate::hashkeys::phashkey;
 use crate::val::Piece::*;
 use crate::val::*;
 use std::fmt;
@@ -186,10 +185,8 @@ fn knight_moves(v: &mut Vec<Move>, board: &[Piece; 64], frm: usize, bitmaps: &Bi
             .map(|&to| Move {
                 frmto: (frm as u8, to as u8),
                 flags: pack_flags(false, false, false),
-                val: pval(board[frm], to) - pval(board[frm], frm) - pval(board[to], to),
-                hash: phashkey(board[frm], to)
-                    ^ phashkey(board[frm], frm)
-                    ^ phashkey(board[to], to),
+                val: board[frm].pval(to) - board[frm].pval(frm) - board[to].pval(to),
+                hash: board[frm].phashkey(to) ^ board[frm].phashkey(frm) ^ board[to].phashkey(to),
             }),
     );
 }
@@ -204,15 +201,13 @@ fn ray_moves(v: &mut Vec<Move>, board: &[Piece; 64], frm: usize, moves: u64, bit
             .map(|&to| Move {
                 frmto: (frm as u8, to as u8),
                 flags: pack_flags(false, false, false),
-                val: pval(board[frm], to) - pval(board[frm], frm) - pval(board[to], to),
-                hash: phashkey(board[frm], to)
-                    ^ phashkey(board[frm], frm)
-                    ^ phashkey(board[to], to),
+                val: board[frm].pval(to) - board[frm].pval(frm) - board[to].pval(to),
+                hash: board[frm].phashkey(to) ^ board[frm].phashkey(frm) ^ board[to].phashkey(to),
             }),
     );
 }
 
-fn pt(p: Piece, to: usize) -> Piece {
+const fn pt(p: Piece, to: usize) -> Piece {
     match to % 8 {
         7 => Queen(WHITE),
         0 => Queen(BLACK),
@@ -238,10 +233,8 @@ fn pawn_moves(
     v.extend(vto.iter().map(|&to| Move {
         frmto: (frm as u8, to as u8),
         flags: pack_flags(false, false, to % 8 == 7 || to % 8 == 0),
-        val: pval(pt(board[frm], to), to) - pval(board[frm], frm) - pval(board[to], to),
-        hash: phashkey(pt(board[frm], to), to)
-            ^ phashkey(board[frm], frm)
-            ^ phashkey(board[to], to),
+        val: pt(board[frm], to).pval(to) - board[frm].pval(frm) - board[to].pval(to),
+        hash: pt(board[frm], to).phashkey(to) ^ board[frm].phashkey(frm) ^ board[to].phashkey(to),
     }));
 
     // en passant
@@ -259,12 +252,12 @@ fn pawn_moves(
                 .map(|&to| Move {
                     frmto: (frm as u8, to as u8),
                     flags: pack_flags(false, true, false),
-                    val: pval(board[frm], to)
-                        - pval(board[frm], frm)
-                        - pval(board[last.to()], last.to()),
-                    hash: phashkey(board[frm], to)
-                        ^ phashkey(board[frm], frm)
-                        ^ phashkey(board[to], to),
+                    val: board[frm].pval(to)
+                        - board[frm].pval(frm)
+                        - board[last.to()].pval(last.to()),
+                    hash: board[frm].phashkey(to)
+                        ^ board[frm].phashkey(frm)
+                        ^ board[to].phashkey(to),
                 }),
         );
     }
@@ -315,10 +308,8 @@ fn king_moves(
                 //castle: false,
                 //en_passant: false,
                 //transform: false,
-                val: pval(p, to) - pval(p, frm) - pval(board[to], to),
-                hash: phashkey(board[frm], to)
-                    ^ phashkey(board[frm], frm)
-                    ^ phashkey(board[to], to),
+                val: p.pval(to) - p.pval(frm) - board[to].pval(to),
+                hash: board[frm].phashkey(to) ^ board[frm].phashkey(frm) ^ board[to].phashkey(to),
             })
             .chain(
                 cc2.iter()
@@ -326,15 +317,11 @@ fn king_moves(
                     .map(|(_, k, r, to, rfrm, rto)| Move {
                         frmto: (frm as u8, *to),
                         flags: pack_flags(true, false, false),
-                        //castle: true,
-                        //en_passant: false,
-                        //transform: false,
-                        val: pval(p, *to as usize) - pval(p, frm) + pval(*r, *rto)
-                            - pval(*r, *rfrm),
-                        hash: phashkey(*k, *to as usize)
-                            ^ phashkey(*k, frm)
-                            ^ phashkey(*r, *rto)
-                            ^ phashkey(*r, *rfrm),
+                        val: p.pval(*to as usize) - p.pval(frm) + r.pval(*rto) - r.pval(*rfrm),
+                        hash: k.phashkey(*to as usize)
+                            ^ k.phashkey(frm)
+                            ^ r.phashkey(*rto)
+                            ^ r.phashkey(*rfrm),
                     }),
             ),
     );

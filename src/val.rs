@@ -14,21 +14,23 @@ pub enum Piece {
 pub const WHITE: bool = true;
 pub const BLACK: bool = false;
 
-pub const fn pval(p: Piece, pos: usize) -> i16 {
-    match p {
-        Rook(WHITE) => ROOKVAL1[pos],
-        Rook(BLACK) => ROOKVAL2[pos],
-        Knight(WHITE) => KNIGHTVAL1[pos],
-        Knight(BLACK) => KNIGHTVAL2[pos],
-        Bishop(WHITE) => BISHOPVAL1[pos],
-        Bishop(BLACK) => BISHOPVAL2[pos],
-        King(WHITE) => KINGVAL1[pos],
-        King(BLACK) => KINGVAL2[pos],
-        Queen(WHITE) => QUEENVAL1[pos],
-        Queen(BLACK) => QUEENVAL2[pos],
-        Pawn(WHITE) => PAWNVAL1[pos],
-        Pawn(BLACK) => PAWNVAL2[pos],
-        _ => 0,
+impl Piece {
+    pub const fn pval(&self, pos: usize) -> i16 {
+        match self {
+            Rook(WHITE) => ROOKVAL1[pos],
+            Rook(BLACK) => ROOKVAL2[pos],
+            Knight(WHITE) => KNIGHTVAL1[pos],
+            Knight(BLACK) => KNIGHTVAL2[pos],
+            Bishop(WHITE) => BISHOPVAL1[pos],
+            Bishop(BLACK) => BISHOPVAL2[pos],
+            King(WHITE) => KINGVAL1[pos],
+            King(BLACK) => KINGVAL2[pos],
+            Queen(WHITE) => QUEENVAL1[pos],
+            Queen(BLACK) => QUEENVAL2[pos],
+            Pawn(WHITE) => PAWNVAL1[pos],
+            Pawn(BLACK) => PAWNVAL2[pos],
+            _ => 0,
+        }
     }
 }
 
@@ -38,7 +40,7 @@ pub const fn abs_material(board: &[Piece; 64]) -> i16 {
     let mut i = 0;
     let mut val: i16 = 0;
     while i < board.len() {
-        val += pval(board[i], i).abs();
+        val += board[i].pval(i).abs();
         i += 1;
     }
     val
@@ -48,7 +50,7 @@ pub const fn material(board: &[Piece; 64]) -> i16 {
     let mut i = 0;
     let mut val: i16 = 0;
     while i < board.len() {
-        val += pval(board[i], i);
+        val += board[i].pval(i);
         i += 1;
     }
     val

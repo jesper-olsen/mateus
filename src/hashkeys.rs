@@ -40,21 +40,23 @@ use crate::val::*;
 // const NIL_HASH: [u64; 64] = hashkey!();
 // pub const WHITE_HASH: u64 = const_random::const_random!(u64);
 
-pub const fn phashkey(p: Piece, pos: usize) -> u64 {
-    match p {
-        Piece::Rook(WHITE) => R1_HASH[pos],
-        Piece::Rook(BLACK) => R2_HASH[pos],
-        Piece::Knight(WHITE) => N1_HASH[pos],
-        Piece::Knight(BLACK) => N2_HASH[pos],
-        Piece::Bishop(WHITE) => B1_HASH[pos],
-        Piece::Bishop(BLACK) => B2_HASH[pos],
-        Piece::King(WHITE) => K1_HASH[pos],
-        Piece::King(BLACK) => K2_HASH[pos],
-        Piece::Queen(WHITE) => Q1_HASH[pos],
-        Piece::Queen(BLACK) => Q2_HASH[pos],
-        Piece::Pawn(WHITE) => P1_HASH[pos],
-        Piece::Pawn(BLACK) => P2_HASH[pos],
-        _ => NIL_HASH[pos],
+impl Piece {
+    pub const fn phashkey(&self, pos: usize) -> u64 {
+        match self {
+            Piece::Rook(WHITE) => R1_HASH[pos],
+            Piece::Rook(BLACK) => R2_HASH[pos],
+            Piece::Knight(WHITE) => N1_HASH[pos],
+            Piece::Knight(BLACK) => N2_HASH[pos],
+            Piece::Bishop(WHITE) => B1_HASH[pos],
+            Piece::Bishop(BLACK) => B2_HASH[pos],
+            Piece::King(WHITE) => K1_HASH[pos],
+            Piece::King(BLACK) => K2_HASH[pos],
+            Piece::Queen(WHITE) => Q1_HASH[pos],
+            Piece::Queen(BLACK) => Q2_HASH[pos],
+            Piece::Pawn(WHITE) => P1_HASH[pos],
+            Piece::Pawn(BLACK) => P2_HASH[pos],
+            _ => NIL_HASH[pos],
+        }
     }
 }
 
@@ -68,7 +70,7 @@ pub const fn board2hash(board: &[Piece; 64], colour: bool) -> u64 {
     while i < 64 {
         match board[i] {
             Piece::Nil => (),
-            _ => key ^= phashkey(board[i], i),
+            _ => key ^= board[i].phashkey(i),
         };
         i += 1;
     }
