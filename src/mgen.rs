@@ -185,8 +185,8 @@ fn knight_moves(v: &mut Vec<Move>, board: &[Piece; 64], frm: usize, bitmaps: &Bi
             .map(|&to| Move {
                 frmto: (frm as u8, to as u8),
                 flags: pack_flags(false, false, false),
-                val: board[frm].pval(to) - board[frm].pval(frm) - board[to].pval(to),
-                hash: board[frm].phashkey(to) ^ board[frm].phashkey(frm) ^ board[to].phashkey(to),
+                val: board[frm].val(to) - board[frm].val(frm) - board[to].val(to),
+                hash: board[frm].hashkey(to) ^ board[frm].hashkey(frm) ^ board[to].hashkey(to),
             }),
     );
 }
@@ -201,18 +201,10 @@ fn ray_moves(v: &mut Vec<Move>, board: &[Piece; 64], frm: usize, moves: u64, bit
             .map(|&to| Move {
                 frmto: (frm as u8, to as u8),
                 flags: pack_flags(false, false, false),
-                val: board[frm].pval(to) - board[frm].pval(frm) - board[to].pval(to),
-                hash: board[frm].phashkey(to) ^ board[frm].phashkey(frm) ^ board[to].phashkey(to),
+                val: board[frm].val(to) - board[frm].val(frm) - board[to].val(to),
+                hash: board[frm].hashkey(to) ^ board[frm].hashkey(frm) ^ board[to].hashkey(to),
             }),
     );
-}
-
-const fn pt(p: Piece, to: usize) -> Piece {
-    match to % 8 {
-        7 => Queen(WHITE),
-        0 => Queen(BLACK),
-        _ => p,
-    }
 }
 
 fn pawn_moves(
@@ -233,8 +225,10 @@ fn pawn_moves(
     v.extend(vto.iter().map(|&to| Move {
         frmto: (frm as u8, to as u8),
         flags: pack_flags(false, false, to % 8 == 7 || to % 8 == 0),
-        val: pt(board[frm], to).pval(to) - board[frm].pval(frm) - board[to].pval(to),
-        hash: pt(board[frm], to).phashkey(to) ^ board[frm].phashkey(frm) ^ board[to].phashkey(to),
+        val: board[frm].transform(to).val(to) - board[frm].val(frm) - board[to].val(to),
+        hash: board[frm].transform(to).hashkey(to)
+            ^ board[frm].hashkey(frm)
+            ^ board[to].hashkey(to),
     }));
 
     // en passant
@@ -252,12 +246,8 @@ fn pawn_moves(
                 .map(|&to| Move {
                     frmto: (frm as u8, to as u8),
                     flags: pack_flags(false, true, false),
-                    val: board[frm].pval(to)
-                        - board[frm].pval(frm)
-                        - board[last.to()].pval(last.to()),
-                    hash: board[frm].phashkey(to)
-                        ^ board[frm].phashkey(frm)
-                        ^ board[to].phashkey(to),
+                    val: board[frm].val(to) - board[frm].val(frm) - board[last.to()].val(last.to()),
+                    hash: board[frm].hashkey(to) ^ board[frm].hashkey(frm) ^ board[to].hashkey(to),
                 }),
         );
     }
@@ -308,8 +298,8 @@ fn king_moves(
                 //castle: false,
                 //en_passant: false,
                 //transform: false,
-                val: p.pval(to) - p.pval(frm) - board[to].pval(to),
-                hash: board[frm].phashkey(to) ^ board[frm].phashkey(frm) ^ board[to].phashkey(to),
+                val: p.val(to) - p.val(frm) - board[to].val(to),
+                hash: board[frm].hashkey(to) ^ board[frm].hashkey(frm) ^ board[to].hashkey(to),
             })
             .chain(
                 cc2.iter()
@@ -317,11 +307,11 @@ fn king_moves(
                     .map(|(_, k, r, to, rfrm, rto)| Move {
                         frmto: (frm as u8, *to),
                         flags: pack_flags(true, false, false),
-                        val: p.pval(*to as usize) - p.pval(frm) + r.pval(*rto) - r.pval(*rfrm),
-                        hash: k.phashkey(*to as usize)
-                            ^ k.phashkey(frm)
-                            ^ r.phashkey(*rto)
-                            ^ r.phashkey(*rfrm),
+                        val: p.val(*to as usize) - p.val(frm) + r.val(*rto) - r.val(*rfrm),
+                        hash: k.hashkey(*to as usize)
+                            ^ k.hashkey(frm)
+                            ^ r.hashkey(*rto)
+                            ^ r.hashkey(*rfrm),
                     }),
             ),
     );

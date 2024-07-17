@@ -15,7 +15,7 @@ pub const WHITE: bool = true;
 pub const BLACK: bool = false;
 
 impl Piece {
-    pub const fn pval(&self, pos: usize) -> i16 {
+    pub const fn val(&self, pos: usize) -> i16 {
         match self {
             Rook(WHITE) => ROOKVAL1[pos],
             Rook(BLACK) => ROOKVAL2[pos],
@@ -32,6 +32,14 @@ impl Piece {
             _ => 0,
         }
     }
+
+    pub const fn transform(&self, to: usize) -> Piece {
+        match to % 8 {
+            7 => Queen(WHITE),
+            0 => Queen(BLACK),
+            _ => *self,
+        }
+    }
 }
 
 pub const END_GAME_MATERIAL: i16 = abs_material(&ROOT_BOARD) / 3;
@@ -40,7 +48,7 @@ pub const fn abs_material(board: &[Piece; 64]) -> i16 {
     let mut i = 0;
     let mut val: i16 = 0;
     while i < board.len() {
-        val += board[i].pval(i).abs();
+        val += board[i].val(i).abs();
         i += 1;
     }
     val
@@ -50,7 +58,7 @@ pub const fn material(board: &[Piece; 64]) -> i16 {
     let mut i = 0;
     let mut val: i16 = 0;
     while i < board.len() {
-        val += board[i].pval(i);
+        val += board[i].val(i);
         i += 1;
     }
     val

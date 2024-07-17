@@ -41,7 +41,7 @@ use crate::val::*;
 // pub const WHITE_HASH: u64 = const_random::const_random!(u64);
 
 impl Piece {
-    pub const fn phashkey(&self, pos: usize) -> u64 {
+    pub const fn hashkey(&self, pos: usize) -> u64 {
         match self {
             Piece::Rook(WHITE) => R1_HASH[pos],
             Piece::Rook(BLACK) => R2_HASH[pos],
@@ -70,7 +70,7 @@ pub const fn board2hash(board: &[Piece; 64], colour: bool) -> u64 {
     while i < 64 {
         match board[i] {
             Piece::Nil => (),
-            _ => key ^= board[i].phashkey(i),
+            _ => key ^= board[i].hashkey(i),
         };
         i += 1;
     }

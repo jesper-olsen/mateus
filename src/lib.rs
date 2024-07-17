@@ -310,11 +310,7 @@ impl Game {
         }
 
         self.board[m.to()] = if m.transform() {
-            match m.to() % 8 {
-                7 => Queen(WHITE),
-                0 => Queen(BLACK),
-                _ => panic!(),
-            }
+            self.board[m.to()].transform(m.to())
         } else {
             self.board[m.frm()]
         };
