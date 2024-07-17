@@ -3,13 +3,17 @@ use crate::val::Piece::*;
 use crate::val::*;
 use std::fmt;
 
-const fn pack_flags(castle: bool, en_passant: bool, transform: bool) -> (bool, bool, bool) {
-    (castle, en_passant, transform)
+const fn pack_flags(castle: bool, en_passant: bool, transform: bool) -> u8 {
+    CASTLE & castle as u8 | EN_PASSANT & en_passant as u8 | TRANSFORM & transform as u8
 }
+
+const CASTLE: u8 = 1;
+const EN_PASSANT: u8 = 2;
+const TRANSFORM: u8 = 4;
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Move {
-    flags: (bool, bool, bool),
+    flags: u8,
     frmto: (u8, u8),
     pub val: i16,
     pub hash: u64,
@@ -17,13 +21,13 @@ pub struct Move {
 
 impl Move {
     pub fn castle(&self) -> bool {
-        self.flags.0
+        self.flags & CASTLE != 0
     }
     pub fn en_passant(&self) -> bool {
-        self.flags.1
+        self.flags & EN_PASSANT!= 0
     }
     pub fn transform(&self) -> bool {
-        self.flags.2
+        self.flags & TRANSFORM!= 0
     }
     pub fn frm(&self) -> usize {
         self.frmto.0 as usize
