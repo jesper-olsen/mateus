@@ -7,9 +7,9 @@ const fn pack_flags(castle: bool, en_passant: bool, transform: bool) -> (bool, b
     (castle, en_passant, transform)
 }
 
-// 16 bytes - flags can be packed, but no saving due to alignment
+// 16 bytes - due to alignment
 #[derive(Debug, Copy, Clone, PartialEq)]
-pub struct Move { 
+pub struct Move {
     flags: (bool, bool, bool),
     frmto: (u8, u8),
     pub val: i16,
