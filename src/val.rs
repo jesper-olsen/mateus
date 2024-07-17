@@ -1,4 +1,5 @@
 use std::fmt;
+use Piece::*;
 
 #[derive(Debug, PartialEq, Eq, Hash, Copy, Clone)]
 pub enum Piece {
@@ -13,35 +14,20 @@ pub enum Piece {
 pub const WHITE: bool = true;
 pub const BLACK: bool = false;
 
-#[rustfmt::skip]
-const R1: Piece = Piece::Rook(WHITE);
-const N1: Piece = Piece::Knight(WHITE);
-const B1: Piece = Piece::Bishop(WHITE);
-const K1: Piece = Piece::King(WHITE);
-const Q1: Piece = Piece::Queen(WHITE);
-const P1: Piece = Piece::Pawn(WHITE);
-const R2: Piece = Piece::Rook(BLACK);
-const N2: Piece = Piece::Knight(BLACK);
-const B2: Piece = Piece::Bishop(BLACK);
-const K2: Piece = Piece::King(BLACK);
-const Q2: Piece = Piece::Queen(BLACK);
-const P2: Piece = Piece::Pawn(BLACK);
-const NIL: Piece = Piece::Nil;
-
 pub const fn pval(p: Piece, pos: usize) -> i16 {
     match p {
-        R1 => ROOKVAL1[pos],
-        R2 => ROOKVAL2[pos],
-        N1 => KNIGHTVAL1[pos],
-        N2 => KNIGHTVAL2[pos],
-        B1 => BISHOPVAL1[pos],
-        B2 => BISHOPVAL2[pos],
-        K1 => KINGVAL1[pos],
-        K2 => KINGVAL2[pos],
-        Q1 => QUEENVAL1[pos],
-        Q2 => QUEENVAL2[pos],
-        P1 => PAWNVAL1[pos],
-        P2 => PAWNVAL2[pos],
+        Rook(WHITE) => ROOKVAL1[pos],
+        Rook(BLACK) => ROOKVAL2[pos],
+        Knight(WHITE) => KNIGHTVAL1[pos],
+        Knight(BLACK) => KNIGHTVAL2[pos],
+        Bishop(WHITE) => BISHOPVAL1[pos],
+        Bishop(BLACK) => BISHOPVAL2[pos],
+        King(WHITE) => KINGVAL1[pos],
+        King(BLACK) => KINGVAL2[pos],
+        Queen(WHITE) => QUEENVAL1[pos],
+        Queen(BLACK) => QUEENVAL2[pos],
+        Pawn(WHITE) => PAWNVAL1[pos],
+        Pawn(BLACK) => PAWNVAL2[pos],
         _ => 0,
     }
 }
@@ -70,20 +56,20 @@ pub const fn material(board: &[Piece; 64]) -> i16 {
 
 #[rustfmt::skip]
 pub const ROOT_BOARD: [Piece; 64] = [
-    R1, P1, NIL, NIL, NIL, NIL, P2, R2, 
-    N1, P1, NIL, NIL, NIL, NIL, P2, N2, 
-    B1, P1, NIL, NIL, NIL, NIL, P2, B2, 
-    K1, P1, NIL, NIL, NIL, NIL, P2, K2, 
-    Q1, P1, NIL, NIL, NIL, NIL, P2, Q2, 
-    B1, P1, NIL, NIL, NIL, NIL, P2, B2, 
-    N1, P1, NIL, NIL, NIL, NIL, P2, N2, 
-    R1, P1, NIL, NIL, NIL, NIL, P2, R2,
+    Rook(WHITE), Pawn(WHITE), Nil, Nil, Nil, Nil, Pawn(BLACK), Rook(BLACK), 
+    Knight(WHITE), Pawn(WHITE), Nil, Nil, Nil, Nil, Pawn(BLACK), Knight(BLACK), 
+    Bishop(WHITE), Pawn(WHITE), Nil, Nil, Nil, Nil, Pawn(BLACK), Bishop(BLACK), 
+    King(WHITE), Pawn(WHITE), Nil, Nil, Nil, Nil, Pawn(BLACK), King(BLACK), 
+    Queen(WHITE), Pawn(WHITE), Nil, Nil, Nil, Nil, Pawn(BLACK), Queen(BLACK), 
+    Bishop(WHITE), Pawn(WHITE), Nil, Nil, Nil, Nil, Pawn(BLACK), Bishop(BLACK), 
+    Knight(WHITE), Pawn(WHITE), Nil, Nil, Nil, Nil, Pawn(BLACK), Knight(BLACK), 
+    Rook(WHITE), Pawn(WHITE), Nil, Nil, Nil, Nil, Pawn(BLACK), Rook(BLACK),
 ];
 
 pub const ROOT_FEN: &str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR";
 
 // Lasker position - test for transposition table - winning move Ka1-b1
-pub const LASKER_FEN: &str = "8/k7/3p4/p2P1p2/P2P1P2/8/8/K7"; //, "w - -", "Kb1")
+pub const LASKER_FEN: &str = "8/k7/3p4/p2Pawn(WHITE)p2/Pawn(BLACK)Pawn(WHITE)Pawn(BLACK)/8/8/K7"; //, "w - -", "Kb1")
 
 fn feni(i: usize) -> usize {
     let x = 7 - i % 8;
@@ -92,7 +78,7 @@ fn feni(i: usize) -> usize {
 }
 
 pub fn fen2board(s: &str) -> [Piece; 64] {
-    let mut a = [NIL; 64];
+    let mut a = [Nil; 64];
     let mut offset = 0i16;
     for (i, c) in s.chars().enumerate() {
         if let Some(d) = c.to_digit(10) {
@@ -103,18 +89,18 @@ pub fn fen2board(s: &str) -> [Piece; 64] {
             let k: usize = (i as i16 + offset).try_into().unwrap();
             let q = feni(k);
             a[q] = match c {
-                'r' => R2,
-                'n' => N2,
-                'b' => B2,
-                'q' => Q2,
-                'k' => K2,
-                'p' => P2,
-                'R' => R1,
-                'N' => N1,
-                'B' => B1,
-                'Q' => Q1,
-                'K' => K1,
-                'P' => P1,
+                'r' => Rook(BLACK),
+                'n' => Knight(BLACK),
+                'b' => Bishop(BLACK),
+                'q' => Queen(BLACK),
+                'k' => King(BLACK),
+                'p' => Pawn(BLACK),
+                'R' => Rook(WHITE),
+                'N' => Knight(WHITE),
+                'B' => Bishop(WHITE),
+                'Q' => Queen(WHITE),
+                'K' => King(WHITE),
+                'P' => Pawn(WHITE),
                 _ => panic!("invalid fen"),
             }
         }
@@ -125,18 +111,18 @@ pub fn fen2board(s: &str) -> [Piece; 64] {
 impl fmt::Display for Piece {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
-            R1 => write!(f, "R"),
-            R2 => write!(f, "r"),
-            N1 => write!(f, "N"),
-            N2 => write!(f, "n"),
-            B1 => write!(f, "B"),
-            B2 => write!(f, "b"),
-            Q1 => write!(f, "Q"),
-            Q2 => write!(f, "q"),
-            K1 => write!(f, "K"),
-            K2 => write!(f, "k"),
-            P1 => write!(f, "P"),
-            P2 => write!(f, "p"),
+            Rook(WHITE) => write!(f, "R"),
+            Rook(BLACK) => write!(f, "r"),
+            Knight(WHITE) => write!(f, "N"),
+            Knight(BLACK) => write!(f, "n"),
+            Bishop(WHITE) => write!(f, "B"),
+            Bishop(BLACK) => write!(f, "b"),
+            Queen(WHITE) => write!(f, "Q"),
+            Queen(BLACK) => write!(f, "q"),
+            King(WHITE) => write!(f, "K"),
+            King(BLACK) => write!(f, "k"),
+            Pawn(WHITE) => write!(f, "P"),
+            Pawn(BLACK) => write!(f, "p"),
             _ => write!(f, "."),
         }
     }

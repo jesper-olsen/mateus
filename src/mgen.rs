@@ -108,22 +108,22 @@ pub fn in_check(
     bm_bking: u64,
     bm_board: u64,
 ) -> bool {
-    let (cidx, bm_king) = if colour == WHITE {
-        (1, bm_wking)
-    } else {
-        (0, bm_bking)
-    };
-
     board
         .iter()
         .enumerate()
-        .map(|(frm, &p)| match p {
-            Knight(c) if c != colour => (BM_KNIGHT_MOVES[frm] & bm_king) != 0,
-            King(c) if c != colour => (BM_KING_MOVES[frm] & bm_king) != 0, // TODO - not necessary
-            Pawn(c) if c != colour => BM_PAWN_CAPTURES[cidx][frm] & bm_king != 0,
-            Rook(c) if c != colour => ray_check(frm, BM_ROOK_MOVES[frm], bm_board, bm_king),
-            Bishop(c) if c != colour => ray_check(frm, BM_BISHOP_MOVES[frm], bm_board, bm_king),
-            Queen(c) if c != colour => ray_check(frm, BM_QUEEN_MOVES[frm], bm_board, bm_king),
+        .map(|(frm, &p)| match (colour, p) {
+            (WHITE, Knight(BLACK)) => (BM_KNIGHT_MOVES[frm] & bm_wking) != 0,
+            (BLACK, Knight(WHITE)) => (BM_KNIGHT_MOVES[frm] & bm_bking) != 0,
+            (WHITE, King(BLACK)) => (BM_KING_MOVES[frm] & bm_wking) != 0,
+            (BLACK, King(WHITE)) => (BM_KING_MOVES[frm] & bm_bking) != 0,
+            (WHITE, Pawn(BLACK)) => BM_PAWN_CAPTURES[1][frm] & bm_wking != 0,
+            (BLACK, Pawn(WHITE)) => BM_PAWN_CAPTURES[0][frm] & bm_bking != 0,
+            (WHITE, Rook(BLACK)) => ray_check(frm, BM_ROOK_MOVES[frm], bm_board, bm_wking),
+            (BLACK, Rook(WHITE)) => ray_check(frm, BM_ROOK_MOVES[frm], bm_board, bm_bking),
+            (WHITE, Bishop(BLACK)) => ray_check(frm, BM_BISHOP_MOVES[frm], bm_board, bm_wking),
+            (BLACK, Bishop(WHITE)) => ray_check(frm, BM_BISHOP_MOVES[frm], bm_board, bm_bking),
+            (WHITE, Queen(BLACK)) => ray_check(frm, BM_QUEEN_MOVES[frm], bm_board, bm_wking),
+            (BLACK, Queen(WHITE)) => ray_check(frm, BM_QUEEN_MOVES[frm], bm_board, bm_bking),
             _ => false,
         })
         .any(|x| x)
