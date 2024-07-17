@@ -7,7 +7,7 @@ const fn pack_flags(castle: bool, en_passant: bool, transform: bool) -> (bool, b
     (castle, en_passant, transform)
 }
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Move {
     flags: (bool, bool, bool),
     frmto: (u8, u8),
@@ -234,11 +234,7 @@ fn pawn_moves(
     // en passant
     if matches!(board[last.to()], Pawn(_)) && last.to().abs_diff(last.frm()) == 2 {
         // square attacked if last move was a step-2 pawn move
-        let idx = if colour {
-            last.frm() - 1
-        } else {
-            last.frm() + 1
-        };
+        let idx = last.frm() as isize + if colour { -1 } else { 1 };
 
         v.extend(
             bm2vec(BM_PAWN_CAPTURES[cidx][frm] & 1 << idx)
