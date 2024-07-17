@@ -8,6 +8,7 @@ use clap::Parser;
 use puccinia_s_checkmate::mgen::*;
 use puccinia_s_checkmate::misc::str2move;
 use puccinia_s_checkmate::openings::library_moves;
+use puccinia_s_checkmate::val::Piece::*;
 use puccinia_s_checkmate::val::*;
 use puccinia_s_checkmate::Game;
 use rand::random;
@@ -62,15 +63,20 @@ fn move2label(board: &[Piece; 64], m: &Move, moves: &Vec<Move>) -> String {
     } else if m.transform() {
         label.push('*');
     }
-    if board[m.frm()].ptype != PType::Pawn {
+    if !matches!(board[m.frm()], Pawn(_)) {
         let p = format!("{}", board[m.frm()]).to_uppercase();
         label.push_str(&p);
     }
 
     let mut l = Vec::new();
     for m2 in moves {
-        if m2.to() == m.to() && board[m.frm()].ptype == board[m2.frm()].ptype {
-            l.push(i2str(m2.to()));
+        match (board[m.frm()], board[m2.frm()]) {
+            (Rook(_), Rook(_)) | (Knight(_), Knight(_)) | (Bishop(_), Bishop(_))
+                if m2.to() == m.to() =>
+            {
+                l.push(i2str(m2.to()))
+            }
+            _ => (),
         }
     }
     if l.len() > 1 {
@@ -78,9 +84,9 @@ fn move2label(board: &[Piece; 64], m: &Move, moves: &Vec<Move>) -> String {
         let n = if l[0] == l[1] { 1 } else { 0 };
         label.push(l[0].chars().nth(n).unwrap());
     }
-    if m.en_passant() || board[m.to()] != NIL {
+    if m.en_passant() || board[m.to()] != Nil {
         // TODO ?
-        if board[m.frm()].ptype == PType::Pawn {}
+        //if board[m.frm()].ptype == PType::Pawn {}
         label.push('x');
     }
     label.push_str(&i2str(m.to()));

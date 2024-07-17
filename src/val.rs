@@ -1,74 +1,32 @@
 use std::fmt;
 
 #[derive(Debug, PartialEq, Eq, Hash, Copy, Clone)]
-pub enum PType {
-    Rook,
-    Knight,
-    Bishop,
-    Queen,
-    King,
-    Pawn,
+pub enum Piece {
+    Rook(bool),
+    Knight(bool),
+    Bishop(bool),
+    Queen(bool),
+    King(bool),
+    Pawn(bool),
     Nil,
 }
 pub const WHITE: bool = true;
 pub const BLACK: bool = false;
 
-#[derive(Debug, PartialEq, Eq, Hash, Copy, Clone)]
-pub struct Piece {
-    pub ptype: PType,
-    pub colour: bool,
-}
-
 #[rustfmt::skip]
-pub const R1: Piece = Piece {ptype: PType::Rook, colour: WHITE};
-pub const R2: Piece = Piece {
-    ptype: PType::Rook,
-    colour: BLACK,
-};
-pub const N1: Piece = Piece {
-    ptype: PType::Knight,
-    colour: WHITE,
-};
-pub const N2: Piece = Piece {
-    ptype: PType::Knight,
-    colour: BLACK,
-};
-pub const B1: Piece = Piece {
-    ptype: PType::Bishop,
-    colour: WHITE,
-};
-pub const B2: Piece = Piece {
-    ptype: PType::Bishop,
-    colour: BLACK,
-};
-pub const K1: Piece = Piece {
-    ptype: PType::King,
-    colour: WHITE,
-};
-pub const K2: Piece = Piece {
-    ptype: PType::King,
-    colour: BLACK,
-};
-pub const Q1: Piece = Piece {
-    ptype: PType::Queen,
-    colour: WHITE,
-};
-pub const Q2: Piece = Piece {
-    ptype: PType::Queen,
-    colour: BLACK,
-};
-pub const P1: Piece = Piece {
-    ptype: PType::Pawn,
-    colour: WHITE,
-};
-pub const P2: Piece = Piece {
-    ptype: PType::Pawn,
-    colour: BLACK,
-};
-pub const NIL: Piece = Piece {
-    ptype: PType::Nil,
-    colour: BLACK,
-};
+const R1: Piece = Piece::Rook(WHITE);
+const N1: Piece = Piece::Knight(WHITE);
+const B1: Piece = Piece::Bishop(WHITE);
+const K1: Piece = Piece::King(WHITE);
+const Q1: Piece = Piece::Queen(WHITE);
+const P1: Piece = Piece::Pawn(WHITE);
+const R2: Piece = Piece::Rook(BLACK);
+const N2: Piece = Piece::Knight(BLACK);
+const B2: Piece = Piece::Bishop(BLACK);
+const K2: Piece = Piece::King(BLACK);
+const Q2: Piece = Piece::Queen(BLACK);
+const P2: Piece = Piece::Pawn(BLACK);
+const NIL: Piece = Piece::Nil;
 
 pub const fn pval(p: Piece, pos: usize) -> i16 {
     match p {

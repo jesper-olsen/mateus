@@ -16,6 +16,7 @@ pub mod mgen;
 pub mod misc;
 pub mod openings;
 pub mod val;
+use crate::Piece::*;
 use core::cmp::max;
 use core::cmp::min;
 use hashkeys::*;
@@ -123,8 +124,8 @@ impl Game {
         // quiescent unless last move was pawn near promotion
         // !self.in_check(self.colour) &&
         match self.board[last.to()] {
-            P1 => last.to() % 8 != 6,
-            P2 => last.to() % 8 != 1,
+            Pawn(WHITE) => last.to() % 8 != 6,
+            Pawn(BLACK) => last.to() % 8 != 1,
             _ => true,
         }
     }
@@ -188,7 +189,10 @@ impl Game {
     }
 
     pub fn make_move(&mut self, m: Move) {
-        if m.en_passant() || self.board[m.to()] != NIL || [P1, P2].contains(&self.board[m.frm()]) {
+        if m.en_passant()
+            || self.board[m.to()] != Nil
+            || [Pawn(WHITE), Pawn(BLACK)].contains(&self.board[m.frm()])
+        {
             self.rep_clear(); // ireversible move
         }
         self.ttable_clear();
@@ -200,14 +204,14 @@ impl Game {
         //update castling permissions
         let cc = self.can_castle.last_mut().unwrap();
         match (*cc, self.board[m.to()], m.frm()) {
-            ([true, _, _, _], K1, 24) => (cc[0], cc[1]) = (false, false),
-            ([_, true, _, _], K1, 24) => (cc[0], cc[1]) = (false, false),
-            ([_, _, true, _], K2, 31) => (cc[2], cc[3]) = (false, false),
-            ([_, _, _, true], K2, 31) => (cc[2], cc[3]) = (false, false),
-            ([true, _, _, _], R1, 0) => cc[0] = false,
-            ([_, true, _, _], R1, 56) => cc[1] = false,
-            ([_, _, true, _], R2, 7) => cc[2] = false,
-            ([_, _, _, true], R2, 63) => cc[3] = false,
+            ([true, _, _, _], King(WHITE), 24) => (cc[0], cc[1]) = (false, false),
+            ([_, true, _, _], King(WHITE), 24) => (cc[0], cc[1]) = (false, false),
+            ([_, _, true, _], King(BLACK), 31) => (cc[2], cc[3]) = (false, false),
+            ([_, _, _, true], King(BLACK), 31) => (cc[2], cc[3]) = (false, false),
+            ([true, _, _, _], Rook(WHITE), 0) => cc[0] = false,
+            ([_, true, _, _], Rook(WHITE), 56) => cc[1] = false,
+            ([_, _, true, _], Rook(BLACK), 7) => cc[2] = false,
+            ([_, _, _, true], Rook(BLACK), 63) => cc[3] = false,
             _ => (),
         }
     }
@@ -230,9 +234,11 @@ impl Game {
 
     fn legal_move(&mut self, m: &Move) -> bool {
         // verify move does not expose own king
-        let colour = self.board[m.frm()].colour;
         self.update(m);
-        let flag = self.in_check(colour);
+        let flag = match self.board[m.to()] {
+            Rook(c) | Knight(c) | Bishop(c) | Queen(c) | King(c) | Pawn(c) => self.in_check(c),
+            _ => false,
+        };
         self.backdate(m);
         !flag
     }
@@ -279,8 +285,8 @@ impl Game {
         if m.castle() {
             let cc = self.can_castle.last().unwrap();
             match self.board[m.frm()] {
-                K1 => self.can_castle.push([false, false, cc[2], cc[3]]),
-                K2 => self.can_castle.push([cc[0], cc[1], false, false]),
+                King(WHITE) => self.can_castle.push([false, false, cc[2], cc[3]]),
+                King(BLACK) => self.can_castle.push([cc[0], cc[1], false, false]),
                 _ => (),
             }
 
@@ -290,7 +296,7 @@ impl Game {
                 (m.frm() + 32, m.frm() + 8) // long
             };
             self.board[y] = self.board[x];
-            self.board[x] = NIL;
+            self.board[x] = Nil;
         }
         if m.en_passant() {
             // +9  +1 -7
@@ -300,19 +306,19 @@ impl Game {
                 true => m.frm() + 8,  // west
                 false => m.frm() - 8, // w east
             };
-            self.board[x] = NIL;
+            self.board[x] = Nil;
         }
 
         self.board[m.to()] = if m.transform() {
             match m.to() % 8 {
-                7 => Q1,
-                0 => Q2,
+                7 => Queen(WHITE),
+                0 => Queen(BLACK),
                 _ => panic!(),
             }
         } else {
             self.board[m.frm()]
         };
-        self.board[m.frm()] = NIL;
+        self.board[m.frm()] = Nil;
         self.material += m.val;
         self.rep_inc();
         self.hash ^= m.hash ^ WHITE_HASH;
@@ -323,21 +329,25 @@ impl Game {
         self.bm_black = 0;
         for i in 0..64 {
             match self.board[i] {
-                P1 => {
+                Pawn(WHITE) => {
                     self.bm_pawns |= 1 << i;
                     self.bm_white |= 1 << i;
                 }
-                P2 => {
+                Pawn(BLACK) => {
                     self.bm_pawns |= 1 << i;
                     self.bm_black |= 1 << i;
                 }
-                R1 | N1 | B1 | Q1 => self.bm_white |= 1 << i,
-                R2 | N2 | B2 | Q2 => self.bm_black |= 1 << i,
-                K1 => {
+                Rook(WHITE) | Knight(WHITE) | Bishop(WHITE) | Queen(WHITE) => {
+                    self.bm_white |= 1 << i
+                }
+                Rook(BLACK) | Knight(BLACK) | Bishop(BLACK) | Queen(BLACK) => {
+                    self.bm_black |= 1 << i
+                }
+                King(WHITE) => {
                     self.bm_white |= 1 << i;
                     self.bm_wking = 1 << i
                 }
-                K2 => {
+                King(BLACK) => {
                     self.bm_black |= 1 << i;
                     self.bm_bking = 1 << i
                 }
@@ -368,12 +378,12 @@ impl Game {
                 (m.frm() + 32, m.frm() + 8) // long
             };
             self.board[frm] = self.board[to];
-            self.board[to] = NIL;
+            self.board[to] = Nil;
         }
         self.board[m.frm()] = if m.transform() {
             match m.to() % 8 {
-                7 => P1,
-                0 => P2,
+                7 => Pawn(WHITE),
+                0 => Pawn(BLACK),
                 _ => panic!(),
             }
         } else {
@@ -386,12 +396,11 @@ impl Game {
                 true => m.frm() + 8,  // west
                 false => m.frm() - 8, // w east
             };
-            let p = if self.board[m.frm()].colour == WHITE {
-                P2
-            } else {
-                P1
-            };
-            self.board[x] = p;
+            self.board[x] = match self.board[m.frm()] {
+                Pawn(WHITE) => Pawn(BLACK),
+                Pawn(BLACK) => Pawn(WHITE),
+                _ => unreachable!(),
+            }
         }
 
         self.material -= m.val;
@@ -440,7 +449,7 @@ impl Game {
     pub fn score_pawn_structure(&self) -> i16 {
         let mut pen: i16 = 0;
         let bm: [u64; 2] = [self.bm_pawns & self.bm_white, self.bm_pawns & self.bm_black];
-        for (i, &p) in [P1, P2].iter().enumerate() {
+        for (i, &p) in [Pawn(WHITE), Pawn(BLACK)].iter().enumerate() {
             let nfiles = (0..8)
                 .filter(|&q| 0b11111111 << (q * 8) & bm[i] > 0)
                 .count() as i16;
@@ -459,7 +468,7 @@ impl Game {
                 .count() as i16;
 
             let x = 20 * double_pawns + 4 * isolated_pawns;
-            pen += if p == P1 { -x } else { x };
+            pen += if p == Pawn(WHITE) { -x } else { x };
         }
 
         // passed pawn bonus
@@ -493,7 +502,7 @@ impl Game {
             if rfab {
                 m.to() == last.to()
             } else {
-                m.en_passant() || self.board[m.to()] != NIL
+                m.en_passant() || self.board[m.to()] != Nil
             }
         );
         for m in moves {

@@ -42,18 +42,18 @@ use crate::val::*;
 
 pub const fn phashkey(p: Piece, pos: usize) -> u64 {
     match p {
-        R1 => R1_HASH[pos],
-        R2 => R2_HASH[pos],
-        N1 => N1_HASH[pos],
-        N2 => N2_HASH[pos],
-        B1 => B1_HASH[pos],
-        B2 => B2_HASH[pos],
-        K1 => K1_HASH[pos],
-        K2 => K2_HASH[pos],
-        Q1 => Q1_HASH[pos],
-        Q2 => Q2_HASH[pos],
-        P1 => P1_HASH[pos],
-        P2 => P2_HASH[pos],
+        Piece::Rook(WHITE) => R1_HASH[pos],
+        Piece::Rook(BLACK) => R2_HASH[pos],
+        Piece::Knight(WHITE) => N1_HASH[pos],
+        Piece::Knight(BLACK) => N2_HASH[pos],
+        Piece::Bishop(WHITE) => B1_HASH[pos],
+        Piece::Bishop(BLACK) => B2_HASH[pos],
+        Piece::King(WHITE) => K1_HASH[pos],
+        Piece::King(BLACK) => K2_HASH[pos],
+        Piece::Queen(WHITE) => Q1_HASH[pos],
+        Piece::Queen(BLACK) => Q2_HASH[pos],
+        Piece::Pawn(WHITE) => P1_HASH[pos],
+        Piece::Pawn(BLACK) => P2_HASH[pos],
         _ => NIL_HASH[pos],
     }
 }
@@ -67,7 +67,7 @@ pub const fn board2hash(board: &[Piece; 64], colour: bool) -> u64 {
     let mut i = 0;
     while i < 64 {
         match board[i] {
-            NIL => (),
+            Piece::Nil => (),
             _ => key ^= phashkey(board[i], i),
         };
         i += 1;
