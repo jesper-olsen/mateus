@@ -85,7 +85,7 @@ impl fmt::Display for Game {
         let white_fg = "\x1b[38;5;15m"; // White foreground
         let reset_colour = "\x1b[0m"; // Reset to default colour
 
-        writeln!(f, "{}", val::board2fen(self.board))?;
+        writeln!(f, "{}", self.to_fen())?;
         for y in (0..8).rev() {
             write!(f, "{} ", y + 1)?;
             for x in 0..8 {
@@ -162,6 +162,51 @@ impl Game {
         }
     }
 
+    pub fn to_fen(&self) -> String {
+        let mut s = String::new();
+        for y in (0..=7).rev() {
+            let mut n=0;
+            for x in (0..=7).rev() {
+                let idx=x*8+y;
+                if self.board[idx]==Nil {
+                    n+=1;
+                } else {
+                    if n>0 {
+                        s.push_str(format!("{}",n).as_str());
+                        n=0;
+                    }
+                    s.push(match self.board[idx] {
+                        Rook(WHITE)=>'R',
+                        Knight(WHITE)=>'N',
+                        Bishop(WHITE)=>'B',
+                        Queen(WHITE)=>'Q',
+                        King(WHITE)=>'K',
+                        Pawn(WHITE)=>'P',
+                        Rook(BLACK)=>'r',
+                        Knight(BLACK)=>'n',
+                        Bishop(BLACK)=>'b',
+                        Queen(BLACK)=>'q',
+                        King(BLACK)=>'k',
+                        Pawn(BLACK)=>'p',
+                        _ => unreachable!(),
+                    })
+                }
+            }
+            if n>0 {
+                s.push_str(format!("{}",n).as_str())
+            }
+     
+            if y!=0 {
+                s.push('/')
+            }
+        }
+        if self.turn()==WHITE {
+            s.push_str(" w")
+        } else {
+            s.push_str(" b")
+        }
+        s
+    }
     pub fn rep_len(&self) -> usize {
         self.rep.len()
     }

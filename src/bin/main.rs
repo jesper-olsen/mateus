@@ -42,6 +42,9 @@ struct Args {
     #[arg(short, long, default_value_t = false)]
     ///verbose output
     v: bool,
+    #[arg(short, long, default_value_t = String::from(ROOT_FEN))]
+    ///fen board - start position
+    f: String,
 }
 
 fn i2str(i: usize) -> String {
@@ -267,8 +270,9 @@ fn play(
     max_depth: usize,
     half_moves: isize,
     library_bypass: bool,
+    fen: &str,
 ) {
-    let mut game = Game::new(fen2board(ROOT_FEN));
+    let mut game = Game::new(fen2board(fen));
     println!("{}", game);
 
     let mut tot = 0;
@@ -374,6 +378,6 @@ fn main() {
         benchmark(args.v, args.n, args.d);
     } else {
         let players = HashMap::from([(WHITE, args.w), (BLACK, args.b)]);
-        play(players, args.v, args.n, args.d, args.m, args.l);
+        play(players, args.v, args.n, args.d, args.m, args.l, args.f.as_str());
     }
 }
