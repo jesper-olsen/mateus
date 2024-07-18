@@ -207,6 +207,47 @@ impl Game {
         }
         s
     }
+
+    pub fn from_fen(s: &str) -> Self {
+        let mut a = [Nil; 64];
+        let mut offset = 0i16;
+        let parts = s.split(' ').collect::<Vec<&str>>();
+        for (i, c) in parts[0].chars().enumerate() {
+            if let Some(d) = c.to_digit(10) {
+                offset += d as i16 - 1;
+            } else if c == '/' {
+                offset -= 1;
+            } else {
+                let k: usize = (i as i16 + offset).try_into().unwrap();
+                let x = 7 - k % 8;
+                let y = 7 - k / 8;
+                let q = x * 8 + y;
+                a[q] = match c {
+                    'r' => Rook(BLACK),
+                    'n' => Knight(BLACK),
+                    'b' => Bishop(BLACK),
+                    'q' => Queen(BLACK),
+                    'k' => King(BLACK),
+                    'p' => Pawn(BLACK),
+                    'R' => Rook(WHITE),
+                    'N' => Knight(WHITE),
+                    'B' => Bishop(WHITE),
+                    'Q' => Queen(WHITE),
+                    'K' => King(WHITE),
+                    'P' => Pawn(WHITE),
+                    _ => panic!("invalid fen"),
+                }
+            }
+        }
+
+        let mut game = Game::new(a);
+        if parts.len()>1 {
+            game.colour=matches!(parts[1].chars().nth(0), Some('w') | Some('W'));
+        } 
+        game
+    }
+
+
     pub fn rep_len(&self) -> usize {
         self.rep.len()
     }
@@ -582,7 +623,7 @@ impl Game {
         pen
     }
 
-    fn quiescence_fab(&mut self, ply: usize, alp: i16, beta: i16, last: &Move, rfab: bool) -> i16 {
+    fn quiescence_fab(&mut self, _ply: usize, alp: i16, beta: i16, last: &Move, rfab: bool) -> i16 {
         let colour = self.colour;
 
         let mut bscore = None;
@@ -600,7 +641,7 @@ impl Game {
             self.update(&m);
             if !self.in_check(colour) {
                 // legal move
-                let score = -self.quiescence_fab(ply + 1, -beta, -alpha, &m, true);
+                let score = -self.quiescence_fab(_ply + 1, -beta, -alpha, &m, true);
                 match bscore {
                     Some(bs) if score <= bs => (),
                     _ => {
@@ -699,8 +740,6 @@ impl Game {
 
         match (bmove, in_check) {
             (None, false) => 0,
-            (None, true) if colour => bscore,
-            (None, true) => -bscore,
             _ => bscore,
         }
     }

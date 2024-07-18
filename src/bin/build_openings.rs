@@ -69,13 +69,13 @@ const OPENINGS: [&str;107]=[
 ];
 
 fn main() {
-    let mut game = Game::new(fen2board(ROOT_FEN));
+    let mut game = Game::from_fen(ROOT_FEN);
     let mut h: HashMap<u64, Vec<(usize, usize)>> = HashMap::new();
     let mut log = vec![];
     for s in &OPENINGS {
         if &s[0..1] == "#" {
             //println!("Opening: {s}");
-            game = Game::new(fen2board(ROOT_FEN));
+            game = Game::from_fen(ROOT_FEN);
             log = vec![];
         } else {
             let (frm, to) = str2move(s);

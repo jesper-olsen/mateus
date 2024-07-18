@@ -201,8 +201,7 @@ fn benchmark(verbose: bool, search_threshold: usize, max_depth: usize) {
     let a = &BRATKO_KOPEC;
     let start = Instant::now();
     for (i, (fen, h, label)) in a.iter().enumerate() {
-        let board = fen2board(fen);
-        let mut game = Game::new(board);
+        let mut game = Game::from_fen(fen);
         let cc = game.can_castle.last_mut().unwrap();
         cc[0] = h.contains('K');
         cc[1] = h.contains('Q');
@@ -272,7 +271,7 @@ fn play(
     library_bypass: bool,
     fen: &str,
 ) {
-    let mut game = Game::new(fen2board(fen));
+    let mut game = Game::from_fen(fen);
     println!("{}", game);
 
     let mut tot = 0;

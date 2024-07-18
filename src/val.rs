@@ -81,45 +81,6 @@ pub const ROOT_FEN: &str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR";
 // Lasker position - test for transposition table - winning move Ka1-b1
 pub const LASKER_FEN: &str = "8/k7/3p4/p2P1p2/P2P1P2/8/8/K7"; //, "w - -", "Kb1")
 
-fn feni(i: usize) -> usize {
-    let x = 7 - i % 8;
-    let y = 7 - i / 8;
-    x * 8 + y
-}
-
-
-
-pub fn fen2board(s: &str) -> [Piece; 64] {
-    let mut a = [Nil; 64];
-    let mut offset = 0i16;
-    for (i, c) in s.chars().enumerate() {
-        if let Some(d) = c.to_digit(10) {
-            offset += d as i16 - 1;
-        } else if c == '/' {
-            offset -= 1;
-        } else {
-            let k: usize = (i as i16 + offset).try_into().unwrap();
-            let q = feni(k);
-            a[q] = match c {
-                'r' => Rook(BLACK),
-                'n' => Knight(BLACK),
-                'b' => Bishop(BLACK),
-                'q' => Queen(BLACK),
-                'k' => King(BLACK),
-                'p' => Pawn(BLACK),
-                'R' => Rook(WHITE),
-                'N' => Knight(WHITE),
-                'B' => Bishop(WHITE),
-                'Q' => Queen(WHITE),
-                'K' => King(WHITE),
-                'P' => Pawn(WHITE),
-                _ => panic!("invalid fen"),
-            }
-        }
-    }
-    a
-}
-
 impl fmt::Display for Piece {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
