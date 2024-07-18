@@ -79,7 +79,7 @@ pub const ROOT_BOARD: [Piece; 64] = [
 pub const ROOT_FEN: &str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR";
 
 // Lasker position - test for transposition table - winning move Ka1-b1
-pub const LASKER_FEN: &str = "8/k7/3p4/p2Pawn(WHITE)p2/Pawn(BLACK)Pawn(WHITE)Pawn(BLACK)/8/8/K7"; //, "w - -", "Kb1")
+pub const LASKER_FEN: &str = "8/k7/3p4/p2P1p2/P2P1P2/8/8/K7"; //, "w - -", "Kb1")
 
 fn feni(i: usize) -> usize {
     let x = 7 - i % 8;

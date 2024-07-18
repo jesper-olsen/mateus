@@ -78,43 +78,54 @@ impl fmt::Display for Game {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // ANSI escape codes for background and foreground colors
         let light_square_bg = "\x1b[48;5;229m"; // Light background
-        let dark_square_bg = "\x1b[48;5;94m";   // Dark background
+        let dark_square_bg = "\x1b[48;5;94m"; // Dark background
         //let light_square_bg = "\x1b[48;5;15m"; // White background
         //let dark_square_bg = "\x1b[48;5;8m";   // Gray background
-        let black_fg = "\x1b[38;5;0m";         // Black foreground
-        let white_fg = "\x1b[38;5;15m";        // White foreground
-        let reset_colour = "\x1b[0m";           // Reset to default colour
+        let black_fg = "\x1b[38;5;0m"; // Black foreground
+        let white_fg = "\x1b[38;5;15m"; // White foreground
+        let reset_colour = "\x1b[0m"; // Reset to default colour
 
         for y in (0..8).rev() {
             write!(f, "{} ", y + 1)?;
             for x in 0..8 {
-                let i = (7-x)*8+y;
-                let (ch,fg) = match self.board[i] {
-                    Rook(WHITE)=> ('\u{2656}', white_fg),
-                    Knight(WHITE)=> ('\u{2658}', white_fg),
-                    Bishop(WHITE)=> ('\u{2657}', white_fg),
-                    Queen(WHITE)=>  ('\u{2655}', white_fg),
-                    King(WHITE)=>   ('\u{2654}', white_fg),
-                    Pawn(WHITE)=>   ('\u{2659}', white_fg),
-                    Rook(BLACK)=> ('\u{265C}', black_fg),
-                    Knight(BLACK)=> ('\u{265E}', black_fg),
-                    Bishop(BLACK)=> ('\u{265D}', black_fg),
-                    Queen(BLACK)=>  ('\u{265B}', black_fg),
-                    King(BLACK)=>   ('\u{265A}', black_fg),
-                    Pawn(BLACK)=>   ('\u{265F}', black_fg),
-                    Nil =>  (' ', ""),
+                let i = (7 - x) * 8 + y;
+                let (ch, fg) = match self.board[i] {
+                    Rook(WHITE) => ('\u{2656}', white_fg),
+                    Knight(WHITE) => ('\u{2658}', white_fg),
+                    Bishop(WHITE) => ('\u{2657}', white_fg),
+                    Queen(WHITE) => ('\u{2655}', white_fg),
+                    King(WHITE) => ('\u{2654}', white_fg),
+                    Pawn(WHITE) => ('\u{2659}', white_fg),
+                    Rook(BLACK) => ('\u{265C}', black_fg),
+                    Knight(BLACK) => ('\u{265E}', black_fg),
+                    Bishop(BLACK) => ('\u{265D}', black_fg),
+                    Queen(BLACK) => ('\u{265B}', black_fg),
+                    King(BLACK) => ('\u{265A}', black_fg),
+                    Pawn(BLACK) => ('\u{265F}', black_fg),
+                    Nil => (' ', ""),
                 };
                 let is_light_square = (x + y) % 2 == 0;
-                let background_color = if is_light_square { light_square_bg } else { dark_square_bg };
-                let fg_colour = if is_light_square && fg==white_fg { black_fg } else { fg};
-                write!(f,"{}{} {} {}", background_color, fg_colour, ch, reset_colour)?;
+                let background_color = if is_light_square {
+                    light_square_bg
+                } else {
+                    dark_square_bg
+                };
+                let fg_colour = if is_light_square && fg == white_fg {
+                    black_fg
+                } else {
+                    fg
+                };
+                write!(
+                    f,
+                    "{}{} {} {}",
+                    background_color, fg_colour, ch, reset_colour
+                )?;
             }
             writeln!(f)?;
         }
-        write!(f,"   A  B  C  D  E  F  G  H")
-        }
+        write!(f, "   A  B  C  D  E  F  G  H")
+    }
 }
- 
 
 fn move_to_head(moves: &mut Vec<Move>, k: &Move) {
     if let Some(q) = moves
