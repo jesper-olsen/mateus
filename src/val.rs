@@ -87,6 +87,47 @@ fn feni(i: usize) -> usize {
     x * 8 + y
 }
 
+pub fn board2fen(board: [Piece; 64]) -> String {
+    let mut s = String::new();
+    for y in (0..=7).rev() {
+        let mut n=0;
+        for x in (0..=7).rev() {
+            let idx=x*8+y;
+            if board[idx]==Nil {
+                n+=1;
+            } else {
+                if n>0 {
+                    s.push_str(format!("{}",n).as_str());
+                    n=0;
+                }
+                s.push(match board[idx] {
+                    Rook(WHITE)=>'R',
+                    Knight(WHITE)=>'N',
+                    Bishop(WHITE)=>'B',
+                    Queen(WHITE)=>'Q',
+                    King(WHITE)=>'K',
+                    Pawn(WHITE)=>'P',
+                    Rook(BLACK)=>'R',
+                    Knight(BLACK)=>'N',
+                    Bishop(BLACK)=>'B',
+                    Queen(BLACK)=>'Q',
+                    King(BLACK)=>'K',
+                    Pawn(BLACK)=>'P',
+                    _ => unreachable!(),
+                })
+            }
+        }
+        if n>0 {
+            s.push_str(format!("{}",n).as_str())
+        }
+ 
+        if y!=0 {
+            s.push('/')
+        }
+    }
+    s
+}
+
 pub fn fen2board(s: &str) -> [Piece; 64] {
     let mut a = [Nil; 64];
     let mut offset = 0i16;

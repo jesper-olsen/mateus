@@ -85,6 +85,7 @@ impl fmt::Display for Game {
         let white_fg = "\x1b[38;5;15m"; // White foreground
         let reset_colour = "\x1b[0m"; // Reset to default colour
 
+        writeln!(f, "{}", val::board2fen(self.board))?;
         for y in (0..8).rev() {
             write!(f, "{} ", y + 1)?;
             for x in 0..8 {
@@ -115,11 +116,8 @@ impl fmt::Display for Game {
                 } else {
                     fg
                 };
-                write!(
-                    f,
-                    "{}{} {} {}",
-                    background_color, fg_colour, ch, reset_colour
-                )?;
+                //write!(f,"{}{} {} {}",background_color, fg_colour, ch, reset_colour)?;
+                write!(f,"{background_color}{fg_colour} {ch} {reset_colour}")?;
             }
             writeln!(f)?;
         }
