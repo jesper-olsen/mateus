@@ -43,22 +43,22 @@ impl Piece {
 
     pub const fn from_ascii(c: char) -> Piece {
         match c {
-                'r' => Rook(BLACK),
-                'n' => Knight(BLACK),
-                'b' => Bishop(BLACK),
-                'q' => Queen(BLACK),
-                'k' => King(BLACK),
-                'p' => Pawn(BLACK),
-                'R' => Rook(WHITE),
-                'N' => Knight(WHITE),
-                'B' => Bishop(WHITE),
-                'Q' => Queen(WHITE),
-                'K' => King(WHITE),
-                'P' => Pawn(WHITE),
-                ' ' => Nil,
-                 _  => panic!("can not convert to Piece"),
-            }
-    } 
+            'r' => Rook(BLACK),
+            'n' => Knight(BLACK),
+            'b' => Bishop(BLACK),
+            'q' => Queen(BLACK),
+            'k' => King(BLACK),
+            'p' => Pawn(BLACK),
+            'R' => Rook(WHITE),
+            'N' => Knight(WHITE),
+            'B' => Bishop(WHITE),
+            'Q' => Queen(WHITE),
+            'K' => King(WHITE),
+            'P' => Pawn(WHITE),
+            ' ' => Nil,
+            _ => panic!("can not convert to Piece"),
+        }
+    }
 
     pub const fn to_ascii(&self) -> char {
         match self {

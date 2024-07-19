@@ -47,7 +47,7 @@ pub struct Game {
     bm_pawns: u64,
     bm_wking: u64,
     bm_bking: u64,
-    log_bms: Vec<(u64, u64, u64, u64, u64, Piece)>,
+    log_bms: Vec<(u64, u64, u64, u64, u64, Piece, u64)>,
 }
 
 impl fmt::Debug for Game {
@@ -367,9 +367,11 @@ impl Game {
             self.bm_wking,
             self.bm_bking,
             self.board[m.to()],
+            self.hash,
         ));
         self.colour = !self.colour;
-        self.board[m.to()]=if m.castle() {
+        let hash;
+        self.board[m.to()] = if m.castle() {
             let cc = self.can_castle.last().unwrap();
             match self.board[m.frm()] {
                 King(WHITE) => self.can_castle.push([false, false, cc[2], cc[3]]),
@@ -382,6 +384,10 @@ impl Game {
             } else {
                 (m.frm() + 32, m.frm() + 8) // long
             };
+            hash = self.board[m.frm()].hashkey(m.to())
+                ^ self.board[m.frm()].hashkey(m.frm())
+                ^ self.board[x].hashkey(y)
+                ^ self.board[x].hashkey(x);
             self.board[y] = self.board[x]; // move rook
             self.board[x] = Nil;
             self.board[m.frm()]
@@ -393,18 +399,27 @@ impl Game {
                 true => m.frm() + 8,  // west
                 false => m.frm() - 8, // east
             };
+            hash = self.board[m.frm()].hashkey(m.to())
+                ^ self.board[m.frm()].hashkey(m.frm())
+                ^ self.board[x].hashkey(x);
             self.board[x] = Nil;
             self.board[m.frm()]
         } else if m.transform() {
+            hash = self.board[m.frm()].transform(m.to()).hashkey(m.to())
+                ^ self.board[m.frm()].hashkey(m.frm())
+                ^ self.board[m.to()].hashkey(m.to());
             self.board[m.frm()].transform(m.to())
         } else {
+            hash = self.board[m.frm()].hashkey(m.to())
+                ^ self.board[m.frm()].hashkey(m.frm())
+                ^ self.board[m.to()].hashkey(m.to());
             self.board[m.frm()]
         };
         self.board[m.frm()] = Nil;
         self.material += m.val;
         self.rep_inc();
-        self.hash ^= m.hash ^ WHITE_HASH;
-        // TODO - calc move hash here: save space (struct Move) and avoid calculating for moves not explored
+        //self.hash ^= m.hash ^ WHITE_HASH;
+        self.hash ^= hash ^ WHITE_HASH;
 
         // update bitmaps - TODO calculate incrementally; ~6% faster?
         self.bm_pawns = 0;
@@ -449,9 +464,10 @@ impl Game {
             self.bm_wking,
             self.bm_bking,
             capture,
+            self.hash,
         ) = bms;
         self.colour = !self.colour;
-        self.hash ^= m.hash ^ WHITE_HASH;
+        //self.hash ^= m.hash ^ WHITE_HASH;
         self.rep_dec();
         if m.castle() {
             self.can_castle.pop();

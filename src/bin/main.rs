@@ -377,6 +377,14 @@ fn main() {
         benchmark(args.v, args.n, args.d);
     } else {
         let players = HashMap::from([(WHITE, args.w), (BLACK, args.b)]);
-        play(players, args.v, args.n, args.d, args.m, args.l, args.f.as_str());
+        play(
+            players,
+            args.v,
+            args.n,
+            args.d,
+            args.m,
+            args.l,
+            args.f.as_str(),
+        );
     }
 }

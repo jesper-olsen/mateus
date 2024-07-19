@@ -13,7 +13,6 @@ pub struct Move {
     flags: (bool, bool, bool),
     frmto: (u8, u8),
     pub val: i16,
-    pub hash: u64,
 }
 
 impl Move {
@@ -38,7 +37,6 @@ pub const NULL_MOVE: Move = Move {
     frmto: (0, 0),
     flags: pack_flags(false, false, false),
     val: 0,
-    hash: 0,
 };
 
 impl fmt::Display for Move {
@@ -186,7 +184,6 @@ fn knight_moves(v: &mut Vec<Move>, board: &[Piece; 64], frm: usize, bitmaps: &Bi
                 frmto: (frm as u8, to as u8),
                 flags: pack_flags(false, false, false),
                 val: board[frm].val(to) - board[frm].val(frm) - board[to].val(to),
-                hash: board[frm].hashkey(to) ^ board[frm].hashkey(frm) ^ board[to].hashkey(to),
             }),
     );
 }
@@ -202,7 +199,6 @@ fn ray_moves(v: &mut Vec<Move>, board: &[Piece; 64], frm: usize, moves: u64, bit
                 frmto: (frm as u8, to as u8),
                 flags: pack_flags(false, false, false),
                 val: board[frm].val(to) - board[frm].val(frm) - board[to].val(to),
-                hash: board[frm].hashkey(to) ^ board[frm].hashkey(frm) ^ board[to].hashkey(to),
             }),
     );
 }
@@ -226,9 +222,6 @@ fn pawn_moves(
         frmto: (frm as u8, to as u8),
         flags: pack_flags(false, false, to % 8 == 7 || to % 8 == 0),
         val: board[frm].transform(to).val(to) - board[frm].val(frm) - board[to].val(to),
-        hash: board[frm].transform(to).hashkey(to)
-            ^ board[frm].hashkey(frm)
-            ^ board[to].hashkey(to),
     }));
 
     // en passant
@@ -243,7 +236,6 @@ fn pawn_moves(
                     frmto: (frm as u8, to as u8),
                     flags: pack_flags(false, true, false),
                     val: board[frm].val(to) - board[frm].val(frm) - board[last.to()].val(last.to()),
-                    hash: board[frm].hashkey(to) ^ board[frm].hashkey(frm) ^ board[last.to()].hashkey(last.to()),
                 }),
         );
     }
@@ -276,13 +268,13 @@ fn king_moves(
     #[rustfmt::skip]
     let cc2 = [
         (can_castle[0] && frm == 24 && board[0] == Rook(WHITE) && bitmaps.bm_board & WSHORT == 0,
-         King(WHITE), Rook(WHITE), 8, 0, 16,),
+         Rook(WHITE), 8, 0, 16,),
         (can_castle[1] && frm == 24 && board[56] == Rook(WHITE) && bitmaps.bm_board & WLONG == 0,
-         King(WHITE), Rook(WHITE), 48, 56, 32,),
+         Rook(WHITE), 48, 56, 32,),
         (can_castle[2] && frm == 31 && board[7] == Rook(BLACK) && bitmaps.bm_board & BSHORT == 0,
-         King(BLACK), Rook(BLACK), 15, 7, 23,),
+         Rook(BLACK), 15, 7, 23,),
         (can_castle[3] && frm == 31 && board[63] == Rook(BLACK) && bitmaps.bm_board & BLONG == 0,
-         King(BLACK), Rook(BLACK), 55, 63, 39,),
+         Rook(BLACK), 55, 63, 39,),
     ];
 
     v.extend(
@@ -295,19 +287,14 @@ fn king_moves(
                 //en_passant: false,
                 //transform: false,
                 val: p.val(to) - p.val(frm) - board[to].val(to),
-                hash: board[frm].hashkey(to) ^ board[frm].hashkey(frm) ^ board[to].hashkey(to),
             })
             .chain(
                 cc2.iter()
-                    .filter(|(c, _, _, _, _, _)| *c)
-                    .map(|(_, k, r, to, rfrm, rto)| Move {
+                    .filter(|(c, _, _, _, _)| *c)
+                    .map(|(_, r, to, rfrm, rto)| Move {
                         frmto: (frm as u8, *to),
                         flags: pack_flags(true, false, false),
                         val: p.val(*to as usize) - p.val(frm) + r.val(*rto) - r.val(*rfrm),
-                        hash: k.hashkey(*to as usize)
-                            ^ k.hashkey(frm)
-                            ^ r.hashkey(*rto)
-                            ^ r.hashkey(*rfrm),
                     }),
             ),
     );
