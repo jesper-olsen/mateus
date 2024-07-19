@@ -313,21 +313,6 @@ fn king_moves(
     );
 }
 
-// const fn board2bm(board: &[Piece; 64]) -> u64 {
-//     let mut b: u64 = 0;
-//     let mut i = 0;
-//     while i < 64 {
-//         match board[i] {
-//             Piece {
-//                 ptype: PType::Nil, ..
-//             } => (),
-//             _ => b |= 1 << i,
-//         }
-//         i += 1;
-//     }
-//     b
-// }
-
 pub const fn board2bm(board: &[Piece; 64]) -> (u64, u64) {
     let (mut w, mut b): (u64, u64) = (0, 0);
     let mut i = 0;
