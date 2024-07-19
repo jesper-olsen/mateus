@@ -40,6 +40,69 @@ impl Piece {
             _ => *self,
         }
     }
+
+    pub const fn from_ascii(c: char) -> Piece {
+        match c {
+                'r' => Rook(BLACK),
+                'n' => Knight(BLACK),
+                'b' => Bishop(BLACK),
+                'q' => Queen(BLACK),
+                'k' => King(BLACK),
+                'p' => Pawn(BLACK),
+                'R' => Rook(WHITE),
+                'N' => Knight(WHITE),
+                'B' => Bishop(WHITE),
+                'Q' => Queen(WHITE),
+                'K' => King(WHITE),
+                'P' => Pawn(WHITE),
+                ' ' => Nil,
+                 _  => panic!("can not convert to Piece"),
+            }
+    } 
+
+    pub const fn to_ascii(&self) -> char {
+        match self {
+            Rook(WHITE) => 'R',
+            Rook(BLACK) => 'r',
+            Knight(WHITE) => 'N',
+            Knight(BLACK) => 'n',
+            Bishop(WHITE) => 'B',
+            Bishop(BLACK) => 'b',
+            Queen(WHITE) => 'Q',
+            Queen(BLACK) => 'q',
+            King(WHITE) => 'K',
+            King(BLACK) => 'k',
+            Pawn(WHITE) => 'P',
+            Pawn(BLACK) => 'p',
+            Nil => '.',
+        }
+    }
+
+    pub const fn to_unicode(&self) -> char {
+        match self {
+            Rook(WHITE) => '\u{2656}',
+            Knight(WHITE) => '\u{2658}',
+            Bishop(WHITE) => '\u{2657}',
+            Queen(WHITE) => '\u{2655}',
+            King(WHITE) => '\u{2654}',
+            Pawn(WHITE) => '\u{2659}',
+            Rook(BLACK) => '\u{265C}',
+            Knight(BLACK) => '\u{265E}',
+            Bishop(BLACK) => '\u{265D}',
+            Queen(BLACK) => '\u{265B}',
+            King(BLACK) => '\u{265A}',
+            Pawn(BLACK) => '\u{265F}',
+            Nil => ' ',
+        }
+    }
+
+    pub const fn is_white(&self) -> bool {
+        match self {
+            Rook(WHITE) | Knight(WHITE) | Bishop(WHITE) | Queen(WHITE) | King(WHITE)
+            | Pawn(WHITE) => true,
+            _ => false,
+        }
+    }
 }
 
 pub const END_GAME_MATERIAL: i16 = abs_material(&ROOT_BOARD) / 3;
@@ -83,21 +146,7 @@ pub const LASKER_FEN: &str = "8/k7/3p4/p2P1p2/P2P1P2/8/8/K7"; //, "w - -", "Kb1"
 
 impl fmt::Display for Piece {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match *self {
-            Rook(WHITE) => write!(f, "R"),
-            Rook(BLACK) => write!(f, "r"),
-            Knight(WHITE) => write!(f, "N"),
-            Knight(BLACK) => write!(f, "n"),
-            Bishop(WHITE) => write!(f, "B"),
-            Bishop(BLACK) => write!(f, "b"),
-            Queen(WHITE) => write!(f, "Q"),
-            Queen(BLACK) => write!(f, "q"),
-            King(WHITE) => write!(f, "K"),
-            King(BLACK) => write!(f, "k"),
-            Pawn(WHITE) => write!(f, "P"),
-            Pawn(BLACK) => write!(f, "p"),
-            _ => write!(f, "."),
-        }
+        write!(f, "{}", self.to_ascii())
     }
 }
 

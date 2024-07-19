@@ -1,13 +1,3 @@
-// Copyright (c) 2023 Jesper Olsen
-// License: MIT, see License.txt
-//
-// Puccinia's Checkmate - small chess library implemented in rust
-
-// References:
-// * ["An Analysis of Alpha-Beta Pruning", Donald E. Knuth and Ronald W. Moore, Artificial Intelligence 6 (1975), 293-326](http://www-public.telecom-sudparis.eu/~gibson/Teaching/Teaching-ReadingMaterial/KnuthMoore75.pdf)
-// * "The History Heuristic and Alpha-Beta Search Enhancements in Practice", Jonathan Schaeffer, IEEE Transactions on Pattern Analysis and Machine Intelligence, Volume: 11, Issue: 11, November 1989, Page(s): 1203 - 1212
-// * "Computer Chess and Search", T.A. Marsland, ENCYCLOPEDIA OF ARTIFICIAL INTELLIGENCE (2nd Ed.), 1992
-
 pub mod bitmaps;
 pub mod hashkeys;
 pub mod hashkeys_generated;
@@ -79,8 +69,8 @@ impl fmt::Display for Game {
         // ANSI escape codes for background and foreground colors
         let light_square_bg = "\x1b[48;5;229m"; // Light background
         let dark_square_bg = "\x1b[48;5;94m"; // Dark background
-        //let light_square_bg = "\x1b[48;5;15m"; // White background
-        //let dark_square_bg = "\x1b[48;5;8m";   // Gray background
+                                              //let light_square_bg = "\x1b[48;5;15m"; // White background
+                                              //let dark_square_bg = "\x1b[48;5;8m";   // Gray background
         let black_fg = "\x1b[38;5;0m"; // Black foreground
         let white_fg = "\x1b[38;5;15m"; // White foreground
         let reset_colour = "\x1b[0m"; // Reset to default colour
@@ -90,20 +80,11 @@ impl fmt::Display for Game {
             write!(f, "{} ", y + 1)?;
             for x in 0..8 {
                 let i = (7 - x) * 8 + y;
-                let (ch, fg) = match self.board[i] {
-                    Rook(WHITE) => ('\u{2656}', white_fg),
-                    Knight(WHITE) => ('\u{2658}', white_fg),
-                    Bishop(WHITE) => ('\u{2657}', white_fg),
-                    Queen(WHITE) => ('\u{2655}', white_fg),
-                    King(WHITE) => ('\u{2654}', white_fg),
-                    Pawn(WHITE) => ('\u{2659}', white_fg),
-                    Rook(BLACK) => ('\u{265C}', black_fg),
-                    Knight(BLACK) => ('\u{265E}', black_fg),
-                    Bishop(BLACK) => ('\u{265D}', black_fg),
-                    Queen(BLACK) => ('\u{265B}', black_fg),
-                    King(BLACK) => ('\u{265A}', black_fg),
-                    Pawn(BLACK) => ('\u{265F}', black_fg),
-                    Nil => (' ', ""),
+                let ch = self.board[i].to_unicode();
+                let fg = if self.board[i].is_white() {
+                    white_fg
+                } else {
+                    black_fg
                 };
                 let is_light_square = (x + y) % 2 == 0;
                 let background_color = if is_light_square {
@@ -116,8 +97,7 @@ impl fmt::Display for Game {
                 } else {
                     fg
                 };
-                //write!(f,"{}{} {} {}",background_color, fg_colour, ch, reset_colour)?;
-                write!(f,"{background_color}{fg_colour} {ch} {reset_colour}")?;
+                write!(f, "{background_color}{fg_colour} {ch} {reset_colour}")?;
             }
             writeln!(f)?;
         }
@@ -165,42 +145,28 @@ impl Game {
     pub fn to_fen(&self) -> String {
         let mut s = String::new();
         for y in (0..=7).rev() {
-            let mut n=0;
+            let mut n = 0;
             for x in (0..=7).rev() {
-                let idx=x*8+y;
-                if self.board[idx]==Nil {
-                    n+=1;
+                let idx = x * 8 + y;
+                if self.board[idx] == Nil {
+                    n += 1;
                 } else {
-                    if n>0 {
-                        s.push_str(format!("{}",n).as_str());
-                        n=0;
+                    if n > 0 {
+                        s.push_str(format!("{}", n).as_str());
+                        n = 0;
                     }
-                    s.push(match self.board[idx] {
-                        Rook(WHITE)=>'R',
-                        Knight(WHITE)=>'N',
-                        Bishop(WHITE)=>'B',
-                        Queen(WHITE)=>'Q',
-                        King(WHITE)=>'K',
-                        Pawn(WHITE)=>'P',
-                        Rook(BLACK)=>'r',
-                        Knight(BLACK)=>'n',
-                        Bishop(BLACK)=>'b',
-                        Queen(BLACK)=>'q',
-                        King(BLACK)=>'k',
-                        Pawn(BLACK)=>'p',
-                        _ => unreachable!(),
-                    })
+                    s.push(self.board[idx].to_ascii())
                 }
             }
-            if n>0 {
-                s.push_str(format!("{}",n).as_str())
+            if n > 0 {
+                s.push_str(format!("{}", n).as_str())
             }
-     
-            if y!=0 {
+
+            if y != 0 {
                 s.push('/')
             }
         }
-        if self.turn()==WHITE {
+        if self.turn() == WHITE {
             s.push_str(" w")
         } else {
             s.push_str(" b")
@@ -222,31 +188,16 @@ impl Game {
                 let x = 7 - k % 8;
                 let y = 7 - k / 8;
                 let q = x * 8 + y;
-                a[q] = match c {
-                    'r' => Rook(BLACK),
-                    'n' => Knight(BLACK),
-                    'b' => Bishop(BLACK),
-                    'q' => Queen(BLACK),
-                    'k' => King(BLACK),
-                    'p' => Pawn(BLACK),
-                    'R' => Rook(WHITE),
-                    'N' => Knight(WHITE),
-                    'B' => Bishop(WHITE),
-                    'Q' => Queen(WHITE),
-                    'K' => King(WHITE),
-                    'P' => Pawn(WHITE),
-                    _ => panic!("invalid fen"),
-                }
+                a[q] = Piece::from_ascii(c);
             }
         }
 
         let mut game = Game::new(a);
-        if parts.len()>1 {
-            game.colour=matches!(parts[1].chars().nth(0), Some('w') | Some('W'));
-        } 
+        if parts.len() > 1 {
+            game.colour = matches!(parts[1].chars().nth(0), Some('w') | Some('W'));
+        }
         game
     }
-
 
     pub fn rep_len(&self) -> usize {
         self.rep.len()
