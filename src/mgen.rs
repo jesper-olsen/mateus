@@ -243,7 +243,7 @@ fn pawn_moves(
                     frmto: (frm as u8, to as u8),
                     flags: pack_flags(false, true, false),
                     val: board[frm].val(to) - board[frm].val(frm) - board[last.to()].val(last.to()),
-                    hash: board[frm].hashkey(to) ^ board[frm].hashkey(frm) ^ board[to].hashkey(to),
+                    hash: board[frm].hashkey(to) ^ board[frm].hashkey(frm) ^ board[last.to()].hashkey(last.to()),
                 }),
         );
     }
