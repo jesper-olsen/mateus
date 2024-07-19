@@ -369,7 +369,7 @@ impl Game {
             self.board[m.to()],
         ));
         self.colour = !self.colour;
-        if m.castle() {
+        self.board[m.to()]=if m.castle() {
             let cc = self.can_castle.last().unwrap();
             match self.board[m.frm()] {
                 King(WHITE) => self.can_castle.push([false, false, cc[2], cc[3]]),
@@ -384,6 +384,7 @@ impl Game {
             };
             self.board[y] = self.board[x]; // move rook
             self.board[x] = Nil;
+            self.board[m.frm()]
         } else if m.en_passant() {
             // +9  +1 -7
             // +8   0 -8
@@ -393,9 +394,8 @@ impl Game {
                 false => m.frm() - 8, // east
             };
             self.board[x] = Nil;
-        }
-
-        self.board[m.to()] = if m.transform() {
+            self.board[m.frm()]
+        } else if m.transform() {
             self.board[m.frm()].transform(m.to())
         } else {
             self.board[m.frm()]
