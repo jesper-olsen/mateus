@@ -339,7 +339,7 @@ fn play(
         let label = move2label(&game.board, &m, &moves);
         game.make_move(m);
         log.push(m);
-        println!("{}", game);
+        println!("{game}");
         moves = game.legal_moves(Some(&m));
         let s = match (game.in_check(game.turn()), moves.is_empty()) {
             (true, true) => "#",

@@ -260,7 +260,7 @@ const fn bm_rook_moves_from(frm: usize) -> u64 {
 
     // East
     let mut i = frm as isize - 8;
-    while i > 0 {
+    while i >= 0 {
         b |= 1 << i;
         i -= 8;
     }
