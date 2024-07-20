@@ -3,45 +3,44 @@ use crate::val::Piece::*;
 use crate::val::*;
 use std::fmt;
 
-const fn pack_flags(castle: bool, en_passant: bool, transform: bool) -> (bool, bool, bool) {
-    (castle, en_passant, transform)
+const fn pack_data(castle: bool, en_passant: bool, transform: bool, frm: usize, to: usize) -> u16 {
+    ((castle as u16)<<12) + ((en_passant as u16)<<13) + ((transform as u16)<<14) 
+    + (0b111111111111 & ((to << 6) | frm)) as u16
 }
 
-// 16 bytes - due to alignment
+
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Move {
-    flags: (bool, bool, bool),
-    frmto: (u8, u8),
+    data: u16,
     pub val: i16,
 }
 
 impl Move {
     pub fn castle(&self) -> bool {
-        self.flags.0
+        self.data & 1<<12 != 0
     }
     pub fn en_passant(&self) -> bool {
-        self.flags.1
+        self.data & 1<<13 != 0
     }
     pub fn transform(&self) -> bool {
-        self.flags.2
+        self.data & 1<<14 != 0
     }
     pub fn frm(&self) -> usize {
-        self.frmto.0 as usize
+        (self.data & 0b111111) as usize
     }
     pub fn to(&self) -> usize {
-        self.frmto.1 as usize
+        ((self.data & 0b111111000000)>>6) as usize
     }
 }
 
 pub const NULL_MOVE: Move = Move {
-    frmto: (0, 0),
-    flags: pack_flags(false, false, false),
+    data: pack_data(false, false, false, 0, 0),
     val: 0,
 };
 
 impl fmt::Display for Move {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let (frm, to) = self.frmto;
+        let (frm, to) = (self.frm(),self.to());
         let x1 = 7 - frm / 8;
         let y1 = frm % 8 + 1;
         let x2 = 7 - to / 8;
@@ -181,8 +180,7 @@ fn knight_moves(v: &mut Vec<Move>, board: &[Piece; 64], frm: usize, bitmaps: &Bi
         bm2vec(BM_KNIGHT_MOVES[frm] & !bitmaps.bm_own)
             .iter()
             .map(|&to| Move {
-                frmto: (frm as u8, to as u8),
-                flags: pack_flags(false, false, false),
+                data: pack_data(false, false, false, frm, to),
                 val: board[frm].val(to) - board[frm].val(frm) - board[to].val(to),
             }),
     );
@@ -196,8 +194,7 @@ fn ray_moves(v: &mut Vec<Move>, board: &[Piece; 64], frm: usize, moves: u64, bit
         bm2vec(moves & !bl & !bitmaps.bm_own)
             .iter()
             .map(|&to| Move {
-                frmto: (frm as u8, to as u8),
-                flags: pack_flags(false, false, false),
+                data: pack_data(false, false, false, frm, to),
                 val: board[frm].val(to) - board[frm].val(frm) - board[to].val(to),
             }),
     );
@@ -219,8 +216,7 @@ fn pawn_moves(
     let vto = bm2vec(cap | step1 | step2);
 
     v.extend(vto.iter().map(|&to| Move {
-        frmto: (frm as u8, to as u8),
-        flags: pack_flags(false, false, to % 8 == 7 || to % 8 == 0),
+        data: pack_data(false, false, to % 8 == 7 || to % 8 == 0, frm, to),
         val: board[frm].transform(to).val(to) - board[frm].val(frm) - board[to].val(to),
     }));
 
@@ -233,8 +229,7 @@ fn pawn_moves(
             bm2vec(BM_PAWN_CAPTURES[cidx][frm] & 1 << idx)
                 .iter()
                 .map(|&to| Move {
-                    frmto: (frm as u8, to as u8),
-                    flags: pack_flags(false, true, false),
+                    data: pack_data(false, true, false, frm, to),
                     val: board[frm].val(to) - board[frm].val(frm) - board[last.to()].val(last.to()),
                 }),
         );
@@ -281,8 +276,7 @@ fn king_moves(
         bm2vec(BM_KING_MOVES[frm] & !bitmaps.bm_own)
             .iter()
             .map(|&to| Move {
-                frmto: (frm as u8, to as u8),
-                flags: pack_flags(false, false, false),
+                data: pack_data(false, false, false, frm, to),
                 //castle: false,
                 //en_passant: false,
                 //transform: false,
@@ -292,8 +286,7 @@ fn king_moves(
                 cc2.iter()
                     .filter(|(c, _, _, _, _)| *c)
                     .map(|(_, r, to, rfrm, rto)| Move {
-                        frmto: (frm as u8, *to),
-                        flags: pack_flags(true, false, false),
+                        data: pack_data(true, false, false, frm, *to as usize),
                         val: p.val(*to as usize) - p.val(frm) + r.val(*rto) - r.val(*rfrm),
                     }),
             ),
