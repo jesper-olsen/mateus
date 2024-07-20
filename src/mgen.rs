@@ -3,11 +3,19 @@ use crate::val::Piece::*;
 use crate::val::*;
 use std::fmt;
 
-const fn pack_data(castle: bool, en_passant: bool, transform: bool, frm: usize, to: usize) -> u16 {
-    ((castle as u16)<<12) + ((en_passant as u16)<<13) + ((transform as u16)<<14) 
-    + (0b111111111111 & ((to << 6) | frm)) as u16
-}
+const CASTLE_BIT: u16 = 1 << 12;
+const EN_PASSANT_BIT: u16 = 1 << 13;
+const TRANSFORM_BIT: u16 = 1 << 14;
+const TO_SHIFT: u16 = 6;
+const FRM_MASK: u16 = 0b111111;
+const TO_MASK: u16 = 0b111111 << TO_SHIFT;
 
+const fn pack_data(castle: bool, en_passant: bool, transform: bool, frm: usize, to: usize) -> u16 {
+    ((castle as u16) << 12) |
+    ((en_passant as u16) << 13) |
+    ((transform as u16) << 14) |
+    ((to << 6) | frm) as u16
+}
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Move {
@@ -17,19 +25,19 @@ pub struct Move {
 
 impl Move {
     pub fn castle(&self) -> bool {
-        self.data & 1<<12 != 0
+        self.data & CASTLE_BIT != 0
     }
     pub fn en_passant(&self) -> bool {
-        self.data & 1<<13 != 0
+        self.data & EN_PASSANT_BIT != 0
     }
     pub fn transform(&self) -> bool {
-        self.data & 1<<14 != 0
+        self.data & TRANSFORM_BIT != 0
     }
     pub fn frm(&self) -> usize {
-        (self.data & 0b111111) as usize
+        (self.data & FRM_MASK) as usize
     }
     pub fn to(&self) -> usize {
-        ((self.data & 0b111111000000)>>6) as usize
+        ((self.data & TO_MASK) >> TO_SHIFT) as usize
     }
 }
 
