@@ -32,7 +32,7 @@ Options:
   -w, --w        play white (human-computer)
   -b, --b        play black (human-computer)
   -l, --l        no opening library
-  -k, --k <K>    benchmark test positions - Bratko-Kopec (1) / Kaufman (2) [default: 0]
+  -k, --k <K>    benchmark test positions - Bratko-Kopec (1) / Kaufman (2) / Lasker (3) [default: 0]
   -v, --v        verbose output
   -f, --f <F>    fen board - start position [default: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR]
   -h, --help     Print help
