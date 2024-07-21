@@ -16,6 +16,8 @@ Two example apps included - terminal CLI app (src/bin) and browser web applicati
 Run CLI app like this: 
 
 ```
+% cargo run --release --bin main -- -h
+
 Usage: main [OPTIONS]
 
 Options:
@@ -34,7 +36,7 @@ Options:
 
 Run CLI app like this to play white:
 ```
-% cargo run --release -- --bin main -w 
+% cargo run --release --bin main -- -w 
 
 ```
 
