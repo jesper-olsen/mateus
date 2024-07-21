@@ -75,9 +75,11 @@ Correct: [1, 3, 6, 8, 10, 12, 13, 14, 15, 16, 18, 20, 24] 13/24
 Points: 14
 Time: 3770684 ms => 157111 ms/position
 Search total: 64093151997; Time 3770684 ms => 16997 nodes/ms
+```
 
 Run CLI app like this to benchmark on Kaufman positions:
 
+```
 % cargo run --release --bin main -- -k 2 -n 1000000000
 
 Position  1; Searched: 1395431159, Score:   187, Move (white): e4 f6 =  Nf6; Expected: Nf6+
