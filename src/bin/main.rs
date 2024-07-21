@@ -34,11 +34,11 @@ struct Args {
     ///play black (human-computer)
     b: bool,
     #[arg(short, long, default_value_t = false)]
-    ///library bypass
+    ///no opening library
     l: bool,
-    #[arg(short, long, default_value_t = false)]
-    ///benchmark test positions - Bratko-Kopec / Kaufman
-    k: bool,
+    #[arg(short, long, default_value_t = 0)]
+    ///benchmark test positions - Bratko-Kopec (1) / Kaufman (2)
+    k: usize,
     #[arg(short, long, default_value_t = false)]
     ///verbose output
     v: bool,
@@ -164,7 +164,7 @@ const BRATKO_KOPEC: [(&str, &str, &str); 24] = [
 
 // https://www.chessprogramming.org/Kaufman_Test
 #[rustfmt::skip]
-const _KAUFMAN: [(&str, &str, &str); 25] = [
+const KAUFMAN: [(&str, &str, &str); 25] = [
     // fen, turn-castling-enpassant, best move/alt move
     ("1rbq1rk1/p1b1nppp/1p2p3/8/1B1pN3/P2B4/1P3PPP/2RQ1R1K", "w - - bm", "Nf6+", ),
     ("3r2k1/p2r1p1p/1p2p1p1/q4n2/3P4/PQ5P/1P1RNPP1/3R2K1", "b - - bm", "Nxd4", ),
@@ -193,14 +193,22 @@ const _KAUFMAN: [(&str, &str, &str); 25] = [
     ("8/3nk3/3pp3/1B6/8/3PPP2/4K3/8", "w - - bm", "Bxd7"),
 ];
 
-fn benchmark(verbose: bool, search_threshold: usize, max_depth: usize) {
+fn benchmark(
+    verbose: bool,
+    search_threshold: usize,
+    max_depth: usize,
+    tname: &str,
+    tpos: &[(&str, &str, &str)],
+) {
+    println!(
+        "{} Test - search threshold: {search_threshold}, max depth: {max_depth}",
+        tname
+    );
     let mut correct: Vec<usize> = vec![];
     let mut points: f64 = 0.0;
     let mut n_searched: usize = 0;
-    //let a = &KAUFMAN;
-    let a = &BRATKO_KOPEC;
     let start = Instant::now();
-    for (i, (fen, h, label)) in a.iter().enumerate() {
+    for (i, (fen, h, label)) in tpos.iter().enumerate() {
         let mut game = Game::from_fen(fen);
         let cc = game.can_castle.last_mut().unwrap();
         cc[0] = h.contains('K');
@@ -245,7 +253,7 @@ fn benchmark(verbose: bool, search_threshold: usize, max_depth: usize) {
             //if clabel.as_str() == *label {
             correct.push(i + 1);
         }
-        println!("Correct: {:?} {}/{}", correct, correct.len(), a.len());
+        println!("Correct: {:?} {}/{}", correct, correct.len(), tpos.len());
         println!("Points: {points}");
 
         let dur = (Instant::now() - start).as_millis();
@@ -375,8 +383,11 @@ fn main() {
 
     //println!("Move1: {}", mem::size_of::<Move1>());
 
-    if args.k {
-        benchmark(args.v, args.n, args.d);
+    if args.k > 0 {
+        match args.k {
+            1 => benchmark(args.v, args.n, args.d, "BRATKO-KOPEC", &BRATKO_KOPEC),
+            _ => benchmark(args.v, args.n, args.d, "KAUFMAN", &KAUFMAN),
+        }
     } else {
         let players = HashMap::from([(WHITE, args.w), (BLACK, args.b)]);
         play(

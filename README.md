@@ -41,9 +41,10 @@ Run CLI app like this to play white:
 ![alt text](https://github.com/jesper-olsen/puccinia_s_checkmate/blob/main/Images/your_move.png "Game UI")
 
 
+
 Run CLI app like this to benchmark on Bratko-Kopec positions:
 ```
-% cargo run --release --bin main -- -k -n 1000000000
+% cargo run --release --bin main -- -k 1 -n 1000000000
 
 Position  1; Searched:    2800755, Score:  9995, Move (black): d6 d1 =  Qd1; Expected: Qd1+
 Position  2; Searched: 2222449681, Score:    93, Move (white): f2 g1 =  Kg1; Expected: d5
@@ -74,4 +75,39 @@ Correct: [1, 3, 6, 8, 10, 12, 13, 14, 15, 16, 18, 20, 24] 13/24
 Points: 14
 Time: 3770684 ms => 157111 ms/position
 Search total: 64093151997; Time 3770684 ms => 16997 nodes/ms
+
+Run CLI app like this to benchmark on Kaufman positions:
+
+% cargo run --release --bin main -- -k 2 -n 1000000000
+
+Position  1; Searched: 1395431159, Score:   187, Move (white): e4 f6 =  Nf6; Expected: Nf6+
+Position  2; Searched: 3444952992, Score:   -27, Move (black): f5 d6 =  Nd6; Expected: Nxd4
+Position  3; Searched: 2531952375, Score:  -124, Move (white): h4 h5 =   h5; Expected: Rd1
+Position  4; Searched: 2818344653, Score:   -26, Move (white): c2 e3 =  Ne3; Expected: Rxb2
+Position  5; Searched: 4197810114, Score:    78, Move (black): g5 c1 = Qxc1; Expected: Qxc1
+Position  6; Searched: 3260377981, Score:   -45, Move (black): h7 h5 =   h5; Expected: Rxa2
+Position  7; Searched: 3002123202, Score:   -47, Move (black): f6 h5 =  Nh5; Expected: Bxe4
+Position  8; Searched: 1906626805, Score:   -87, Move (black): e1 f2 =  Qf2; Expected: h6
+Position  9; Searched: 2484627037, Score:   361, Move (white): f3 e2 =  Be2; Expected: Be2
+Position 10; Searched: 4246892341, Score:   164, Move (black): d5 f4 =  Nf4; Expected: Nxc3
+Position 11; Searched: 1236660820, Score:  9989, Move (white): g3 f5 =  Nf5; Expected: Nf5
+Position 12; Searched: 2093813685, Score:  -300, Move (black): a7 a6 =   a6; Expected: Rd6
+Position 13; Searched: 1579128939, Score:   206, Move (white): c3 d5 = Nxd5; Expected: Nxd5
+Position 14; Searched: 1058834540, Score:    91, Move (white): h6 f4 =  Bf4; Expected: Rxb2
+Position 15; Searched: 1471202188, Score:   533, Move (white): g3 f5 = Nxf5; Expected: Bxf5
+Position 16; Searched: 1142702021, Score:   631, Move (white): b3 b4 =   b4; Expected: b4
+Position 17; Searched: 1059733768, Score:    46, Move (white): e4 e5 =   e5; Expected: e5
+Position 18; Searched: 1004542637, Score:    71, Move (black): a8 a7 =  Qa7; Expected: Qc8
+Position 19; Searched: 1209889636, Score:   307, Move (white): a4 d7 = Qxd7; Expected: Qxd7
+Position 20; Searched: 7008215735, Score:   257, Move (white): h3 g4 =  Bg4; Expected: Bg4
+Position 21; Searched: 1773774170, Score:  -245, Move (white): c4 c5 = Kxc5; Expected: Kxb5
+Position 22; Searched: 3381170517, Score:  -149, Move (white): h7 g6 =  Kg6; Expected: Ba7
+Position 23; Searched: 2502075164, Score:   -20, Move (black): f7 f5 =   f5; Expected: Ba6
+Position 24; Searched: 1899177410, Score:    59, Move (white): e4 c6 = Bxc6; Expected: Bxc6
+Position 25; Searched: 1123406907, Score:   166, Move (white): f3 f4 =   f4; Expected: Bxd7
+
+Correct: [1, 5, 9, 11, 13, 16, 17, 19, 20, 24] 10/25
+Points: 11.5
+Time: 3744815 ms => 149792 ms/position
+Search total: 58833466796; Time 3744815 ms => 15710 nodes/ms
 ```
