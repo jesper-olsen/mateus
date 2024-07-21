@@ -70,21 +70,7 @@ impl Component for App {
                 if (7 - i / 8) % 2 == i % 2 {
                     col = "black"
                 }
-                let sq = match self.game.board[i] {
-                    K1 => "\u{2654}",
-                    Q1 => "\u{2655}",
-                    R1 => "\u{2656}",
-                    B1 => "\u{2657}",
-                    N1 => "\u{2658}",
-                    P1 => "\u{2659}",
-                    K2 => "\u{265a}",
-                    Q2 => "\u{265b}",
-                    R2 => "\u{265c}",
-                    B2 => "\u{265d}",
-                    N2 => "\u{265e}",
-                    P2 => "\u{265f}",
-                    _ => "",
-                };
+                let sq = self.game.board[i].to_unicode();
                 vec.push(html! {<div class={col}>{sq}</div>});
             }
         }

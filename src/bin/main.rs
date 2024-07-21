@@ -13,7 +13,7 @@ use puccinia_s_checkmate::val::*;
 use puccinia_s_checkmate::Game;
 use rand::random;
 use std::collections::hash_map::HashMap;
-use std::{io};
+use std::io;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -379,6 +379,14 @@ fn main() {
         benchmark(args.v, args.n, args.d);
     } else {
         let players = HashMap::from([(WHITE, args.w), (BLACK, args.b)]);
-        play( players, args.v, args.n, args.d, args.m, args.l, args.f.as_str());
+        play(
+            players,
+            args.v,
+            args.n,
+            args.d,
+            args.m,
+            args.l,
+            args.f.as_str(),
+        );
     }
 }

@@ -86,7 +86,7 @@ impl fmt::Display for Game {
                 } else {
                     black_fg
                 };
-                let is_light_square = (x + y) % 2 == 0;
+                let is_light_square = (x + y) % 2 != 0;
                 let background_color = if is_light_square {
                     light_square_bg
                 } else {
@@ -166,11 +166,7 @@ impl Game {
                 s.push('/')
             }
         }
-        if self.turn() == WHITE {
-            s.push_str(" w")
-        } else {
-            s.push_str(" b")
-        }
+        s.push_str(if self.turn() == WHITE { " w" } else { " b" });
         s
     }
 
@@ -347,9 +343,11 @@ impl Game {
             self.bm_black,
         );
         if colour {
-            l.sort_by(|b, a| a.val.cmp(&b.val)); // decreasing
+            //l.sort_by(|b, a| a.val.cmp(&b.val)); // decreasing
+            l.sort_unstable_by(|b, a| a.val.cmp(&b.val)); // decreasing
         } else {
-            l.sort_by(|a, b| a.val.cmp(&b.val)); // increasing
+            //l.sort_by(|a, b| a.val.cmp(&b.val)); // increasing
+            l.sort_unstable_by(|a, b| a.val.cmp(&b.val)); // increasing
         }
         self.n_searched += l.len();
         l

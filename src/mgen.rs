@@ -11,10 +11,10 @@ const FRM_MASK: u16 = 0b111111;
 const TO_MASK: u16 = 0b111111 << TO_SHIFT;
 
 const fn pack_data(castle: bool, en_passant: bool, transform: bool, frm: usize, to: usize) -> u16 {
-    ((castle as u16) << 12) |
-    ((en_passant as u16) << 13) |
-    ((transform as u16) << 14) |
-    ((to << 6) | frm) as u16
+    ((castle as u16) << 12)
+        | ((en_passant as u16) << 13)
+        | ((transform as u16) << 14)
+        | ((to << 6) | frm) as u16
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -48,7 +48,7 @@ pub const NULL_MOVE: Move = Move {
 
 impl fmt::Display for Move {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let (frm, to) = (self.frm(),self.to());
+        let (frm, to) = (self.frm(), self.to());
         let x1 = 7 - frm / 8;
         let y1 = frm % 8 + 1;
         let x2 = 7 - to / 8;
