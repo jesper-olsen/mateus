@@ -1,17 +1,22 @@
 # Puccinia's Checkmate
 
 A rusty chess library:
-* Principle variation negamax search with alpha beta pruning (See Knuth).
+* Principle variation negamax search with alpha beta pruning (See [1]).
 * Transposition table to avoid re-searching cycles
 * Evaluation based on material, pawn structure & mobility
 * Checks draw by 3x repetition and 50 move rule
 * Opening library
 
 References:
-* ["An Analysis of Alpha-Beta Pruning", Donald E. Knuth and Ronald W. Moore, Artificial Intelligence 6 (1975), 293-326](http://www-public.telecom-sudparis.eu/~gibson/Teaching/Teaching-ReadingMaterial/KnuthMoore75.pdf) 
-* ["Computer Chess Methods", T.A. Marsland, ENCYCLOPEDIAOF ARTIFICIAL INTELLIGENCE, 1987](https://www.researchgate.net/publication/2404258_Computer_Chess_Methods)
-* ["The Bratko-Kopec Experiment: A Comparison of Human and Computer Performance in Chess", D. Kopec and I Bratko](http://spider.sci.brooklyn.cuny.edu/~kopec)
+[1] ["An Analysis of Alpha-Beta Pruning", Donald E. Knuth and Ronald W. Moore, Artificial Intelligence 6 (1975), 293-326](http://www-public.telecom-sudparis.eu/~gibson/Teaching/Teaching-ReadingMaterial/KnuthMoore75.pdf) 
 
+[2] ["Computer Chess Methods", T.A. Marsland, ENCYCLOPEDIAOF ARTIFICIAL INTELLIGENCE, 1987](https://www.researchgate.net/publication/2404258_Computer_Chess_Methods)
+
+[3] ["The Bratko-Kopec Experiment: A Comparison of Human and Computer Performance in Chess", D. Kopec and I Bratko](http://spider.sci.brooklyn.cuny.edu/~kopec)
+
+[4] ["Kaufman Test"](https://www.chessprogramming.org/Kaufman_Test)
+
+## Run
 Two example apps included - terminal CLI app (src/bin) and browser web application ([examples/spa](https://github.com/jesper-olsen/puccinia_s_checkmate/tree/main/examples/spa)).
 
 Run CLI app like this to see options: 
@@ -46,7 +51,8 @@ Run CLI app like this to play white:
 
 
 
-Run CLI app like this to benchmark on Bratko-Kopec positions:
+## Bratko-Kopec
+Run CLI app like this to benchmark on Bratko-Kopec positions [3]:
 ```
 % cargo run --release --bin main -- -k 1 -n 1000000000
 
@@ -81,7 +87,8 @@ Time: 3770684 ms => 157111 ms/position
 Search total: 64093151997; Time 3770684 ms => 16997 nodes/ms
 ```
 
-Run CLI app like this to benchmark on Kaufman positions:
+## Kaufman 
+Run CLI app like this to benchmark on Kaufman positions [4]:
 
 ```
 % cargo run --release --bin main -- -k 2 -n 1000000000
