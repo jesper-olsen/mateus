@@ -6,6 +6,7 @@ pub mod mgen;
 pub mod misc;
 pub mod openings;
 pub mod val;
+pub mod benchmark;
 use crate::Piece::*;
 use core::cmp::max;
 use core::cmp::min;
