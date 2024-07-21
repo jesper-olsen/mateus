@@ -1,6 +1,6 @@
 # Puccinia's Checkmate
 
-Puccinia's Checkmate - a rusty chess library:
+A rusty chess library:
 * Principle variation negamax search with alpha beta pruning (See Knuth).
 * Transposition table to avoid re-searching cycles
 * Evaluation based on material, pawn structure & mobility
@@ -13,7 +13,7 @@ References:
 
 Two example apps included - terminal CLI app (src/bin) and browser web application ([examples/spa](https://github.com/jesper-olsen/puccinia_s_checkmate/tree/main/examples/spa)).
 
-Run CLI app like this: 
+Run CLI app like this to see options: 
 
 ```
 % cargo run --release --bin main -- -h
@@ -26,12 +26,13 @@ Options:
   -m, --m <M>    number of (half) moves before stopping [default: -1]
   -w, --w        play white (human-computer)
   -b, --b        play black (human-computer)
-  -l, --l        library bypass
-  -k, --k        benchmark test positions - Bratko-Kopec / Kaufman
+  -l, --l        no opening library
+  -k, --k <K>    benchmark test positions - Bratko-Kopec (1) / Kaufman (2) [default: 0]
   -v, --v        verbose output
   -f, --f <F>    fen board - start position [default: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR]
   -h, --help     Print help
   -V, --version  Print version
+
 ```
 
 Run CLI app like this to play white:
