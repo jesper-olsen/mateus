@@ -60,5 +60,4 @@ pub const KAUFMAN: [(&str, &str, &str); 25] = [
 ];
 
 // Lasker position - test for transposition table - winning move Ka1-b1
-pub const LASKER: [(&str, &str, &str); 1] = 
-    [("8/k7/3p4/p2P1p2/P2P1P2/8/8/K7", "w - -", "Kb1")];
+pub const LASKER: [(&str, &str, &str); 1] = [("8/k7/3p4/p2P1p2/P2P1P2/8/8/K7", "w - -", "Kb1")];

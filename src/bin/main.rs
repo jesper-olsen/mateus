@@ -5,13 +5,13 @@
 
 use ::std::time::Instant;
 use clap::Parser;
+use puccinia_s_checkmate::benchmark;
 use puccinia_s_checkmate::mgen::*;
 use puccinia_s_checkmate::misc::str2move;
 use puccinia_s_checkmate::openings::library_moves;
 use puccinia_s_checkmate::val::Piece::*;
 use puccinia_s_checkmate::val::*;
 use puccinia_s_checkmate::Game;
-use puccinia_s_checkmate::benchmark;
 use rand::random;
 use std::collections::hash_map::HashMap;
 use std::io;
@@ -323,10 +323,15 @@ fn main() {
 
     if args.k > 0 {
         match args.k {
-            1 => benchmark(args.v, args.n, args.d, "Bratko-Kopec", &benchmark::BRATKO_KOPEC),
+            1 => benchmark(
+                args.v,
+                args.n,
+                args.d,
+                "Bratko-Kopec",
+                &benchmark::BRATKO_KOPEC,
+            ),
             2 => benchmark(args.v, args.n, args.d, "Kaufman", &benchmark::KAUFMAN),
             _ => benchmark(args.v, args.n, args.d, "Lasker", &benchmark::LASKER),
-            
         }
     } else {
         let players = HashMap::from([(WHITE, args.w), (BLACK, args.b)]);

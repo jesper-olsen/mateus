@@ -2,11 +2,11 @@ pub mod bitmaps;
 pub mod hashkeys;
 pub mod hashkeys_generated;
 use crate::hashkeys_generated::WHITE_HASH;
+pub mod benchmark;
 pub mod mgen;
 pub mod misc;
 pub mod openings;
 pub mod val;
-pub mod benchmark;
 use crate::Piece::*;
 use core::cmp::max;
 use core::cmp::min;
@@ -29,7 +29,7 @@ enum BType {
 pub struct TTable {
     depth: u16,
     score: i16,
-    frmto: (u8,u8),
+    frmto: (u8, u8),
     bound: BType,
 }
 
@@ -106,7 +106,7 @@ impl fmt::Display for Game {
     }
 }
 
-fn move_to_head(moves: &mut Vec<Move>, frmto: &(u8,u8)) {
+fn move_to_head(moves: &mut Vec<Move>, frmto: &(u8, u8)) {
     if let Some(q) = moves
         .iter()
         .position(|m| (m.frm(), m.to()) == (frmto.0 as usize, frmto.1 as usize))
@@ -517,7 +517,7 @@ impl Game {
             } else {
                 BType::Exact
             },
-            frmto: (m.frm() as u8,m.to() as u8),
+            frmto: (m.frm() as u8, m.to() as u8),
         };
         self.ttable
             .entry(key)
@@ -640,11 +640,7 @@ impl Game {
         let mut bmove = None;
         let colour = self.colour;
 
-        let in_check = self.in_check(colour);
-        let depth = if in_check { depth + 1 } else { depth };
-
-        let key = self.hash;
-        let kmove = if let Some(e) = self.ttable.get(&key) {
+        let kmove = if let Some(e) = self.ttable.get(&self.hash) {
             if e.depth >= depth {
                 match e.bound {
                     BType::Exact => return e.score,
@@ -660,12 +656,14 @@ impl Game {
             None
         };
 
-        let depth = match depth {
-            0 if self.is_quiescent(last) => {
+        let in_check = self.in_check(colour);
+        let depth = match (depth, in_check) {
+            (_, true) => depth + 1,
+            (0, false) if self.is_quiescent(last) => {
                 return self.quiescence_fab(alpha, beta, last, false)
             }
-            0 => 1,
-            _ => depth,
+            (0, false) => 1,
+            (_, false) => depth,
         };
 
         let mut moves = self.moves(colour, Some(last));
@@ -694,20 +692,24 @@ impl Game {
                 }
             }
             self.backdate(m);
-            if let Some(m) = bmove {
-                if bscore >= beta {
-                    self.ttstore(depth, bscore, alp, beta, m);
-                    return bscore;
-                }
+            if bscore >= beta {
+                break;
             }
-        }
-        if let Some(m) = bmove {
-            self.ttstore(depth, bscore, alp, beta, m);
+            //if let Some(m) = bmove {
+            //    if bscore >= beta {
+            //        self.ttstore(depth, bscore, alp, beta, m);
+            //        return bscore;
+            //    }
+            //}
         }
 
         match (bmove, in_check) {
             (None, false) => 0,
-            _ => bscore,
+            (None, true) => bscore,
+            (Some(m), _) => {
+                self.ttstore(depth, bscore, alp, beta, m);
+                bscore
+            }
         }
     }
 
