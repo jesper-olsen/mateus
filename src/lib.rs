@@ -695,12 +695,6 @@ impl Game {
             if bscore >= beta {
                 break;
             }
-            //if let Some(m) = bmove {
-            //    if bscore >= beta {
-            //        self.ttstore(depth, bscore, alp, beta, m);
-            //        return bscore;
-            //    }
-            //}
         }
 
         match (bmove, in_check) {
