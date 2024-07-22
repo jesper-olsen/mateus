@@ -676,18 +676,18 @@ impl Game {
                 // legal move
                 if bmove.is_none() {
                     bscore = -self.pvs(depth - 1, ply + 1, -beta, -alpha, m); // full beam
-                    alpha = max(bscore, alpha);
                     bmove = Some(m);
+                    alpha = max(bscore, alpha);
                 } else {
                     let mut score =
-                        -self.pvs(depth - 1, ply + 1, -alpha - 1, -max(bscore, alpha), m);
+                        -self.pvs(depth - 1, ply + 1, -alpha - 1, -alpha, m);
                     if score > bscore {
                         if score > max(bscore, alpha) && score < beta && depth > 2 {
                             score = -self.pvs(depth - 1, ply + 1, -beta, -score, m);
                         }
                         bscore = score;
-                        alpha = max(bscore, alpha);
                         bmove = Some(m);
+                        alpha = max(bscore, alpha);
                     }
                 }
             }
