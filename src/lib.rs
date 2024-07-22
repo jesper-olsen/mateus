@@ -27,9 +27,9 @@ enum BType {
 
 #[derive(Debug, Copy, Clone)]
 pub struct TTable {
-    pub depth: usize,
-    pub score: i16,
-    pub m: Move,
+    depth: u16,
+    score: i16,
+    frmto: (u8,u8),
     bound: BType,
 }
 
@@ -106,10 +106,10 @@ impl fmt::Display for Game {
     }
 }
 
-fn move_to_head(moves: &mut Vec<Move>, k: &Move) {
+fn move_to_head(moves: &mut Vec<Move>, frmto: &(u8,u8)) {
     if let Some(q) = moves
         .iter()
-        .position(|m| (m.frm(), m.to()) == (k.frm(), k.to()))
+        .position(|m| (m.frm(), m.to()) == (frmto.0 as usize, frmto.1 as usize))
     {
         if q != 0 {
             let m = moves.remove(q);
@@ -504,7 +504,7 @@ impl Game {
         self.material -= m.val;
     }
 
-    fn ttstore(&mut self, depth: usize, score: i16, alpha: i16, beta: i16, m: &Move) {
+    fn ttstore(&mut self, depth: u16, score: i16, alpha: i16, beta: i16, m: &Move) {
         // TODO - implement more efficient hashing function
         let key = self.hash;
         let e = TTable {
@@ -517,7 +517,7 @@ impl Game {
             } else {
                 BType::Exact
             },
-            m: *m,
+            frmto: (m.frm() as u8,m.to() as u8),
         };
         self.ttable
             .entry(key)
@@ -589,7 +589,7 @@ impl Game {
         pen
     }
 
-    fn quiescence_fab(&mut self, _ply: usize, alp: i16, beta: i16, last: &Move, rfab: bool) -> i16 {
+    fn quiescence_fab(&mut self, alp: i16, beta: i16, last: &Move, rfab: bool) -> i16 {
         let colour = self.colour;
 
         let mut bscore = None;
@@ -607,7 +607,7 @@ impl Game {
             self.update(&m);
             if !self.in_check(colour) {
                 // legal move
-                let score = -self.quiescence_fab(_ply + 1, -beta, -alpha, &m, true);
+                let score = -self.quiescence_fab(-beta, -alpha, &m, true);
                 match bscore {
                     Some(bs) if score <= bs => (),
                     _ => {
@@ -629,7 +629,7 @@ impl Game {
         }
     } // fn quiescence fab
 
-    pub fn pvs(&mut self, dpt: usize, ply: usize, alp: i16, bet: i16, last: &Move) -> i16 {
+    pub fn pvs(&mut self, depth: u16, ply: usize, alp: i16, bet: i16, last: &Move) -> i16 {
         if self.rep_count() >= 2 {
             return 0;
         }
@@ -641,11 +641,10 @@ impl Game {
         let colour = self.colour;
 
         let in_check = self.in_check(colour);
-        let mut depth = if in_check { dpt + 1 } else { dpt };
+        let depth = if in_check { depth + 1 } else { depth };
 
-        let mut kmove = None;
         let key = self.hash;
-        if let Some(e) = self.ttable.get(&key) {
+        let kmove = if let Some(e) = self.ttable.get(&key) {
             if e.depth >= depth {
                 match e.bound {
                     BType::Exact => return e.score,
@@ -656,16 +655,18 @@ impl Game {
                     return e.score;
                 }
             }
-            kmove = Some(e.m);
-        }
+            Some(e.frmto)
+        } else {
+            None
+        };
 
-        match depth {
+        let depth = match depth {
             0 if self.is_quiescent(last) => {
-                return self.quiescence_fab(ply, alpha, beta, last, false)
+                return self.quiescence_fab(alpha, beta, last, false)
             }
-            0 => depth = 1,
-            _ => (),
-        }
+            0 => 1,
+            _ => depth,
+        };
 
         let mut moves = self.moves(colour, Some(last));
         if let Some(k) = kmove {
@@ -714,7 +715,7 @@ impl Game {
         &mut self,
         moves: &[Move],
         max_searched: usize,
-        max_depth: usize,
+        max_depth: u16,
         verbose: bool,
     ) -> Vec<(Move, i16)> {
         // top level pvs - does iterative deepening, sorts moves

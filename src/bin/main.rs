@@ -24,7 +24,7 @@ struct Args {
     n: usize,
     #[arg(short, long, default_value_t = 30)]
     ///max depth of regular search  
-    d: usize,
+    d: u16,
     #[arg(short, long, default_value_t = -1)]
     ///number of (half) moves before stopping
     m: isize,
@@ -136,7 +136,7 @@ fn check_game_over(game: &Game, moves: &[Move], half_moves: isize, log: &[Move])
 fn benchmark(
     verbose: bool,
     search_threshold: usize,
-    max_depth: usize,
+    max_depth: u16,
     tname: &str,
     tpos: &[(&str, &str, &str)],
 ) {
@@ -214,7 +214,7 @@ fn play(
     players: HashMap<bool, bool>,
     verbose: bool,
     search_threshold: usize,
-    max_depth: usize,
+    max_depth: u16,
     half_moves: isize,
     library_bypass: bool,
     fen: &str,
@@ -320,8 +320,6 @@ fn get_input() -> String {
 
 fn main() {
     let args = Args::parse();
-
-    //println!("Move1: {}", mem::size_of::<Move1>());
 
     if args.k > 0 {
         match args.k {
