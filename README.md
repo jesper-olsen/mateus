@@ -53,9 +53,8 @@ Run CLI app like this to play white:
 
 ## Benchmarks
 
-### Bratko-Kopec
+### Bratko-Kopec [3]
 
-Run CLI app like this to benchmark on Bratko-Kopec positions [3]:
 ```
 % cargo run --release --bin main -- -k 1 -n 1000000000
 
@@ -90,9 +89,7 @@ Time: 3638684 ms => 151611 ms/position
 Search total: 63182106516; Time 3638684 ms => 17363 nodes/ms
 ```
 
-### Kaufman 
-
-Run CLI app like this to benchmark on Kaufman positions [4]:
+### Kaufman [4]
 
 ```
 % cargo run --release --bin main -- -k 2 -n 1000000000
@@ -129,9 +126,7 @@ Time: 3405925 ms => 136237 ms/position
 Search total: 58388201097; Time 3405925 ms => 17143 nodes/ms
 ```
 
-### Lasker  
-
-Run CLI app like this to benchmark on Lasker position [5]:
+### Lasker [5]
 
 ```
 % cargo run --release --bin main -- -k 3
