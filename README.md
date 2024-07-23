@@ -13,7 +13,7 @@ A rusty chess library:
 [2] ["Computer Chess Methods", T.A. Marsland, ENCYCLOPEDIAOF ARTIFICIAL INTELLIGENCE, 1987](https://www.researchgate.net/publication/2404258_Computer_Chess_Methods) <br/>
 [3] ["The Bratko-Kopec Experiment: A Comparison of Human and Computer Performance in Chess", D. Kopec and I Bratko](http://spider.sci.brooklyn.cuny.edu/~kopec) <br/>
 [4] ["Kaufman Test"](https://www.chessprogramming.org/Kaufman_Test)<br/>
-[5] ["Lasker Test"] https://www.chessprogramming.org/Lasker-Reichhelm_Position <br/>
+[5] ["Lasker Test"](https://www.chessprogramming.org/Lasker-Reichhelm_Position) <br/>
 
 ## Run:
 
