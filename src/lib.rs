@@ -629,13 +629,13 @@ impl Game {
         }
     } // fn quiescence fab
 
-    pub fn pvs(&mut self, depth: u16, ply: usize, alp: i16, bet: i16, last: &Move) -> i16 {
+    pub fn pvs(&mut self, depth: u16, ply: usize, alpha: i16, beta: i16, last: &Move) -> i16 {
         if self.rep_count() >= 2 {
             return 0;
         }
 
-        let mut alpha = alp;
-        let mut beta = bet;
+        let mut alpha=alpha;
+        let mut beta=beta;
         let mut bscore = -INFINITE + ply as i16;
         let mut bmove = None;
         let colour = self.colour;
@@ -677,17 +677,15 @@ impl Game {
                 if bmove.is_none() {
                     bscore = -self.pvs(depth - 1, ply + 1, -beta, -alpha, m); // full beam
                     bmove = Some(m);
-                    alpha = max(bscore, alpha);
                 } else {
                     let mut score =
-                        -self.pvs(depth - 1, ply + 1, -alpha - 1, -alpha, m);
+                        -self.pvs(depth - 1, ply + 1, -max(alpha,bscore) - 1, -max(alpha,bscore), m);
                     if score > bscore {
                         if score > max(bscore, alpha) && score < beta && depth > 2 {
                             score = -self.pvs(depth - 1, ply + 1, -beta, -score, m);
                         }
                         bscore = score;
                         bmove = Some(m);
-                        alpha = max(bscore, alpha);
                     }
                 }
             }
@@ -701,7 +699,7 @@ impl Game {
             (None, false) => 0,
             (None, true) => bscore,
             (Some(m), _) => {
-                self.ttstore(depth, bscore, alp, beta, m);
+                self.ttstore(depth, bscore, alpha, beta, m);
                 bscore
             }
         }
