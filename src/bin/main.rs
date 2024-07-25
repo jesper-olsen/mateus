@@ -9,7 +9,6 @@ use puccinia_s_checkmate::benchmark;
 use puccinia_s_checkmate::mgen::*;
 use puccinia_s_checkmate::misc::str2move;
 use puccinia_s_checkmate::openings::library_moves;
-use puccinia_s_checkmate::val::Piece::*;
 use puccinia_s_checkmate::val::*;
 use puccinia_s_checkmate::Game;
 use rand::random;
@@ -46,55 +45,6 @@ struct Args {
     #[arg(short, long, default_value_t = String::from(ROOT_FEN))]
     ///fen board - start position
     f: String,
-}
-
-fn i2str(i: usize) -> String {
-    let s = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
-    let x = 7 - i / 8;
-    let y = i % 8 + 1;
-    format!("{}{}", s[x], y)
-}
-
-//https://cheatography.com/davechild/cheat-sheets/chess-algebraic-notation/
-fn move2label(board: &[Piece; 64], m: &Move, moves: &Vec<Move>) -> String {
-    let mut label = String::new();
-    if m.castle() {
-        if m.to() < 31 {
-            label.push_str("0-0 ");
-        } else {
-            label.push_str("0-0-0 ");
-        }
-    } else if m.transform() {
-        label.push('*');
-    }
-    if !matches!(board[m.frm()], Pawn(_)) {
-        let p = format!("{}", board[m.frm()]).to_uppercase();
-        label.push_str(&p);
-    }
-
-    let mut l = Vec::new();
-    for m2 in moves {
-        match (board[m.frm()], board[m2.frm()]) {
-            (Rook(_), Rook(_)) | (Knight(_), Knight(_)) | (Bishop(_), Bishop(_))
-                if m2.to() == m.to() =>
-            {
-                l.push(i2str(m2.to()))
-            }
-            _ => (),
-        }
-    }
-    if l.len() > 1 {
-        // push file - or rank if same
-        let n = if l[0] == l[1] { 1 } else { 0 };
-        label.push(l[0].chars().nth(n).unwrap());
-    }
-    if m.en_passant() || board[m.to()] != Nil {
-        // TODO ?
-        //if board[m.frm()].ptype == PType::Pawn {}
-        label.push('x');
-    }
-    label.push_str(&i2str(m.to()));
-    label
 }
 
 fn pick_move(moves: &[Move], label: &str) -> Vec<(Move, i16)> {
@@ -165,7 +115,7 @@ fn benchmark(
         let l = game.score_moves(&moves, search_threshold, max_depth, verbose);
         let (best, score) = l[0];
         n_searched += game.n_searched;
-        let clabel = move2label(&game.board, &best, &moves);
+        let clabel = game.move2label(&best, &moves);
         let colour = if game.colour { "white" } else { "black" };
         println!("{game}");
 
@@ -173,7 +123,7 @@ fn benchmark(
             if verbose {
                 println!("{i}/{}: dpt {max_depth} {m} {}/{score}", l.len(), m.val);
             }
-            let clabel = move2label(&game.board, m, &moves);
+            let clabel = game.move2label(m, &moves);
             if i < 4 && (*label).contains(clabel.as_str()) {
                 // note - only the best move is accurately scored (pruning)
                 points += match i {
@@ -284,7 +234,7 @@ fn play(
         }
         let (m, score) = l[0];
 
-        let label = move2label(&game.board, &m, &moves);
+        let label = game.move2label(&m, &moves);
         game.make_move(m);
         log.push(m);
         println!("{game}");

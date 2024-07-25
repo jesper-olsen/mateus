@@ -120,6 +120,13 @@ fn move_to_head(moves: &mut Vec<Move>, frmto: &(u8, u8)) {
     }
 }
 
+fn i2str(i: usize) -> String {
+    let s = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+    let x = 7 - i / 8;
+    let y = i % 8 + 1;
+    format!("{}{}", s[x], y)
+}
+
 impl Game {
     pub fn new(board: [Piece; 64]) -> Self {
         let key = board2hash(&board, WHITE);
@@ -194,6 +201,48 @@ impl Game {
             game.colour = matches!(parts[1].chars().nth(0), Some('w') | Some('W'));
         }
         game
+    }
+
+    //https://cheatography.com/davechild/cheat-sheets/chess-algebraic-notation/
+    pub fn move2label(&self, m: &Move, moves: &Vec<Move>) -> String {
+        let mut label = String::new();
+        if m.castle() {
+            if m.to() < 31 {
+                label.push_str("0-0 ");
+            } else {
+                label.push_str("0-0-0 ");
+            }
+        } else if m.transform() {
+            label.push('*');
+        }
+        if !matches!(self.board[m.frm()], Pawn(_)) {
+            let p = format!("{}", self.board[m.frm()]).to_uppercase();
+            label.push_str(&p);
+        }
+
+        let mut l = Vec::new();
+        for m2 in moves {
+            match (self.board[m.frm()], self.board[m2.frm()]) {
+                (Rook(_), Rook(_)) | (Knight(_), Knight(_)) | (Bishop(_), Bishop(_))
+                    if m2.to() == m.to() =>
+                {
+                    l.push(i2str(m2.to()))
+                }
+                _ => (),
+            }
+        }
+        if l.len() > 1 {
+            // push file - or rank if same
+            let n = if l[0] == l[1] { 1 } else { 0 };
+            label.push(l[0].chars().nth(n).unwrap());
+        }
+        if m.en_passant() || self.board[m.to()] != Nil {
+            // TODO ?
+            //if board[m.frm()].ptype == PType::Pawn {}
+            label.push('x');
+        }
+        label.push_str(&i2str(m.to()));
+        label
     }
 
     pub fn rep_len(&self) -> usize {
@@ -634,8 +683,8 @@ impl Game {
             return 0;
         }
 
-        let mut alpha=alpha;
-        let mut beta=beta;
+        let mut alpha = alpha;
+        let mut beta = beta;
         let mut bscore = -INFINITE + ply as i16;
         let mut bmove = None;
         let colour = self.colour;
@@ -678,8 +727,13 @@ impl Game {
                     bscore = -self.pvs(depth - 1, ply + 1, -beta, -alpha, m); // full beam
                     bmove = Some(m);
                 } else {
-                    let mut score =
-                        -self.pvs(depth - 1, ply + 1, -max(alpha,bscore) - 1, -max(alpha,bscore), m);
+                    let mut score = -self.pvs(
+                        depth - 1,
+                        ply + 1,
+                        -max(alpha, bscore) - 1,
+                        -max(alpha, bscore),
+                        m,
+                    );
                     if score > bscore {
                         if score > max(bscore, alpha) && score < beta && depth > 2 {
                             score = -self.pvs(depth - 1, ply + 1, -beta, -score, m);
