@@ -273,11 +273,11 @@ fn king_moves(
         (can_castle[0] && frm == 24 && board[0] == Rook(WHITE) && bitmaps.bm_board & WSHORT == 0,
          Rook(WHITE), 8, 0, 16,),
         (can_castle[1] && frm == 24 && board[56] == Rook(WHITE) && bitmaps.bm_board & WLONG == 0,
-         Rook(WHITE), 48, 56, 32,),
+         Rook(WHITE), 40, 56, 32,),
         (can_castle[2] && frm == 31 && board[7] == Rook(BLACK) && bitmaps.bm_board & BSHORT == 0,
          Rook(BLACK), 15, 7, 23,),
         (can_castle[3] && frm == 31 && board[63] == Rook(BLACK) && bitmaps.bm_board & BLONG == 0,
-         Rook(BLACK), 55, 63, 39,),
+         Rook(BLACK), 47, 63, 39,),
     ];
 
     v.extend(

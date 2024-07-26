@@ -239,12 +239,7 @@ fn play(
         log.push(m);
         println!("{game}");
         moves = game.legal_moves(Some(&m));
-        let s = match (game.in_check(game.turn()), moves.is_empty()) {
-            (true, true) => "#",
-            (true, false) => "+",
-            (false, _) => "",
-        };
-        println!("{}. {}{}", log.len() / 2 + 1, label, s);
+        println!("{}. {label}", log.len() / 2 + 1);
 
         if verbose {
             if game.rep_count() > 1 {

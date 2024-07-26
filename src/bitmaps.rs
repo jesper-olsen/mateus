@@ -152,14 +152,16 @@ const fn bm_queen_moves_bb(frm: usize, blocked: usize) -> u64 {
             if frm_y < blocked_y {
                 // bishop blocked NE
                 let mut i = blocked as isize - 7;
-                while i % 8 <= 7 && i >= 0 {
+                //while i % 8 <= 7 && i >= 0 {
+                while i % 8 > frm_y as isize && i >= 0 {
                     b |= 1 << i;
                     i -= 7;
                 }
             } else {
                 // bishop blocked SE
                 let mut i = blocked as isize - 9;
-                while i % 8 >= 0 && i >= 0 {
+                //while i % 8 >= 0 && i >= 0 {
+                while i % 8 < frm_y as isize && i >= 0 {
                     b |= 1 << i;
                     i -= 9;
                 }

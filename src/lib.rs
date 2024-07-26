@@ -204,44 +204,62 @@ impl Game {
     }
 
     //https://cheatography.com/davechild/cheat-sheets/chess-algebraic-notation/
-    pub fn move2label(&self, m: &Move, moves: &Vec<Move>) -> String {
+    pub fn move2label(&mut self, m: &Move, moves: &Vec<Move>) -> String {
         let mut label = String::new();
         if m.castle() {
             if m.to() < 31 {
-                label.push_str("0-0 ");
+                label.push_str("O-O");
             } else {
-                label.push_str("0-0-0 ");
+                label.push_str("O-O-O");
             }
-        } else if m.transform() {
-            label.push('*');
-        }
-        if !matches!(self.board[m.frm()], Pawn(_)) {
-            let p = format!("{}", self.board[m.frm()]).to_uppercase();
-            label.push_str(&p);
+        } else {
+            if matches!(self.board[m.frm()], Pawn(_)) {
+                if self.board[m.to()] != Nil || m.en_passant() {
+                    let s = i2str(m.frm());
+                    label.push(s.chars().nth(0).unwrap())
+                }
+            } else {
+                let p = format!("{}", self.board[m.frm()]).to_uppercase();
+                label.push_str(&p);
+            }
+
+            let mut s = None;
+            for m2 in moves {
+                match (self.board[m.frm()], self.board[m2.frm()]) {
+                    (Rook(_), Rook(_)) | (Knight(_), Knight(_)) | (Bishop(_), Bishop(_)) | (Queen(_), Queen(_))
+                        if m != m2 && m2.to() == m.to() =>
+                    {
+                        let s1 = i2str(m.frm());
+                        let s2 = i2str(m2.frm());
+                        s = if s1.chars().nth(0) == s2.chars().nth(0) {
+                            s1.chars().nth(1)
+                        } else {
+                            s1.chars().nth(0)
+                        }
+                    }
+                    _ => (),
+                }
+            }
+            if let Some(a) = s {
+                label.push(a)
+            }
+            if m.en_passant() || self.board[m.to()] != Nil {
+                label.push('x');
+            }
+            label.push_str(&i2str(m.to()));
+            if m.transform() {
+                label.push_str("=Q")
+            }
         }
 
-        let mut l = Vec::new();
-        for m2 in moves {
-            match (self.board[m.frm()], self.board[m2.frm()]) {
-                (Rook(_), Rook(_)) | (Knight(_), Knight(_)) | (Bishop(_), Bishop(_))
-                    if m2.to() == m.to() =>
-                {
-                    l.push(i2str(m2.to()))
-                }
-                _ => (),
-            }
+        self.update(&m);
+        let in_check=self.in_check(self.turn());
+        if self.legal_moves(Some(&m)).len()==0 && in_check{
+            label.push('#')
+        } else if self.in_check(self.turn()) {
+            label.push('+')
         }
-        if l.len() > 1 {
-            // push file - or rank if same
-            let n = if l[0] == l[1] { 1 } else { 0 };
-            label.push(l[0].chars().nth(n).unwrap());
-        }
-        if m.en_passant() || self.board[m.to()] != Nil {
-            // TODO ?
-            //if board[m.frm()].ptype == PType::Pawn {}
-            label.push('x');
-        }
-        label.push_str(&i2str(m.to()));
+        self.backdate(&m);
         label
     }
 
