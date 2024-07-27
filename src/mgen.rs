@@ -49,13 +49,21 @@ pub const NULL_MOVE: Move = Move {
 impl fmt::Display for Move {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let (frm, to) = (self.frm(), self.to());
-        let x1 = 7 - frm / 8;
-        let y1 = frm % 8 + 1;
-        let x2 = 7 - to / 8;
-        let y2 = to % 8 + 1;
+        let (x1, y1) = i2xy(frm);
+        let (x2, y2) = i2xy(to);
+        //let x1 = 7 - frm / 8;
+        //let y1 = frm % 8 + 1;
+        //let x2 = 7 - to / 8;
+        //let y2 = to % 8 + 1;
         let s = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
-        write!(f, "{}{} {}{}", s[x1 as usize], y1, s[x2 as usize], y2)
+        write!(f, "{}{} {}{}", s[x1], y1 + 1, s[x2], y2 + 1)
     }
+}
+
+pub fn i2xy(i: usize) -> (usize, usize) {
+    let x = 7 - i / 8; // col
+    let y = i % 8; // row
+    (x, y)
 }
 
 // count pseudo legal moves - ignoring en passant & castling
@@ -150,6 +158,7 @@ struct Bitmaps {
 pub fn moves(
     board: &[Piece; 64],
     colour: bool,
+    in_check: bool,
     end_game: bool,
     can_castle: &[bool; 4],
     last: Option<&Move>,
@@ -173,7 +182,9 @@ pub fn moves(
     let mut v = Vec::with_capacity(50);
     board.iter().enumerate().for_each(|(frm, &p)| match p {
         Knight(c) if c == colour => knight_moves(&mut v, board, frm, &bitmaps),
-        King(c) if c == colour => king_moves(&mut v, board, frm, &bitmaps, end_game, can_castle),
+        King(c) if c == colour => {
+            king_moves(&mut v, board, frm, &bitmaps, end_game, can_castle, in_check)
+        }
         Pawn(c) if c == colour => pawn_moves(&mut v, board, frm, last, &bitmaps, colour),
         Rook(c) if c == colour => ray_moves(&mut v, board, frm, BM_ROOK_MOVES[frm], &bitmaps),
         Bishop(c) if c == colour => ray_moves(&mut v, board, frm, BM_BISHOP_MOVES[frm], &bitmaps),
@@ -251,6 +262,7 @@ fn king_moves(
     bitmaps: &Bitmaps,
     end_game: bool,
     can_castle: &[bool; 4],
+    in_check: bool,
 ) {
     // change king valuation in end_game
     let p = match (board[frm], end_game) {
@@ -270,13 +282,13 @@ fn king_moves(
 
     #[rustfmt::skip]
     let cc2 = [
-        (can_castle[0] && frm == 24 && board[0] == Rook(WHITE) && bitmaps.bm_board & WSHORT == 0,
+        (can_castle[0] && frm == 24 && !in_check && board[0] == Rook(WHITE) && bitmaps.bm_board & WSHORT == 0,
          Rook(WHITE), 8, 0, 16,),
-        (can_castle[1] && frm == 24 && board[56] == Rook(WHITE) && bitmaps.bm_board & WLONG == 0,
+        (can_castle[1] && frm == 24 && !in_check && board[56] == Rook(WHITE) && bitmaps.bm_board & WLONG == 0,
          Rook(WHITE), 40, 56, 32,),
-        (can_castle[2] && frm == 31 && board[7] == Rook(BLACK) && bitmaps.bm_board & BSHORT == 0,
+        (can_castle[2] && frm == 31 && !in_check && board[7] == Rook(BLACK) && bitmaps.bm_board & BSHORT == 0,
          Rook(BLACK), 15, 7, 23,),
-        (can_castle[3] && frm == 31 && board[63] == Rook(BLACK) && bitmaps.bm_board & BLONG == 0,
+        (can_castle[3] && frm == 31 && !in_check && board[63] == Rook(BLACK) && bitmaps.bm_board & BLONG == 0,
          Rook(BLACK), 47, 63, 39,),
     ];
 

@@ -223,25 +223,40 @@ impl Game {
                 label.push_str(&p);
             }
 
-            let mut s = None;
+            // If two or more pieces of the same type can move to the same sq we need to disambiguate
+            // by adding file if file is unique, otherwise row
+            let mut nx = 0;
+            let mut ny = 0;
+            let mut n = 0;
+            let (x0, y0) = mgen::i2xy(m.frm());
             for m2 in moves {
                 match (self.board[m.frm()], self.board[m2.frm()]) {
-                    (Rook(_), Rook(_)) | (Knight(_), Knight(_)) | (Bishop(_), Bishop(_)) | (Queen(_), Queen(_))
-                        if m != m2 && m2.to() == m.to() =>
+                    (Rook(_), Rook(_))
+                    | (Knight(_), Knight(_))
+                    | (Bishop(_), Bishop(_))
+                    | (Queen(_), Queen(_))
+                        if m2.to() == m.to() =>
                     {
-                        let s1 = i2str(m.frm());
-                        let s2 = i2str(m2.frm());
-                        s = if s1.chars().nth(0) == s2.chars().nth(0) {
-                            s1.chars().nth(1)
-                        } else {
-                            s1.chars().nth(0)
+                        n += 1;
+                        let (x, y) = mgen::i2xy(m2.frm());
+                        if x == x0 {
+                            nx += 1;
+                        }
+                        if y == y0 {
+                            ny += 1;
                         }
                     }
                     _ => (),
                 }
             }
-            if let Some(a) = s {
-                label.push(a)
+            if n > 1 {
+                if nx > 1 && ny > 1 {
+                    label.push_str(i2str(m.frm()).as_str())
+                } else if nx <= ny {
+                    label.push(i2str(m.frm()).chars().nth(0).unwrap())
+                } else {
+                    label.push(i2str(m.frm()).chars().nth(1).unwrap())
+                }
             }
             if m.en_passant() || self.board[m.to()] != Nil {
                 label.push('x');
@@ -252,14 +267,14 @@ impl Game {
             }
         }
 
-        self.update(&m);
-        let in_check=self.in_check(self.turn());
-        if self.legal_moves(Some(&m)).len()==0 && in_check{
+        self.update(m);
+        let in_check = self.in_check(self.turn());
+        if self.legal_moves(Some(m)).is_empty() && in_check {
             label.push('#')
         } else if self.in_check(self.turn()) {
             label.push('+')
         }
-        self.backdate(&m);
+        self.backdate(m);
         label
     }
 
@@ -395,15 +410,17 @@ impl Game {
     }
 
     pub fn legal_moves(&mut self, last: Option<&Move>) -> Vec<Move> {
-        let mut moves = self.moves(self.colour, last);
+        let in_check = self.in_check(self.colour);
+        let mut moves = self.moves(self.colour, last, in_check);
         moves.retain(|m| self.legal_move(m));
         moves
     }
 
-    fn moves(&mut self, colour: bool, last: Option<&Move>) -> Vec<Move> {
+    fn moves(&mut self, colour: bool, last: Option<&Move>, in_check: bool) -> Vec<Move> {
         let mut l = moves(
             &self.board,
             colour,
+            in_check,
             self.end_game,
             self.can_castle.last().unwrap(),
             last,
@@ -661,7 +678,8 @@ impl Game {
 
         let mut bscore = None;
         let mut alpha = alp;
-        let mut moves = self.moves(colour, Some(last));
+        let in_check = false; // TODO - calculate?
+        let mut moves = self.moves(colour, Some(last), in_check);
         moves.retain(|m|
             //let ic = self.in_check(colour);
             if rfab {
@@ -733,7 +751,7 @@ impl Game {
             (_, false) => depth,
         };
 
-        let mut moves = self.moves(colour, Some(last));
+        let mut moves = self.moves(colour, Some(last), in_check);
         if let Some(k) = kmove {
             move_to_head(&mut moves, &k);
         }

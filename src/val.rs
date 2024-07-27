@@ -97,11 +97,10 @@ impl Piece {
     }
 
     pub const fn is_white(&self) -> bool {
-        match self {
-            Rook(WHITE) | Knight(WHITE) | Bishop(WHITE) | Queen(WHITE) | King(WHITE)
-            | Pawn(WHITE) => true,
-            _ => false,
-        }
+        matches!(
+            self,
+            Rook(WHITE) | Knight(WHITE) | Bishop(WHITE) | Queen(WHITE) | King(WHITE) | Pawn(WHITE)
+        )
     }
 }
 
