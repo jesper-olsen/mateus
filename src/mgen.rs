@@ -51,10 +51,6 @@ impl fmt::Display for Move {
         let (frm, to) = (self.frm(), self.to());
         let (x1, y1) = i2xy(frm);
         let (x2, y2) = i2xy(to);
-        //let x1 = 7 - frm / 8;
-        //let y1 = frm % 8 + 1;
-        //let x2 = 7 - to / 8;
-        //let y2 = to % 8 + 1;
         let s = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
         write!(f, "{}{} {}{}", s[x1], y1 + 1, s[x2], y2 + 1)
     }

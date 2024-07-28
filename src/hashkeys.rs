@@ -55,7 +55,7 @@ impl Piece {
             Piece::Queen(BLACK) => Q2_HASH[pos],
             Piece::Pawn(WHITE) => P1_HASH[pos],
             Piece::Pawn(BLACK) => P2_HASH[pos],
-            _ => NIL_HASH[pos],
+            Piece::Nil => NIL_HASH[pos],
         }
     }
 }

@@ -179,7 +179,7 @@ impl Game {
     }
 
     pub fn from_fen(s: &str) -> Self {
-        let mut a = [Nil; 64];
+        let mut board = [Nil; 64];
         let mut offset = 0i16;
         let parts = s.split(' ').collect::<Vec<&str>>();
         for (i, c) in parts[0].chars().enumerate() {
@@ -192,11 +192,11 @@ impl Game {
                 let x = 7 - k % 8;
                 let y = 7 - k / 8;
                 let q = x * 8 + y;
-                a[q] = Piece::from_ascii(c);
+                board[q] = Piece::from_ascii(c);
             }
         }
 
-        let mut game = Game::new(a);
+        let mut game = Game::new(board);
         if parts.len() > 1 {
             game.colour = matches!(parts[1].chars().nth(0), Some('w') | Some('W'));
         }
