@@ -174,6 +174,9 @@ fn play(
 
     let mut tot = 0;
     let mut moves = game.legal_moves(None);
+    //for m in &moves {
+    //    println!("Move: {m}");
+    //}
     let mut log = Vec::new();
 
     let start = Instant::now();

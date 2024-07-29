@@ -263,7 +263,10 @@ impl Game {
             }
             label.push_str(&i2str(m.to()));
             if m.transform() {
-                label.push_str("=Q")
+                match m.ptransform(self.colour) {
+                    Rook(_) => label.push_str("=R"),
+                    _ => label.push_str("=Q"),
+                }
             }
         }
 
@@ -474,7 +477,8 @@ impl Game {
             self.board[x] = Nil;
             self.board[m.frm()]
         } else if m.transform() {
-            let p = Piece::Queen(self.colour);
+            //let p = Piece::Queen(self.colour);
+            let p = m.ptransform(self.colour);
             hash = p.hashkey(m.to())
                 ^ self.board[m.frm()].hashkey(m.frm())
                 ^ self.board[m.to()].hashkey(m.to());
@@ -564,11 +568,7 @@ impl Game {
             self.board[to] = Nil;
         }
         self.board[m.frm()] = if m.transform() {
-            match m.to() % 8 {
-                7 => Pawn(WHITE),
-                0 => Pawn(BLACK),
-                _ => panic!(),
-            }
+            Pawn(self.colour)
         } else {
             self.board[m.to()]
         };

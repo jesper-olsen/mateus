@@ -10,11 +10,23 @@ const TO_SHIFT: u16 = 6;
 const FRM_MASK: u16 = 0b111111;
 const TO_MASK: u16 = 0b111111 << TO_SHIFT;
 
-const fn pack_data(castle: bool, en_passant: bool, transform: bool, frm: usize, to: usize) -> u16 {
+const fn pack_data(
+    castle: bool,
+    en_passant: bool,
+    ptransform: Piece,
+    frm: usize,
+    to: usize,
+) -> u16 {
+    let (transform, tbits) = match ptransform {
+        Rook(_) => (true, 1 << 15),
+        Queen(_) => (true, 0),
+        _ => (false, 0),
+    };
     ((castle as u16) << 12)
         | ((en_passant as u16) << 13)
         | ((transform as u16) << 14)
         | ((to << 6) | frm) as u16
+        | tbits
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -30,6 +42,13 @@ impl Move {
     pub fn en_passant(&self) -> bool {
         self.data & EN_PASSANT_BIT != 0
     }
+    pub fn ptransform(&self, colour: bool) -> Piece {
+        if self.data & 1<<15  == 0 {
+            Queen(colour)
+        } else {
+            Rook(colour)
+        }
+    }
     pub fn transform(&self) -> bool {
         self.data & TRANSFORM_BIT != 0
     }
@@ -42,7 +61,7 @@ impl Move {
 }
 
 pub const NULL_MOVE: Move = Move {
-    data: pack_data(false, false, false, 0, 0),
+    data: pack_data(false, false, Piece::Nil, 0, 0),
     val: 0,
 };
 
@@ -52,7 +71,15 @@ impl fmt::Display for Move {
         let (x1, y1) = i2xy(frm);
         let (x2, y2) = i2xy(to);
         let s = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
-        write!(f, "{}{} {}{}", s[x1], y1 + 1, s[x2], y2 + 1)
+        let t=if self.transform() {
+            match self.ptransform(WHITE) {
+                Rook(_) => "=R",
+                _ => "=Q",
+            }
+        } else {
+            ""
+        };
+        write!(f, "{}{} {}{}{t}", s[x1], y1 + 1, s[x2], y2 + 1)
     }
 }
 
@@ -195,7 +222,7 @@ fn knight_moves(v: &mut Vec<Move>, board: &[Piece; 64], frm: usize, bitmaps: &Bi
         bm2vec(BM_KNIGHT_MOVES[frm] & !bitmaps.bm_own)
             .iter()
             .map(|&to| Move {
-                data: pack_data(false, false, false, frm, to),
+                data: pack_data(false, false, Nil, frm, to),
                 val: board[frm].val(to) - board[frm].val(frm) - board[to].val(to),
             }),
     );
@@ -209,7 +236,7 @@ fn ray_moves(v: &mut Vec<Move>, board: &[Piece; 64], frm: usize, moves: u64, bit
         bm2vec(moves & !bl & !bitmaps.bm_own)
             .iter()
             .map(|&to| Move {
-                data: pack_data(false, false, false, frm, to),
+                data: pack_data(false, false, Nil, frm, to),
                 val: board[frm].val(to) - board[frm].val(frm) - board[to].val(to),
             }),
     );
@@ -230,19 +257,25 @@ fn pawn_moves(
     let step2: u64 = step2 & BM_PAWN_STEP2[cidx][frm] & !bitmaps.bm_board;
     let vto = bm2vec(cap | step1 | step2);
 
-    v.extend(vto.iter().map(|&to| {
-        let row = to % 8;
-        let (data, val) = match row {
-            0 | 7 => (
-                pack_data(false, false, true, frm, to),
-                Piece::Queen(colour).val(to) - board[frm].val(frm) - board[to].val(to),
-            ),
-            _ => (
-                pack_data(false, false, false, frm, to),
-                board[frm].val(to) - board[frm].val(frm) - board[to].val(to),
-            ),
-        };
-        Move { data, val }
+    v.extend(vto.iter().flat_map(|&to| {
+        match to % 8 {
+            0 | 7 => vec![
+                Move {
+                    data: pack_data(false, false, Queen(colour), frm, to),
+                    val: Piece::Queen(colour).val(to) - board[frm].val(frm) - board[to].val(to),
+                },
+                Move {
+                    data: pack_data(false, false, Rook(colour), frm, to),
+                    val: Piece::Rook(colour).val(to) - board[frm].val(frm) - board[to].val(to),
+                },
+            ]
+            .into_iter(),
+            _ => vec![Move {
+                data: pack_data(false, false, Nil, frm, to),
+                val: board[frm].val(to) - board[frm].val(frm) - board[to].val(to),
+            }]
+            .into_iter(),
+        }
     }));
 
     // en passant
@@ -254,7 +287,7 @@ fn pawn_moves(
             bm2vec(BM_PAWN_CAPTURES[cidx][frm] & 1 << idx)
                 .iter()
                 .map(|&to| Move {
-                    data: pack_data(false, true, false, frm, to),
+                    data: pack_data(false, true, Nil, frm, to),
                     val: board[frm].val(to) - board[frm].val(frm) - board[last.to()].val(last.to()),
                 }),
         );
@@ -302,7 +335,7 @@ fn king_moves(
         bm2vec(BM_KING_MOVES[frm] & !bitmaps.bm_own)
             .iter()
             .map(|&to| Move {
-                data: pack_data(false, false, false, frm, to),
+                data: pack_data(false, false, Nil, frm, to),
                 //castle: false,
                 //en_passant: false,
                 //transform: false,
@@ -312,7 +345,7 @@ fn king_moves(
                 cc2.iter()
                     .filter(|(c, _, _, _, _)| *c)
                     .map(|(_, r, to, rfrm, rto)| Move {
-                        data: pack_data(true, false, false, frm, *to as usize),
+                        data: pack_data(true, false, Nil, frm, *to as usize),
                         val: p.val(*to as usize) - p.val(frm) + r.val(*rto) - r.val(*rfrm),
                     }),
             ),
