@@ -33,14 +33,6 @@ impl Piece {
         }
     }
 
-    //pub const fn transform(&self, to: usize) -> Piece {
-    //    match to % 8 {
-    //        7 => Queen(WHITE),
-    //        0 => Queen(BLACK),
-    //        _ => *self,
-    //    }
-    //}
-
     pub const fn from_ascii(c: char) -> Piece {
         match c {
             'r' => Rook(BLACK),

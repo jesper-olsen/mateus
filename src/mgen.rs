@@ -233,13 +233,9 @@ fn pawn_moves(
     v.extend(vto.iter().map(|&to| {
         let row = to % 8;
         let (data, val) = match row {
-            7 => (
+            0 | 7 => (
                 pack_data(false, false, true, frm, to),
-                Piece::Queen(WHITE).val(to) - board[frm].val(frm) - board[to].val(to),
-            ),
-            0 => (
-                pack_data(false, false, true, frm, to),
-                Piece::Queen(BLACK).val(to) - board[frm].val(frm) - board[to].val(to),
+                Piece::Queen(colour).val(to) - board[frm].val(frm) - board[to].val(to),
             ),
             _ => (
                 pack_data(false, false, false, frm, to),

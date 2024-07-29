@@ -452,7 +452,6 @@ impl Game {
             self.board[m.to()],
             self.hash,
         ));
-        self.colour = !self.colour;
         let hash;
         self.board[m.to()] = if m.castle() {
             let cc = self.can_castle.last().unwrap();
@@ -475,11 +474,7 @@ impl Game {
             self.board[x] = Nil;
             self.board[m.frm()]
         } else if m.transform() {
-            let p = match m.to() % 8 {
-                7 => Piece::Queen(WHITE),
-                0 => Piece::Queen(BLACK),
-                _ => panic!(""),
-            };
+            let p = Piece::Queen(self.colour);
             hash = p.hashkey(m.to())
                 ^ self.board[m.frm()].hashkey(m.frm())
                 ^ self.board[m.to()].hashkey(m.to());
@@ -540,6 +535,7 @@ impl Game {
                 _ => (),
             }
         }
+        self.colour = !self.colour;
     }
 
     pub fn backdate(&mut self, m: &Move) {
