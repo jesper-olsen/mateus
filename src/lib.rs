@@ -474,6 +474,16 @@ impl Game {
             self.board[y] = self.board[x]; // move rook
             self.board[x] = Nil;
             self.board[m.frm()]
+        } else if m.transform() {
+            let p = match m.to() % 8 {
+                7 => Piece::Queen(WHITE),
+                0 => Piece::Queen(BLACK),
+                _ => panic!(""),
+            };
+            hash = p.hashkey(m.to())
+                ^ self.board[m.frm()].hashkey(m.frm())
+                ^ self.board[m.to()].hashkey(m.to());
+            p
         } else if m.en_passant() {
             // +9  +1 -7
             // +8   0 -8
@@ -487,11 +497,6 @@ impl Game {
                 ^ self.board[x].hashkey(x);
             self.board[x] = Nil;
             self.board[m.frm()]
-        } else if m.transform() {
-            hash = self.board[m.frm()].transform(m.to()).hashkey(m.to())
-                ^ self.board[m.frm()].hashkey(m.frm())
-                ^ self.board[m.to()].hashkey(m.to());
-            self.board[m.frm()].transform(m.to())
         } else {
             hash = self.board[m.frm()].hashkey(m.to())
                 ^ self.board[m.frm()].hashkey(m.frm())

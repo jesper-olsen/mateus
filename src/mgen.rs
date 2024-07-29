@@ -230,9 +230,23 @@ fn pawn_moves(
     let step2: u64 = step2 & BM_PAWN_STEP2[cidx][frm] & !bitmaps.bm_board;
     let vto = bm2vec(cap | step1 | step2);
 
-    v.extend(vto.iter().map(|&to| Move {
-        data: pack_data(false, false, to % 8 == 7 || to % 8 == 0, frm, to),
-        val: board[frm].transform(to).val(to) - board[frm].val(frm) - board[to].val(to),
+    v.extend(vto.iter().map(|&to| {
+        let row = to % 8;
+        let (data, val) = match row {
+            7 => (
+                pack_data(false, false, true, frm, to),
+                Piece::Queen(WHITE).val(to) - board[frm].val(frm) - board[to].val(to),
+            ),
+            0 => (
+                pack_data(false, false, true, frm, to),
+                Piece::Queen(BLACK).val(to) - board[frm].val(frm) - board[to].val(to),
+            ),
+            _ => (
+                pack_data(false, false, false, frm, to),
+                board[frm].val(to) - board[frm].val(frm) - board[to].val(to),
+            ),
+        };
+        Move { data, val }
     }));
 
     // en passant
