@@ -55,11 +55,33 @@ fn pick_move(moves: &[Move], label: &str) -> Vec<(Move, i16)> {
             std::process::exit(1);
         } else {
             let (frm, to) = str2move(s.as_str());
-            if let Some(m) = moves.iter().find(|m| (m.frm(), m.to()) == (frm, to)) {
-                return vec![(*m, 0)];
-            } else {
-                println!("Not valid");
+            let l: Vec<_> = moves
+                .iter()
+                .filter(|m| (m.frm(), m.to()) == (frm, to))
+                .collect();
+            match l.len() {
+                0 => println!("Not valid"),
+                1 => return vec![(*l[0], 0)],
+                _ => {
+                        let mut n;
+                        let label = format!("pick a number [0-{}]",l.len()-1);
+                        loop {
+                            for (i,m) in l.iter().enumerate() {
+                                println!("[{i}] Move: {m}");
+                            }
+                            n=get_number::<usize>(label.as_str());
+                            if n<l.len() {
+                              break
+                            }
+                        }
+                        return vec![(*l[n], 0)]
+                }
             }
+            //if let Some(m) = moves.iter().find(|m| (m.frm(), m.to()) == (frm, to)) {
+            //    return vec![(*m, 0)];
+            //} else {
+            //    println!("Not valid");
+            //}
         }
     }
 }
@@ -257,6 +279,18 @@ fn play(
                 game.mobility()
             );
         }
+    }
+}
+
+pub fn get_number<T: std::str::FromStr>(msg: &str) -> T {
+    loop {
+        println!("{msg}");
+        let input: String = get_input();
+        if let Ok(num) = input.trim().parse::<T>() {
+            return num;
+        } else {
+            println!("Invalid input. Please enter a valid number.");
+        };
     }
 }
 

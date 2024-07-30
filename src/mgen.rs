@@ -19,6 +19,8 @@ const fn pack_data(
 ) -> u16 {
     let (transform, tbits) = match ptransform {
         Rook(_) => (true, 1 << 15),
+        Knight(_) => (true, 1 << 12),
+        Bishop(_) => (true, 1 << 13),
         Queen(_) => (true, 0),
         _ => (false, 0),
     };
@@ -37,16 +39,20 @@ pub struct Move {
 
 impl Move {
     pub fn castle(&self) -> bool {
-        self.data & CASTLE_BIT != 0
+        !self.transform() && self.data & CASTLE_BIT != 0
     }
     pub fn en_passant(&self) -> bool {
-        self.data & EN_PASSANT_BIT != 0
+        !self.transform() && self.data & EN_PASSANT_BIT != 0
     }
     pub fn ptransform(&self, colour: bool) -> Piece {
-        if self.data & 1<<15  == 0 {
-            Queen(colour)
-        } else {
+        if self.data & (1 << 15) != 0 {
             Rook(colour)
+        } else if self.data & (1 << 12) != 0 {
+            Knight(colour)
+        } else if self.data & (1 << 13) != 0 {
+            Bishop(colour)
+        } else {
+            Queen(colour)
         }
     }
     pub fn transform(&self) -> bool {
@@ -71,9 +77,11 @@ impl fmt::Display for Move {
         let (x1, y1) = i2xy(frm);
         let (x2, y2) = i2xy(to);
         let s = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
-        let t=if self.transform() {
+        let t = if self.transform() {
             match self.ptransform(WHITE) {
                 Rook(_) => "=R",
+                Knight(_) => "=N",
+                Bishop(_) => "=B",
                 _ => "=Q",
             }
         } else {
@@ -267,6 +275,14 @@ fn pawn_moves(
                 Move {
                     data: pack_data(false, false, Rook(colour), frm, to),
                     val: Piece::Rook(colour).val(to) - board[frm].val(frm) - board[to].val(to),
+                },
+                Move {
+                    data: pack_data(false, false, Knight(colour), frm, to),
+                    val: Piece::Knight(colour).val(to) - board[frm].val(frm) - board[to].val(to),
+                },
+                Move {
+                    data: pack_data(false, false, Bishop(colour), frm, to),
+                    val: Piece::Bishop(colour).val(to) - board[frm].val(frm) - board[to].val(to),
                 },
             ]
             .into_iter(),

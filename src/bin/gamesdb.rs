@@ -185,21 +185,16 @@ fn parse_moves(fg: &mut FicsG, line: String) -> (Vec<(usize, usize)>, String) {
         let alg_labels: Vec<_> = moves.iter().map(|m| game.move2label(m, &moves)).collect();
         match alg_labels.iter().position(|r| r == s) {
             Some(index) => {
-                //println!("{s} {} = {}", alg_labels[index], moves[index]);
                 game.make_move(moves[index]);
                 lmoves.push((moves[index].frm(), moves[index].to()));
                 last_move = moves[index]; // TODO - Option<Move>
                 last = Some(&last_move);
             }
             None => {
-                if s.contains("=N") | s.contains("=B") | s.contains("=R") {
-                    print!("Not handling this transform: {s}");
-                } else {
-                    println!("Logged moves: {line}");
-                    println!("{game}");
-                    println!("Computed moves: {:?}", alg_labels);
-                    print!("Logged move '{}' not valid?", s);
-                }
+                println!("Logged moves: {line}");
+                println!("{game}");
+                println!("Computed moves: {:?}", alg_labels);
+                print!("Logged move '{}' not valid?", s);
                 break;
             }
         }
@@ -280,7 +275,7 @@ fn read_games(fname: &str) -> io::Result<Vec<FicsG>> {
     Ok(games)
 }
 
-fn summarise_games(games: &Vec<FicsG>) {
+fn summarise_games(games: &[FicsG]) {
     println!("#games: {}", games.len());
 
     let welo = games.iter().map(|g| g.white_elo).sum::<usize>() as f32 / games.len() as f32;

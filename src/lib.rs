@@ -265,6 +265,8 @@ impl Game {
             if m.transform() {
                 match m.ptransform(self.colour) {
                     Rook(_) => label.push_str("=R"),
+                    Knight(_) => label.push_str("=N"),
+                    Bishop(_) => label.push_str("=B"),
                     _ => label.push_str("=Q"),
                 }
             }
@@ -477,7 +479,6 @@ impl Game {
             self.board[x] = Nil;
             self.board[m.frm()]
         } else if m.transform() {
-            //let p = Piece::Queen(self.colour);
             let p = m.ptransform(self.colour);
             hash = p.hashkey(m.to())
                 ^ self.board[m.frm()].hashkey(m.frm())
