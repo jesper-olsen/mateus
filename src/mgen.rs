@@ -3,6 +3,8 @@ use crate::val::Piece::*;
 use crate::val::*;
 use std::fmt;
 
+// bitpacking - 1st 12 bits (6+6) for from/to, remaining 4 bits for castling and 
+// pawn transforms & enpassant. Castling, en passant & transform are mutually exclusive.
 const CASTLE_BIT: u16 = 1 << 12;
 const EN_PASSANT_BIT: u16 = 1 << 13;
 const TRANSFORM_BIT: u16 = 1 << 14;
@@ -38,12 +40,15 @@ pub struct Move {
 }
 
 impl Move {
+    #[inline]
     pub fn castle(&self) -> bool {
-        !self.transform() && self.data & CASTLE_BIT != 0
+        self.data & CASTLE_BIT != 0 && !self.transform()
     }
+    #[inline]
     pub fn en_passant(&self) -> bool {
-        !self.transform() && self.data & EN_PASSANT_BIT != 0
+        (self.data & EN_PASSANT_BIT) != 0 && !self.transform()
     }
+    #[inline]
     pub fn ptransform(&self, colour: bool) -> Piece {
         if self.data & (1 << 15) != 0 {
             Rook(colour)
@@ -55,12 +60,15 @@ impl Move {
             Queen(colour)
         }
     }
+    #[inline]
     pub fn transform(&self) -> bool {
         self.data & TRANSFORM_BIT != 0
     }
+    #[inline]
     pub fn frm(&self) -> usize {
         (self.data & FRM_MASK) as usize
     }
+    #[inline]
     pub fn to(&self) -> usize {
         ((self.data & TO_MASK) >> TO_SHIFT) as usize
     }

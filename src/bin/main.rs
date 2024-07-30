@@ -77,11 +77,6 @@ fn pick_move(moves: &[Move], label: &str) -> Vec<(Move, i16)> {
                         return vec![(*l[n], 0)]
                 }
             }
-            //if let Some(m) = moves.iter().find(|m| (m.frm(), m.to()) == (frm, to)) {
-            //    return vec![(*m, 0)];
-            //} else {
-            //    println!("Not valid");
-            //}
         }
     }
 }
