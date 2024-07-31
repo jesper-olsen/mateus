@@ -94,13 +94,13 @@ fn pick_move(game: &mut Game, moves: &[Move]) -> Vec<(Move, i16)> {
     }
 }
 
-fn check_game_over(game: &Game, moves: &[Move], half_moves: isize, log: &[Move]) -> String {
+fn check_game_over(game: &Game, moves: &[Move], half_moves: isize) -> String {
     if game.rep_count() >= 3 {
         "1/2-1/2 Draw by repetition".to_string()
-    } else if game.check_50_move_rule() {
+    } else if game.check_50_move_rule()>=100 {
         "1/2-1/2 Draw by the 50-move rule".to_string()
-    } else if half_moves != -1 && half_moves <= log.len() as isize {
-        format!("stopping after {} half move(s)", log.len())
+    } else if half_moves != -1 && half_moves <= game.move_log.len() as isize {
+        format!("stopping after {} half move(s)", game.move_log.len())
     } else if moves.is_empty() {
         (match (game.in_check(game.turn()), game.turn()) {
             (true, BLACK) => "1-0",
@@ -204,14 +204,10 @@ fn play(
 
     let mut tot = 0;
     let mut moves = game.legal_moves(None);
-    //for m in &moves {
-    //    println!("Move: {m}");
-    //}
-    let mut log = Vec::new();
 
     let start = Instant::now();
     loop {
-        let msg = check_game_over(&game, &moves, half_moves, &log);
+        let msg = check_game_over(&game, &moves, half_moves);
         if !msg.is_empty() {
             println!("{}", msg);
             std::process::exit(1);
@@ -264,10 +260,9 @@ fn play(
 
         let label = game.move2label(&m, &moves);
         game.make_move(m);
-        log.push(m);
         println!("{game}");
         moves = game.legal_moves(Some(&m));
-        println!("{}. {label}", log.len() / 2 + 1);
+        println!("{}. {label}", game.move_log.len() / 2 + 1);
 
         if verbose {
             if game.rep_count() > 1 {

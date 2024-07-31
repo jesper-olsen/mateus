@@ -41,7 +41,7 @@ pub struct Game {
     rep: HashMap<u64, usize>,
     pub ttable: HashMap<u64, TTable>,
     pub can_castle: Vec<[bool; 4]>, // white short, long, black short, long
-    last_move: Option<Move>,
+    pub move_log: Vec<Move>,
     end_game: bool,
     pub hash: u64,
     bm_white: u64,
@@ -140,7 +140,7 @@ impl Game {
             rep: HashMap::from([(key, 1)]),
             ttable: HashMap::new(),
             can_castle: vec![[true; 4]],
-            last_move: None,
+            move_log: Vec::new(),
             end_game: false,
             hash: key,
             bm_white,
@@ -198,7 +198,7 @@ impl Game {
 
         // en passant sq
         s.push(' ');
-        if let Some(last) = self.last_move {
+        if let Some(last) = self.move_log.last() {
             if matches!(self.board[last.to()], Pawn(_)) && last.to().abs_diff(last.frm()) == 2 {
                 let idx = last.to() as isize + if self.colour { 1 } else { -1 };
                 s.push_str(I2SQ[idx as usize])
@@ -210,6 +210,7 @@ impl Game {
         }
 
         // reversible moves,move nr
+        s.push_str(format!(" {} {}", self.check_50_move_rule()-1, self.move_log.len()/2+1).as_str());
         s
     }
 
@@ -341,13 +342,13 @@ impl Game {
         if self.ttable.contains_key(&key) {
             self.ttable = HashMap::from([(key, self.ttable[&key])]);
         } else {
-            self.ttable = HashMap::new();
+            //self.ttable = HashMap::new();
+            self.ttable.clear();
         }
     }
 
     fn rep_clear(&mut self) {
-        let key = board2hash(&self.board, self.colour);
-        self.rep = HashMap::from([(key, 1)]);
+        self.rep.clear();
     }
 
     fn rep_inc(&mut self) {
@@ -397,7 +398,7 @@ impl Game {
     pub fn make_move(&mut self, m: Move) {
         if m.en_passant()
             || self.board[m.to()] != Nil
-            || [Pawn(WHITE), Pawn(BLACK)].contains(&self.board[m.frm()])
+            || matches!(self.board[m.frm()], Pawn(_))
         {
             self.rep_clear(); // ireversible move
         }
@@ -406,7 +407,7 @@ impl Game {
 
         //adjust king value in end game
         self.end_game = abs_material(&self.board) < END_GAME_MATERIAL / 3;
-        self.last_move = Some(m);
+        self.move_log.push(m);
 
         //update castling permissions
         let cc = self.can_castle.last_mut().unwrap();
@@ -423,8 +424,8 @@ impl Game {
         }
     }
 
-    pub fn check_50_move_rule(&self) -> bool {
-        self.rep.iter().map(|(_, &v)| v).sum::<usize>() >= 100
+    pub fn check_50_move_rule(&self) -> usize {
+        self.rep.iter().map(|(_, &v)| v).sum::<usize>() 
     }
 
     pub fn in_check(&self, colour: bool) -> bool {
