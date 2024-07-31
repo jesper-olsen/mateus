@@ -41,6 +41,7 @@ pub struct Game {
     rep: HashMap<u64, usize>,
     pub ttable: HashMap<u64, TTable>,
     pub can_castle: Vec<[bool; 4]>, // white short, long, black short, long
+    last_move: Option<Move>,
     end_game: bool,
     pub hash: u64,
     bm_white: u64,
@@ -139,6 +140,7 @@ impl Game {
             rep: HashMap::from([(key, 1)]),
             ttable: HashMap::new(),
             can_castle: vec![[true; 4]],
+            last_move: None,
             end_game: false,
             hash: key,
             bm_white,
@@ -175,6 +177,39 @@ impl Game {
             }
         }
         s.push_str(if self.turn() == WHITE { " w" } else { " b" });
+        let cc = self.can_castle.last().unwrap();
+        s.push(' ');
+        if *cc == [false, false, false, false] {
+            s.push('-');
+        } else {
+            if matches!(cc, [true, _, _, _]) {
+                s.push('K');
+            }
+            if matches!(cc, [_, true, _, _]) {
+                s.push('Q');
+            }
+            if matches!(cc, [_, _, true, _]) {
+                s.push('k');
+            }
+            if matches!(cc, [_, _, _, true]) {
+                s.push('q');
+            }
+        }
+
+        // en passant sq
+        s.push(' ');
+        if let Some(last) = self.last_move {
+            if matches!(self.board[last.to()], Pawn(_)) && last.to().abs_diff(last.frm()) == 2 {
+                let idx = last.to() as isize + if self.colour { 1 } else { -1 };
+                s.push_str(I2SQ[idx as usize])
+            } else {
+                s.push('-');
+            }
+        } else {
+            s.push('-');
+        }
+
+        // reversible moves,move nr
         s
     }
 
@@ -204,7 +239,7 @@ impl Game {
     }
 
     //https://cheatography.com/davechild/cheat-sheets/chess-algebraic-notation/
-    pub fn move2label(&mut self, m: &Move, moves: &Vec<Move>) -> String {
+    pub fn move2label(&mut self, m: &Move, moves: &[Move]) -> String {
         let mut label = String::new();
         if m.castle() {
             if m.to() < 31 {
@@ -371,6 +406,7 @@ impl Game {
 
         //adjust king value in end game
         self.end_game = abs_material(&self.board) < END_GAME_MATERIAL / 3;
+        self.last_move = Some(m);
 
         //update castling permissions
         let cc = self.can_castle.last_mut().unwrap();

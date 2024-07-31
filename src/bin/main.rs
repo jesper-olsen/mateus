@@ -47,34 +47,47 @@ struct Args {
     f: String,
 }
 
-fn pick_move(moves: &[Move], label: &str) -> Vec<(Move, i16)> {
+fn pick_move(game: &mut Game, moves: &[Move]) -> Vec<(Move, i16)> {
+    let label = if game.turn() == WHITE {
+        "White"
+    } else {
+        "Black"
+    };
     loop {
         println!("Your Move ({label}):");
         let s = get_input();
-        if s.as_str() == "q" {
-            std::process::exit(1);
-        } else {
-            let (frm, to) = str2move(s.as_str());
-            let l: Vec<_> = moves
-                .iter()
-                .filter(|m| (m.frm(), m.to()) == (frm, to))
-                .collect();
-            match l.len() {
-                0 => println!("Not valid"),
-                1 => return vec![(*l[0], 0)],
-                _ => {
+        match s.as_str() {
+            "q" => std::process::exit(1),
+            "m" => {
+                print!("Moves: ");
+                for m in moves {
+                    print!("{} ", game.move2label(m, moves))
+                }
+                println!();
+            }
+            _ => {
+                let (frm, to) = str2move(s.as_str());
+                let l: Vec<_> = moves
+                    .iter()
+                    .filter(|m| (m.frm(), m.to()) == (frm, to))
+                    .collect();
+                match l.len() {
+                    0 => println!("Not valid"),
+                    1 => return vec![(*l[0], 0)],
+                    _ => {
                         let mut n;
-                        let label = format!("pick a number [0-{}]",l.len()-1);
+                        let label = format!("pick a number [0-{}]", l.len() - 1);
                         loop {
-                            for (i,m) in l.iter().enumerate() {
+                            for (i, m) in l.iter().enumerate() {
                                 println!("[{i}] Move: {m}");
                             }
-                            n=get_number::<usize>(label.as_str());
-                            if n<l.len() {
-                              break
+                            n = get_number::<usize>(label.as_str());
+                            if n < l.len() {
+                                break;
                             }
                         }
-                        return vec![(*l[n], 0)]
+                        return vec![(*l[n], 0)];
+                    }
                 }
             }
         }
@@ -205,12 +218,7 @@ fn play(
         }
 
         let l = if players[&game.turn()] {
-            let label = if game.turn() == WHITE {
-                "White"
-            } else {
-                "Black"
-            };
-            pick_move(&moves, label)
+            pick_move(&mut game, &moves)
         } else {
             // try library 1st - compute if not there
             let lmoves = library_moves(game.hash);

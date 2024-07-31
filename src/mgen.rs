@@ -3,7 +3,7 @@ use crate::val::Piece::*;
 use crate::val::*;
 use std::fmt;
 
-// bitpacking - 1st 12 bits (6+6) for from/to, remaining 4 bits for castling and 
+// bitpacking - 1st 12 bits (6+6) for from/to, remaining 4 bits for castling and
 // pawn transforms & enpassant. Castling, en passant & transform are mutually exclusive.
 const CASTLE_BIT: u16 = 1 << 12;
 const EN_PASSANT_BIT: u16 = 1 << 13;
@@ -82,9 +82,6 @@ pub const NULL_MOVE: Move = Move {
 impl fmt::Display for Move {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let (frm, to) = (self.frm(), self.to());
-        let (x1, y1) = i2xy(frm);
-        let (x2, y2) = i2xy(to);
-        let s = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
         let t = if self.transform() {
             match self.ptransform(WHITE) {
                 Rook(_) => "=R",
@@ -95,7 +92,7 @@ impl fmt::Display for Move {
         } else {
             ""
         };
-        write!(f, "{}{} {}{}{t}", s[x1], y1 + 1, s[x2], y2 + 1)
+        write!(f, "{} {}{t}", I2SQ[frm], I2SQ[to])
     }
 }
 
