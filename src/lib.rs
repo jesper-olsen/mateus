@@ -210,7 +210,14 @@ impl Game {
         }
 
         // reversible moves,move nr
-        s.push_str(format!(" {} {}", self.check_50_move_rule()-1, self.move_log.len()/2+1).as_str());
+        s.push_str(
+            format!(
+                " {} {}",
+                self.check_50_move_rule() - 1,
+                self.move_log.len() / 2 + 1
+            )
+            .as_str(),
+        );
         s
     }
 
@@ -396,10 +403,7 @@ impl Game {
     }
 
     pub fn make_move(&mut self, m: Move) {
-        if m.en_passant()
-            || self.board[m.to()] != Nil
-            || matches!(self.board[m.frm()], Pawn(_))
-        {
+        if m.en_passant() || self.board[m.to()] != Nil || matches!(self.board[m.frm()], Pawn(_)) {
             self.rep_clear(); // ireversible move
         }
         self.ttable_clear();
@@ -425,7 +429,7 @@ impl Game {
     }
 
     pub fn check_50_move_rule(&self) -> usize {
-        self.rep.iter().map(|(_, &v)| v).sum::<usize>() 
+        self.rep.iter().map(|(_, &v)| v).sum::<usize>()
     }
 
     pub fn in_check(&self, colour: bool) -> bool {

@@ -11,10 +11,15 @@ use regex::Regex;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{self, BufRead};
+use std::path::{Path, PathBuf};
+use std::io::{Write, Result};
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
+    #[arg(short, long="elo", default_value_t = 2000)]
+    ///minimum elo for both players
+    e: usize,
     /// Input files
     #[arg(required = true)]
     files: Vec<String>,
@@ -41,6 +46,7 @@ struct FicsG {
     ply_count: usize,
     result: &'static str,
     moves: Vec<(usize, usize)>,
+    fens: Vec<String>,
     comment: &'static str,
 }
 
@@ -67,6 +73,7 @@ impl FicsG {
             result: "",
             comment: "",
             moves: Vec::new(),
+            fens: Vec::new(),
         }
     }
 }
@@ -140,9 +147,10 @@ fn static_comment(s: &str) -> &'static str {
     }
 }
 
-fn parse_moves(fg: &mut FicsG, line: String) -> (Vec<(usize, usize)>, String) {
+fn parse_moves(fg: &mut FicsG, line: String) -> (Vec<(usize, usize)>, Vec<String>, String) {
     let mut result = "000".to_string(); // dummy
     let mut lmoves = Vec::new();
+    let mut lfens = Vec::new();
     let mut game = Game::from_fen(ROOT_FEN);
 
     let re_move_number = Regex::new(r"^\d+\.$").unwrap();
@@ -157,12 +165,12 @@ fn parse_moves(fg: &mut FicsG, line: String) -> (Vec<(usize, usize)>, String) {
         let s = comments[0].as_str();
         if !conclusive(s) {
             print!("{s}");
-            return (lmoves, result);
+            return (lmoves, lfens, result);
         }
         fg.comment = static_comment(s);
     } else if comments.len() > 1 {
         println!("Multiple comments: {line}");
-        return (lmoves, result);
+        return (lmoves, lfens, result);
     }
 
     let line = re_comment.replace_all(line.as_str(), "").to_string();
@@ -178,7 +186,7 @@ fn parse_moves(fg: &mut FicsG, line: String) -> (Vec<(usize, usize)>, String) {
         }
         if matches!(s, "0-1" | "1-0" | "1/2-1/2") {
             result = s.to_string();
-            return (lmoves, result);
+            return (lmoves, lfens, result);
         }
 
         let moves = game.legal_moves(last);
@@ -187,7 +195,8 @@ fn parse_moves(fg: &mut FicsG, line: String) -> (Vec<(usize, usize)>, String) {
             Some(index) => {
                 game.make_move(moves[index]);
                 lmoves.push((moves[index].frm(), moves[index].to()));
-                last_move = moves[index]; // TODO - Option<Move>
+                lfens.push(game.to_fen());
+                last_move = moves[index];
                 last = Some(&last_move);
             }
             None => {
@@ -199,10 +208,10 @@ fn parse_moves(fg: &mut FicsG, line: String) -> (Vec<(usize, usize)>, String) {
             }
         }
     }
-    (lmoves, result)
+    (lmoves, lfens, result)
 }
 
-fn read_games(fname: &str) -> io::Result<Vec<FicsG>> {
+fn read_games(fname: &str, min_elo: usize) -> io::Result<Vec<FicsG>> {
     let input = File::open(fname)?;
     let buffered = io::BufReader::new(input);
 
@@ -254,22 +263,22 @@ fn read_games(fname: &str) -> io::Result<Vec<FicsG>> {
             }
         } else if !line.is_empty() && !line.starts_with(' ') {
             in_moves_section = true;
-            let (moves, res) = parse_moves(&mut current_game, line);
+            let (moves, fens, res) = parse_moves(&mut current_game, line);
             if res == "000" {
                 println!("; Ignoring game no {};", current_game.game_no);
             } else if res != current_game.result {
                 println!("Result mismatch in game no {}", current_game.game_no);
             } else {
                 current_game.moves.extend(moves);
+                current_game.fens.extend(fens);
             }
         } else if line.is_empty() && in_moves_section {
-            if current_game.white_elo >= 2000 && current_game.black_elo >= 2000 {
+            if current_game.white_elo >= min_elo && current_game.black_elo >= min_elo {
                 games.push(current_game);
             }
             current_game = FicsG::new();
             in_moves_section = false;
         }
-        //print!("Games: {}\r", games.len());
     }
 
     Ok(games)
@@ -312,15 +321,40 @@ fn summarise_games(games: &[FicsG]) {
     do_output("\nPlayers:", &pcounts);
 }
 
+fn write_games(fname: &str, l: &[FicsG]) ->Result<()> {
+    println!("output to {}", fname);
+    let mut f = File::create(fname)?;
+    for g in l {
+        let s = format!("{} {}", g.result, g.moves.len());
+        writeln!(f, "{s}")?;
+        for fen in &g.fens {
+            writeln!(f, "{fen}")?;
+        }
+        writeln!(f)?;
+    }
+    Ok(())
+}
+
 fn main() {
     let args = Args::parse();
     let mut games = Vec::new();
     for fname in args.files {
         println!("Processing {fname}");
-        match read_games(fname.as_str()) {
+        match read_games(fname.as_str(), args.e) {
             Err(m) => println!("error: {m}"),
-            Ok(l) => games.extend(l),
+            Ok(l) => {
+                let path = Path::new(&fname);
+                let mut new_path = PathBuf::from(path);
+                new_path.set_extension("fens");
+                let fname2= new_path.to_str().unwrap();
+                match write_games(fname2, &l) {
+                    Ok(()) => (),
+                    Err(m) => println!("Failed to write games: {m}"),
+                }
+                games.extend(l)
+            }
         }
     }
+
     summarise_games(&games);
 }
