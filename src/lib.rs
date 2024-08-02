@@ -152,6 +152,44 @@ impl Game {
         }
     }
 
+    const CSV_SIZE: usize = 2*6*64+1+4+64+1;
+    pub fn to_csv(&self) -> Vec<u8> {
+        let mut v = Vec::with_capacity(Self::CSV_SIZE);
+        for p in PIECES {
+            for pb in self.board {
+                v.push( if p==pb {1} else {0} );
+            }
+        }
+
+        //turn
+        v.push( if self.turn()==WHITE {1} else {0} );
+
+        // O-O O-O-O
+        for c in  self.can_castle.last().unwrap() {
+            v.push( if *c {1} else {0} );
+        }
+
+        // en passant
+        if let Some(last) = self.move_log.last() {
+            if matches!(self.board[last.to()], Pawn(_)) && last.to().abs_diff(last.frm()) == 2 {
+                let idx = last.to() as isize + if self.colour { 1 } else { -1 };
+                for i in 0..64 {
+                    v.push(if i==idx {1} else {0});
+                }
+            } else {
+                for _ in 0..64 {
+                    v.push(0);
+                }
+            }
+        } else {
+            for _ in 0..64 {
+                v.push(0);
+            }
+        };
+        
+        v
+    }
+
     pub fn to_fen(&self) -> String {
         let mut s = String::new();
         for y in (0..=7).rev() {

@@ -14,6 +14,9 @@ pub enum Piece {
 pub const WHITE: bool = true;
 pub const BLACK: bool = false;
 
+pub static PIECES: [Piece;12] = [Pawn(WHITE), Rook(WHITE), Knight(WHITE), Bishop(WHITE), Queen(WHITE), King(WHITE),
+                                 Pawn(BLACK), Rook(BLACK), Knight(BLACK), Bishop(BLACK), Queen(BLACK), King(BLACK)];
+
 impl Piece {
     pub const fn val(&self, pos: usize) -> i16 {
         match self {

@@ -10,9 +10,11 @@ use puccinia_s_checkmate::Game;
 use regex::Regex;
 use std::collections::HashMap;
 use std::fs::File;
-use std::io::{self, BufRead};
+use std::io::{self};
 use std::path::{Path, PathBuf};
-use std::io::{Write, Result};
+use std::io::{Result, BufReader, BufRead};
+use flate2::read::GzDecoder;
+use csv::Writer;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -46,7 +48,7 @@ struct FicsG {
     ply_count: usize,
     result: &'static str,
     moves: Vec<(usize, usize)>,
-    fens: Vec<String>,
+    fens: Vec<Vec<u8>>,
     comment: &'static str,
 }
 
@@ -77,6 +79,8 @@ impl FicsG {
         }
     }
 }
+
+
 
 const BLACK_CHECKMATED: &str = "Black checkmated";
 const BLACK_FORFEITS_BY_DISCONNECTION: &str = "Black forfeits by disconnection";
@@ -123,6 +127,15 @@ fn conclusive(s: &str) -> bool {
     }
 }
 
+fn static_outcome(s: &str) -> &'static str {
+    match s {
+        "0-1" => "0-1",
+        "1-0" => "1-0",
+        "1/2-1/2" => "1/2-1/2",
+        _ => "",
+    }
+}
+
 fn static_comment(s: &str) -> &'static str {
     match s {
         BLACK_CHECKMATED => BLACK_CHECKMATED,
@@ -147,8 +160,8 @@ fn static_comment(s: &str) -> &'static str {
     }
 }
 
-fn parse_moves(fg: &mut FicsG, line: String) -> (Vec<(usize, usize)>, Vec<String>, String) {
-    let mut result = "000".to_string(); // dummy
+fn parse_moves(fg: &mut FicsG, line: String) -> (Vec<(usize, usize)>, Vec<Vec<u8>>, &'static str) {
+    let result = "000"; // dummy
     let mut lmoves = Vec::new();
     let mut lfens = Vec::new();
     let mut game = Game::from_fen(ROOT_FEN);
@@ -185,8 +198,7 @@ fn parse_moves(fg: &mut FicsG, line: String) -> (Vec<(usize, usize)>, Vec<String
             continue;
         }
         if matches!(s, "0-1" | "1-0" | "1/2-1/2") {
-            result = s.to_string();
-            return (lmoves, lfens, result);
+            return (lmoves, lfens, static_outcome(s));
         }
 
         let moves = game.legal_moves(last);
@@ -195,7 +207,7 @@ fn parse_moves(fg: &mut FicsG, line: String) -> (Vec<(usize, usize)>, Vec<String
             Some(index) => {
                 game.make_move(moves[index]);
                 lmoves.push((moves[index].frm(), moves[index].to()));
-                lfens.push(game.to_fen());
+                lfens.push(game.to_csv());
                 last_move = moves[index];
                 last = Some(&last_move);
             }
@@ -212,8 +224,12 @@ fn parse_moves(fg: &mut FicsG, line: String) -> (Vec<(usize, usize)>, Vec<String
 }
 
 fn read_games(fname: &str, min_elo: usize) -> io::Result<Vec<FicsG>> {
-    let input = File::open(fname)?;
-    let buffered = io::BufReader::new(input);
+    //let input = File::open(fname)?;
+    //let buffered = io::BufReader::new(input);
+    let input = File::open(fname).expect("Open file");
+    let buffered = BufReader::new(input);
+    let decoder = GzDecoder::new(buffered);
+    let buffered=BufReader::new(decoder);
 
     let mut games = Vec::new();
     let mut current_game = FicsG::new();
@@ -273,7 +289,17 @@ fn read_games(fname: &str, min_elo: usize) -> io::Result<Vec<FicsG>> {
                 current_game.fens.extend(fens);
             }
         } else if line.is_empty() && in_moves_section {
-            if current_game.white_elo >= min_elo && current_game.black_elo >= min_elo {
+            if matches!(current_game.result,"1-0" | "0-1") &&  current_game.white_elo >= min_elo && current_game.black_elo >= min_elo {
+                // add final outcome to positions
+                let z = match current_game.result {
+                    "0-1" => 0,
+                    "1-0"=> 1,
+                    "1/2-1/2"=> 2,
+                    _ => panic!("Unexpected game Result"),
+                };
+                for v in &mut current_game.fens {
+                    v.push(z);
+                }
                 games.push(current_game);
             }
             current_game = FicsG::new();
@@ -323,15 +349,15 @@ fn summarise_games(games: &[FicsG]) {
 
 fn write_games(fname: &str, l: &[FicsG]) ->Result<()> {
     println!("output to {}", fname);
-    let mut f = File::create(fname)?;
+    let f = File::create(fname)?;
+    let mut wtr = Writer::from_writer(f);
     for g in l {
-        let s = format!("{} {}", g.result, g.moves.len());
-        writeln!(f, "{s}")?;
-        for fen in &g.fens {
-            writeln!(f, "{fen}")?;
+        for vec in &g.fens {
+            let row: Vec<String> = vec.iter().map(|v| v.to_string()).collect();
+            wtr.write_record(&row)?;
         }
-        writeln!(f)?;
     }
+    wtr.flush()?;
     Ok(())
 }
 
@@ -345,7 +371,7 @@ fn main() {
             Ok(l) => {
                 let path = Path::new(&fname);
                 let mut new_path = PathBuf::from(path);
-                new_path.set_extension("fens");
+                new_path.set_extension("csv");
                 let fname2= new_path.to_str().unwrap();
                 match write_games(fname2, &l) {
                     Ok(()) => (),
@@ -358,3 +384,4 @@ fn main() {
 
     summarise_games(&games);
 }
+
