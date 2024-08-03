@@ -1,3 +1,7 @@
+//    Train a logistic regression model on a classification dataset.
+//    The dataset is assumed to be in a .csv.gz format file.
+//    Each line is a feature vector - last value is the target value.
+
 use linfa::prelude::*;
 use linfa_logistic::LogisticRegression;
 use csv::ReaderBuilder;
@@ -8,11 +12,10 @@ use std::fs::File;
 use std::io::{BufReader};
 //use std::env;
 
-fn read_winequality_dataset() -> Result<(Dataset<f64, String, Ix1>, Dataset<f64, String, Ix1>), Box<dyn Error>> {
+fn read_dataset(fname: &str) -> Result<(Dataset<f64, String, Ix1>, Dataset<f64, String, Ix1>), Box<dyn Error>> {
     //let current_dir = env::current_dir()?;
     //println!("Current directory: {:?}", current_dir);
-    //let file = File::open("Assets/winequality-red.csv.gz")?;
-    let file = File::open("Assets/ficsgamesdb_2000_standard2000_nomovetimes_394899.pgn.csv.gz")?;
+    let file = File::open(fname)?;
     let buf_reader = BufReader::new(file);
     let gz_decoder = GzDecoder::new(buf_reader);
 
@@ -34,7 +37,8 @@ fn read_winequality_dataset() -> Result<(Dataset<f64, String, Ix1>, Dataset<f64,
 
         features.push(feature_row);
         //targets.push(if target > 6.0 { "good".to_string() } else { "bad".to_string() });
-        targets.push(if target >0.5 { "good".to_string() } else { "bad".to_string() });
+        //targets.push(if target >0.5 { "good".to_string() } else { "bad".to_string() });
+        targets.push(format!("{target}"));
     }
 
     let n_samples = features.len();
@@ -44,8 +48,6 @@ fn read_winequality_dataset() -> Result<(Dataset<f64, String, Ix1>, Dataset<f64,
     let targets_array = Array1::from_shape_vec(n_samples, targets)?;
 
     let dataset = Dataset::new(features_array, targets_array);
-
-    // Split the dataset into training and validation sets
     let (train, valid) = dataset.split_with_ratio(0.9);
 
     Ok((train, valid))
@@ -53,26 +55,22 @@ fn read_winequality_dataset() -> Result<(Dataset<f64, String, Ix1>, Dataset<f64,
 
 fn main() -> Result<(), Box<dyn Error>> {
     // Read and preprocess the winequality dataset
-    let (train, valid) = read_winequality_dataset()?;
+    let fname = "Assets/winequality-red.csv.gz";
+    //let fname = "Assets/ficsgamesdb_2000_standard2000_nomovetimes_394899.pgn.csv.gz";
+    let (train, valid) = read_dataset(fname)?;
 
     println!(
         "Fit Logistic Regression classifier with #{} training points",
         train.nsamples()
     );
 
-    // Fit a Logistic regression model with 150 max iterations
     let model = LogisticRegression::default()
         .max_iterations(150)
         .fit(&train)
         .unwrap();
 
-    // Predict and map targets
     let pred = model.predict(&valid);
-
-    // Create a confusion matrix
     let cm = pred.confusion_matrix(&valid).unwrap();
-
-    // Print the confusion matrix
     println!("{:?}", cm);
 
     // Calculate the accuracy and Matthew Correlation Coefficient (MCC)
