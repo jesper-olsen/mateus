@@ -92,7 +92,7 @@ impl fmt::Display for Move {
         } else {
             ""
         };
-        write!(f, "{} {}{t}", I2SQ[frm], I2SQ[to])
+        write!(f, "{}{}{t}", I2SQ[frm], I2SQ[to])
     }
 }
 
