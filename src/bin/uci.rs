@@ -1,5 +1,7 @@
 // UCI chess engine - to be used with a UCI GUI such as 
 // http://www.pearlchess.com/
+// http://www.cutechess.com/
+// and others
 // https://www.chessprogramming.org/UCI
 //
 // Engine communicates with GUI via stdin and stdout
