@@ -6,7 +6,7 @@
 use ::std::time::Instant;
 use clap::Parser;
 use puccinia_s_checkmate::benchmark;
-use puccinia_s_checkmate::mgen::*;
+use puccinia_s_checkmate::mgen::Move;
 use puccinia_s_checkmate::misc::str2move;
 use puccinia_s_checkmate::openings::library_moves;
 use puccinia_s_checkmate::val::*;

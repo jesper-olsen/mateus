@@ -11,6 +11,12 @@
 // https://www.wbec-ridderkerk.nl/html/UCIProtocol.html
 //
 
+use puccinia_s_checkmate::mgen::Move;
+use puccinia_s_checkmate::misc::str2move;
+use puccinia_s_checkmate::openings::library_moves;
+use puccinia_s_checkmate::val::*;
+use puccinia_s_checkmate::Game;
+
 use std::io::{self, BufRead, Write};
 use std::sync::mpsc::{self, Sender};
 use std::sync::{

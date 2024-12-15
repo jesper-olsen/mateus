@@ -152,21 +152,21 @@ impl Game {
         }
     }
 
-    const CSV_SIZE: usize = 2*6*64+1+4+64+1;
+    const CSV_SIZE: usize = 2 * 6 * 64 + 1 + 4 + 64 + 1;
     pub fn to_csv(&self) -> Vec<u8> {
         let mut v = Vec::with_capacity(Self::CSV_SIZE);
         for p in PIECES {
             for pb in self.board {
-                v.push( if p==pb {1} else {0} );
+                v.push(if p == pb { 1 } else { 0 });
             }
         }
 
         //turn
-        v.push( if self.turn()==WHITE {1} else {0} );
+        v.push(if self.turn() == WHITE { 1 } else { 0 });
 
         // O-O O-O-O
-        for c in  self.can_castle.last().unwrap() {
-            v.push( if *c {1} else {0} );
+        for c in self.can_castle.last().unwrap() {
+            v.push(if *c { 1 } else { 0 });
         }
 
         // en passant
@@ -174,7 +174,7 @@ impl Game {
             if matches!(self.board[last.to()], Pawn(_)) && last.to().abs_diff(last.frm()) == 2 {
                 let idx = last.to() as isize + if self.colour { 1 } else { -1 };
                 for i in 0..64 {
-                    v.push(if i==idx {1} else {0});
+                    v.push(if i == idx { 1 } else { 0 });
                 }
             } else {
                 for _ in 0..64 {
@@ -186,7 +186,7 @@ impl Game {
                 v.push(0);
             }
         };
-        
+
         v
     }
 
@@ -280,6 +280,23 @@ impl Game {
         let mut game = Game::new(board);
         if parts.len() > 1 {
             game.colour = matches!(parts[1].chars().nth(0), Some('w') | Some('W'));
+        }
+        if parts.len() > 2 {
+            let cc = game.can_castle.last_mut().unwrap();
+            cc[0] = parts[2].contains('K');
+            cc[1] = parts[2].contains('Q');
+            cc[2] = parts[2].contains('k');
+            cc[3] = parts[3].contains('q');
+        }
+        if parts.len() > 3 {
+            // en passant attack
+        }
+        if parts.len() > 4 {
+            // half-move count
+        }
+
+        if parts.len() > 5 {
+            // full-move count
         }
         game
     }
