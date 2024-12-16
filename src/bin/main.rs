@@ -118,7 +118,7 @@ fn benchmark(
     search_threshold: usize,
     max_depth: u16,
     tname: &str,
-    tpos: &[(&str, &str, &str)],
+    tpos: &[(&str, &str)],
 ) {
     println!(
         "{} Test - search threshold: {search_threshold}, max depth: {max_depth}",
@@ -128,17 +128,8 @@ fn benchmark(
     let mut points: f64 = 0.0;
     let mut n_searched: usize = 0;
     let start = Instant::now();
-    for (i, (fen, h, label)) in tpos.iter().enumerate() {
+    for (i, (fen, label)) in tpos.iter().enumerate() {
         let mut game = Game::from_fen(fen);
-        let cc = game.can_castle.last_mut().unwrap();
-        cc[0] = h.contains('K');
-        cc[1] = h.contains('Q');
-        cc[2] = h.contains('k');
-        cc[3] = h.contains('q');
-
-        if h.starts_with('b') {
-            game.colour = BLACK;
-        }
         let moves = game.legal_moves(None);
         game.n_searched = 0;
 

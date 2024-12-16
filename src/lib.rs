@@ -30,7 +30,7 @@ pub struct TTable {
     depth: u16,
     score: i16,
     frmto: (u8, u8),
-    bound: BType,
+    bound: BType, // TODO - use bitpacking frm,to,bound in u16
 }
 
 pub struct Game {
@@ -38,6 +38,8 @@ pub struct Game {
     pub colour: bool,
     pub n_searched: usize,
     material: i16,
+    half_move_clock: usize, // since last irreversible move
+    full_move_count: usize,
     rep: HashMap<u64, usize>,
     pub ttable: HashMap<u64, TTable>,
     pub can_castle: Vec<[bool; 4]>, // white short, long, black short, long
@@ -137,6 +139,8 @@ impl Game {
             colour: WHITE,
             n_searched: 0,
             material: material(&board),
+            half_move_clock: 0,
+            full_move_count: 0,
             rep: HashMap::from([(key, 1)]),
             ttable: HashMap::new(),
             can_castle: vec![[true; 4]],
@@ -252,7 +256,7 @@ impl Game {
             format!(
                 " {} {}",
                 self.check_50_move_rule() - 1,
-                self.move_log.len() / 2 + 1
+                self.full_move_count + self.move_log.len() / 2 + 1
             )
             .as_str(),
         );
@@ -286,17 +290,23 @@ impl Game {
             cc[0] = parts[2].contains('K');
             cc[1] = parts[2].contains('Q');
             cc[2] = parts[2].contains('k');
-            cc[3] = parts[3].contains('q');
+            cc[3] = parts[2].contains('q');
         }
         if parts.len() > 3 {
             // en passant attack
         }
         if parts.len() > 4 {
-            // half-move count
+            // moves since last irreversible move
+            if let Ok(value) = parts[4].parse::<usize>() {
+                game.half_move_clock = value;
+            }
         }
 
         if parts.len() > 5 {
             // full-move count
+            if let Ok(value) = parts[5].parse::<usize>() {
+                game.full_move_count = value;
+            }
         }
         game
     }
@@ -460,6 +470,7 @@ impl Game {
     pub fn make_move(&mut self, m: Move) {
         if m.en_passant() || self.board[m.to()] != Nil || matches!(self.board[m.frm()], Pawn(_)) {
             self.rep_clear(); // ireversible move
+            self.half_move_clock = 0;
         }
         self.ttable_clear();
         self.update(&m);
@@ -484,7 +495,7 @@ impl Game {
     }
 
     pub fn check_50_move_rule(&self) -> usize {
-        self.rep.iter().map(|(_, &v)| v).sum::<usize>()
+        self.half_move_clock + self.rep.iter().map(|(_, &v)| v).sum::<usize>()
     }
 
     pub fn in_check(&self, colour: bool) -> bool {
