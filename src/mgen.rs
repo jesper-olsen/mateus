@@ -9,8 +9,8 @@ const CASTLE_BIT: u16 = 1 << 12;
 const EN_PASSANT_BIT: u16 = 1 << 13;
 const TRANSFORM_BIT: u16 = 1 << 14;
 const TO_SHIFT: u16 = 6;
-const FRM_MASK: u16 = 0b111111;
-const TO_MASK: u16 = 0b111111 << TO_SHIFT;
+pub const FRM_MASK: u16 = 0b111111;
+pub const TO_MASK: u16 = FRM_MASK << TO_SHIFT;
 
 const fn pack_data(
     castle: bool,
@@ -35,7 +35,7 @@ const fn pack_data(
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Move {
-    data: u16,
+    pub data: u16,
     pub val: i16,
 }
 
@@ -72,6 +72,14 @@ impl Move {
     pub fn to(&self) -> usize {
         ((self.data & TO_MASK) >> TO_SHIFT) as usize
     }
+}
+
+pub fn ext_frm(data: u16) -> u8 {
+    (data & FRM_MASK) as u8
+}
+
+pub fn ext_to(data: u16) -> u8 {
+    ((data & TO_MASK) >> TO_SHIFT) as u8
 }
 
 pub const NULL_MOVE: Move = Move {

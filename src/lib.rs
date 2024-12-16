@@ -18,19 +18,15 @@ use val::*;
 
 pub const INFINITE: i16 = 10000;
 
-#[derive(Debug, Copy, Clone, PartialEq)]
-enum BType {
-    Exact,
-    Lower,
-    Upper,
-}
+const EXACT_BIT: u16 = 1 << 12;
+const LOWER_BIT: u16 = 1 << 13;
+const UPPER_BIT: u16 = 1 << 14;
 
 #[derive(Debug, Copy, Clone)]
 pub struct TTable {
     depth: u16,
     score: i16,
-    frmto: (u8, u8),
-    bound: BType, // TODO - use bitpacking frm,to,bound in u16
+    data: u16, // frm, to, bound: 2x6 bits + 3 bits
 }
 
 pub struct Game {
@@ -132,6 +128,7 @@ fn i2str(i: usize) -> String {
 
 impl Game {
     pub fn new(board: [Piece; 64]) -> Self {
+        //println!("size of TTable {}", std::mem::size_of::<TTable>());
         let key = board2hash(&board, WHITE);
         let (bm_white, bm_black) = board2bm(&board);
         Game {
@@ -700,18 +697,15 @@ impl Game {
     fn ttstore(&mut self, depth: u16, score: i16, alpha: i16, beta: i16, m: &Move) {
         // TODO - implement more efficient hashing function
         let key = self.hash;
-        let e = TTable {
-            depth,
-            score,
-            bound: if score <= alpha {
-                BType::Upper
-            } else if score >= beta {
-                BType::Lower
-            } else {
-                BType::Exact
-            },
-            frmto: (m.frm() as u8, m.to() as u8),
+        let bound = if score <= alpha {
+            UPPER_BIT
+        } else if score >= beta {
+            LOWER_BIT
+        } else {
+            EXACT_BIT
         };
+        let data = (m.data & (mgen::FRM_MASK | mgen::TO_MASK)) | bound;
+        let e = TTable { depth, score, data };
         self.ttable
             .entry(key)
             .and_modify(|x| {
@@ -836,16 +830,19 @@ impl Game {
 
         let kmove = if let Some(e) = self.ttable.get(&self.hash) {
             if e.depth >= depth {
-                match e.bound {
-                    BType::Exact => return e.score,
-                    BType::Lower => alpha = max(alpha, e.score),
-                    BType::Upper => beta = min(beta, e.score),
+                match e.data & (EXACT_BIT | UPPER_BIT | LOWER_BIT) {
+                    EXACT_BIT => return e.score,
+                    LOWER_BIT => alpha = max(alpha, e.score),
+                    UPPER_BIT => beta = min(beta, e.score),
+                    _ => unreachable!(),
                 }
                 if alpha >= beta {
                     return e.score;
                 }
             }
-            Some(e.frmto)
+            let frm = mgen::ext_frm(e.data);
+            let to = mgen::ext_to(e.data);
+            Some((frm, to))
         } else {
             None
         };
