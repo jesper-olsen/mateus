@@ -291,6 +291,14 @@ impl Game {
         }
         if parts.len() > 3 {
             // en passant attack
+            if let Some(sq) = misc::parse_chess_coord(&parts[3]) {
+                let sq = sq as isize;
+                let o = if !game.colour { 1 } else { -1 };
+                let to: usize = (sq + o).try_into().expect("must be positive");
+                let frm: usize = (sq - o).try_into().expect("must be positive");
+                let m = mgen::Move::new(false, true, frm, to);
+                game.move_log.push(m);
+            }
         }
         if parts.len() > 4 {
             // moves since last irreversible move

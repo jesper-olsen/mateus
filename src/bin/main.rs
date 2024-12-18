@@ -66,28 +66,31 @@ fn pick_move(game: &mut Game, moves: &[Move]) -> Vec<(Move, i16)> {
                 println!();
             }
             _ => {
-                let (frm, to) = str2move(s.as_str());
-                let l: Vec<_> = moves
-                    .iter()
-                    .filter(|m| (m.frm(), m.to()) == (frm, to))
-                    .collect();
-                match l.len() {
-                    0 => println!("Not valid"),
-                    1 => return vec![(*l[0], 0)],
-                    _ => {
-                        let mut n;
-                        let label = format!("pick a number [0-{}]", l.len() - 1);
-                        loop {
-                            for (i, m) in l.iter().enumerate() {
-                                println!("[{i}] Move: {m}");
+                if let Some((frm, to)) = str2move(s.as_str()) {
+                    let l: Vec<_> = moves
+                        .iter()
+                        .filter(|m| (m.frm(), m.to()) == (frm, to))
+                        .collect();
+                    match l.len() {
+                        0 => println!("Not legal"),
+                        1 => return vec![(*l[0], 0)],
+                        _ => {
+                            let mut n;
+                            let label = format!("pick a number [0-{}]", l.len() - 1);
+                            loop {
+                                for (i, m) in l.iter().enumerate() {
+                                    println!("[{i}] Move: {m}");
+                                }
+                                n = get_number::<usize>(label.as_str());
+                                if n < l.len() {
+                                    break;
+                                }
                             }
-                            n = get_number::<usize>(label.as_str());
-                            if n < l.len() {
-                                break;
-                            }
+                            return vec![(*l[n], 0)];
                         }
-                        return vec![(*l[n], 0)];
                     }
+                } else {
+                    println!("Not valid");
                 }
             }
         }

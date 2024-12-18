@@ -78,18 +78,21 @@ fn main() {
             game = Game::from_fen(ROOT_FEN);
             log = vec![];
         } else {
-            let (frm, to) = str2move(s);
-            let moves = game.legal_moves(log.last());
-            if let Some(m) = moves.iter().find(|m| (m.frm(), m.to()) == (frm, to)) {
-                h.entry(game.hash)
-                    .and_modify(|x| {
-                        if !x.iter().any(|(frm, to)| (*frm, *to) == (m.frm(), m.to())) {
-                            x.push((m.frm(), m.to()))
-                        }
-                    })
-                    .or_insert(vec![(m.frm(), m.to())]);
-                game.update(m);
-                log.push(*m);
+            if let Some((frm, to)) = str2move(s) {
+                let moves = game.legal_moves(log.last());
+                if let Some(m) = moves.iter().find(|m| (m.frm(), m.to()) == (frm, to)) {
+                    h.entry(game.hash)
+                        .and_modify(|x| {
+                            if !x.iter().any(|(frm, to)| (*frm, *to) == (m.frm(), m.to())) {
+                                x.push((m.frm(), m.to()))
+                            }
+                        })
+                        .or_insert(vec![(m.frm(), m.to())]);
+                    game.update(m);
+                    log.push(*m);
+                } else {
+                    panic!("Not a legal move");
+                }
             } else {
                 panic!("Not a legal move");
             }

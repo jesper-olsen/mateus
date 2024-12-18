@@ -40,6 +40,11 @@ pub struct Move {
 }
 
 impl Move {
+    pub fn new(castle: bool, en_passant: bool, frm: usize, to: usize) -> Self {
+        // incomplete - needed by from_fen
+        let data = pack_data(castle, en_passant, Nil, frm, to);
+        Move { data, val: 0 }
+    }
     #[inline]
     pub fn castle(&self) -> bool {
         self.data & CASTLE_BIT != 0 && !self.transform()
