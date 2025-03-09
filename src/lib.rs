@@ -307,6 +307,12 @@ impl Game {
 
     //https://cheatography.com/davechild/cheat-sheets/chess-algebraic-notation/
     pub fn move2label(&mut self, m: &Move, moves: &[Move]) -> String {
+        fn i2xy(i: usize) -> (usize, usize) {
+            let x = 7 - i / 8; // col
+            let y = i % 8; // row
+            (x, y)
+        }
+
         let mut label = String::new();
         if m.castle() {
             if m.to() < 31 {
@@ -328,7 +334,7 @@ impl Game {
             let mut nx = 0;
             let mut ny = 0;
             let mut n = 0;
-            let (x0, y0) = mgen::i2xy(m.frm());
+            let (x0, y0) = i2xy(m.frm());
             for m2 in moves {
                 match (self.board[m.frm()], self.board[m2.frm()]) {
                     (Rook(_), Rook(_))
@@ -338,7 +344,7 @@ impl Game {
                         if m2.to() == m.to() =>
                     {
                         n += 1;
-                        let (x, y) = mgen::i2xy(m2.frm());
+                        let (x, y) = i2xy(m2.frm());
                         if x == x0 {
                             nx += 1;
                         }
@@ -361,7 +367,7 @@ impl Game {
             if m.en_passant() || self.board[m.to()] != Nil {
                 label.push('x');
             }
-            label.push_str(&I2SQ[m.to()]);
+            label.push_str(I2SQ[m.to()]);
             if m.transform() {
                 match m.ptransform(self.colour) {
                     Rook(_) => label.push_str("=R"),

@@ -17,7 +17,7 @@ pub fn parse_chess_coord(coord: &str) -> Option<usize> {
     let rank = bytes[1]; // row number, e.g., '4'
 
     // a-h, 1-8
-    if file < b'a' || file > b'h' || rank < b'1' || rank > b'8' {
+    if !(b'a'..=b'h').contains(&file) || !(b'1'..=b'8').contains(&rank) {
         return None; // Invalid input
     }
 

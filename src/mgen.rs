@@ -107,12 +107,6 @@ impl fmt::Display for Move {
     }
 }
 
-pub fn i2xy(i: usize) -> (usize, usize) {
-    let x = 7 - i / 8; // col
-    let y = i % 8; // row
-    (x, y)
-}
-
 // count pseudo legal moves - ignoring en passant & castling
 pub fn count_moves(board: &[Piece; 64], colour: bool, bm_white: u64, bm_black: u64) -> u32 {
     let (bm_own, bm_opp) = if colour == WHITE {
