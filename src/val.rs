@@ -32,18 +32,12 @@ pub static PIECES: [Piece; 12] = [
 impl Piece {
     pub const fn val(&self, pos: usize) -> i16 {
         match self {
-            Rook(WHITE) => ROOKVAL1[pos],
-            Rook(BLACK) => ROOKVAL2[pos],
-            Knight(WHITE) => KNIGHTVAL1[pos],
-            Knight(BLACK) => KNIGHTVAL2[pos],
-            Bishop(WHITE) => BISHOPVAL1[pos],
-            Bishop(BLACK) => BISHOPVAL2[pos],
-            King(WHITE) => KINGVAL1[pos],
-            King(BLACK) => KINGVAL2[pos],
-            Queen(WHITE) => QUEENVAL1[pos],
-            Queen(BLACK) => QUEENVAL2[pos],
-            Pawn(WHITE) => PAWNVAL1[pos],
-            Pawn(BLACK) => PAWNVAL2[pos],
+            Rook(c) => ROOKVAL[*c as usize][pos],
+            Knight(c) => KNIGHTVAL[*c as usize][pos],
+            Bishop(c) => BISHOPVAL[*c as usize][pos],
+            King(c) => KINGVAL[*c as usize][pos],
+            Queen(c) => QUEENVAL[*c as usize][pos],
+            Pawn(c) => PAWNVAL[*c as usize][pos],
             Nil => 0,
         }
     }
@@ -68,20 +62,19 @@ impl Piece {
     }
 
     pub const fn to_ascii(&self) -> char {
-        match self {
-            Rook(WHITE) => 'R',
-            Rook(BLACK) => 'r',
-            Knight(WHITE) => 'N',
-            Knight(BLACK) => 'n',
-            Bishop(WHITE) => 'B',
-            Bishop(BLACK) => 'b',
-            Queen(WHITE) => 'Q',
-            Queen(BLACK) => 'q',
-            King(WHITE) => 'K',
-            King(BLACK) => 'k',
-            Pawn(WHITE) => 'P',
-            Pawn(BLACK) => 'p',
+        let p = match self {
+            Rook(_) => 'r',
+            Knight(_) => 'n',
+            Bishop(_) => 'b',
+            Queen(_) => 'q',
+            King(_) => 'k',
+            Pawn(_) => 'p',
             Nil => '.',
+        };
+        if self.is_white() {
+            p.to_ascii_uppercase()
+        } else {
+            p
         }
     }
 
@@ -164,7 +157,7 @@ impl fmt::Display for Piece {
 }
 
 #[rustfmt::skip]
-pub const KINGVAL1 : [i16;64] = [
+const KINGVAL_W : [i16;64] = [
    24,  24,  12,  6,  6,  12,  24,  24, 
    24,  12,  6,   0,  0,  6,   12,  24, 
    12,  6,   0,  -6, -6,  0,   6,  12, 
@@ -173,10 +166,11 @@ pub const KINGVAL1 : [i16;64] = [
    12,  6,   0,  -6, -6,  0,   6,  12, 
    24,  12,  6,   0,  0,  6,   12,  24, 
    24,  24,  12,  6,  6,  12,  24,  24];
-pub const KINGVAL2: [i16; 64] = array_mul(-1, KINGVAL1);
+const KINGVAL_B: [i16; 64] = array_mul(-1, KINGVAL_W);
+const KINGVAL: [[i16; 64]; 2] = [KINGVAL_B, KINGVAL_W];
 
 #[rustfmt::skip]
-pub const PAWNVAL1 : [i16;64] = [
+const PAWNVAL_W : [i16;64] = [
   100, 100, 101, 102, 104, 106, 108, 900, 
   100, 100, 102, 104, 106, 109, 112, 900, 
   100, 100, 104, 108, 112, 115, 118, 900, 
@@ -185,10 +179,11 @@ pub const PAWNVAL1 : [i16;64] = [
   100, 100, 104, 108, 112, 116, 120, 900, 
   100, 100, 102, 104, 106, 108, 112, 900, 
   100, 100, 101, 102, 104, 106, 108, 900];
-pub const PAWNVAL2: [i16; 64] = array_reverse(array_mul(-1, PAWNVAL1));
+const PAWNVAL_B: [i16; 64] = array_reverse(array_mul(-1, PAWNVAL_W));
+const PAWNVAL: [[i16; 64]; 2] = [PAWNVAL_B, PAWNVAL_W];
 
 #[rustfmt::skip]
-pub const ROOKVAL1 : [i16;64] = [
+const ROOKVAL_W : [i16;64] = [
   500, 500, 500, 500, 500, 500, 522, 500, 
   500, 500, 500, 500, 500, 500, 522, 500, 
   500, 500, 500, 500, 500, 500, 522, 500, 
@@ -197,10 +192,11 @@ pub const ROOKVAL1 : [i16;64] = [
   500, 500, 500, 500, 500, 500, 522, 500, 
   500, 500, 500, 500, 500, 500, 522, 500, 
   500, 500, 500, 500, 500, 500, 522, 500];
-pub const ROOKVAL2: [i16; 64] = array_reverse(array_mul(-1, ROOKVAL1));
+const ROOKVAL_B: [i16; 64] = array_reverse(array_mul(-1, ROOKVAL_W));
+const ROOKVAL: [[i16; 64]; 2] = [ROOKVAL_B, ROOKVAL_W];
 
 #[rustfmt::skip]
-pub const KNIGHTVAL1 : [i16;64] = [
+const KNIGHTVAL_W : [i16;64] = [
   315, 315, 315, 315, 315, 315, 315, 315, 
   315, 320, 320, 320, 320, 320, 320, 315, 
   315, 320, 325, 325, 330, 330, 320, 315, 
@@ -209,10 +205,11 @@ pub const KNIGHTVAL1 : [i16;64] = [
   315, 320, 325, 325, 330, 330, 320, 315, 
   315, 320, 320, 320, 320, 320, 320, 315, 
   315, 315, 315, 315, 315, 315, 315, 315];
-pub const KNIGHTVAL2: [i16; 64] = array_reverse(array_mul(-1, KNIGHTVAL1));
+const KNIGHTVAL_B: [i16; 64] = array_reverse(array_mul(-1, KNIGHTVAL_W));
+const KNIGHTVAL: [[i16; 64]; 2] = [KNIGHTVAL_B, KNIGHTVAL_W];
 
 #[rustfmt::skip]
-pub const BISHOPVAL1: [i16;64] = [
+const BISHOPVAL_W: [i16;64] = [
    339, 350, 350, 350, 350, 350, 350, 350,
    339, 350, 350, 350, 350, 350, 350, 350,
    339, 350, 350, 350, 350, 350, 350, 350,
@@ -221,10 +218,12 @@ pub const BISHOPVAL1: [i16;64] = [
    339, 350, 350, 350, 350, 350, 350, 350,
    339, 350, 350, 350, 350, 350, 350, 350,
    339, 350, 350, 350, 350, 350, 350, 350];
-pub const BISHOPVAL2: [i16; 64] = array_mul(-1, array_reverse(BISHOPVAL1));
+const BISHOPVAL_B: [i16; 64] = array_mul(-1, array_reverse(BISHOPVAL_W));
+const BISHOPVAL: [[i16; 64]; 2] = [BISHOPVAL_B, BISHOPVAL_W];
 
-pub const QUEENVAL1: [i16; 64] = [900; 64];
-pub const QUEENVAL2: [i16; 64] = [-900; 64];
+const QUEENVAL_W: [i16; 64] = [900; 64];
+const QUEENVAL_B: [i16; 64] = [-900; 64];
+const QUEENVAL: [[i16; 64]; 2] = [QUEENVAL_B, QUEENVAL_W];
 
 const fn array_mul<const N: usize>(factor: i16, mut a: [i16; N]) -> [i16; N] {
     let mut i = 0;

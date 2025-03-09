@@ -43,18 +43,12 @@ use crate::val::*;
 impl Piece {
     pub const fn hashkey(&self, pos: usize) -> u64 {
         match self {
-            Piece::Rook(WHITE) => R1_HASH[pos],
-            Piece::Rook(BLACK) => R2_HASH[pos],
-            Piece::Knight(WHITE) => N1_HASH[pos],
-            Piece::Knight(BLACK) => N2_HASH[pos],
-            Piece::Bishop(WHITE) => B1_HASH[pos],
-            Piece::Bishop(BLACK) => B2_HASH[pos],
-            Piece::King(WHITE) => K1_HASH[pos],
-            Piece::King(BLACK) => K2_HASH[pos],
-            Piece::Queen(WHITE) => Q1_HASH[pos],
-            Piece::Queen(BLACK) => Q2_HASH[pos],
-            Piece::Pawn(WHITE) => P1_HASH[pos],
-            Piece::Pawn(BLACK) => P2_HASH[pos],
+            Piece::Rook(c) => R_HASH[*c as usize][pos],
+            Piece::Knight(c) => N_HASH[*c as usize][pos],
+            Piece::Bishop(c) => B_HASH[*c as usize][pos],
+            Piece::King(c) => K_HASH[*c as usize][pos],
+            Piece::Queen(c) => Q_HASH[*c as usize][pos],
+            Piece::Pawn(c) => P_HASH[*c as usize][pos],
             Piece::Nil => NIL_HASH[pos],
         }
     }
