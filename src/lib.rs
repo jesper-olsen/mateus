@@ -320,8 +320,7 @@ impl Game {
                     label.push_str(&I2SQ[m.frm()][0..1])
                 }
             } else {
-                let p = format!("{}", self.board[m.frm()]).to_uppercase();
-                label.push_str(&p);
+                label.push_str(&self.board[m.frm()].to_string().to_uppercase());
             }
 
             // If two or more pieces of the same type can move to the same sq we need to disambiguate
@@ -356,7 +355,7 @@ impl Game {
                 } else if nx <= ny {
                     label.push_str(&I2SQ[m.frm()][0..1])
                 } else {
-                    label.push_str(&I2SQ[m.frm()][1..])
+                    label.push_str(&I2SQ[m.frm()][1..2])
                 }
             }
             if m.en_passant() || self.board[m.to()] != Nil {
