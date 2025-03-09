@@ -119,13 +119,6 @@ fn move_to_head(moves: &mut Vec<Move>, frmto: &(u8, u8)) {
     }
 }
 
-fn i2str(i: usize) -> String {
-    let s = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
-    let x = 7 - i / 8;
-    let y = i % 8 + 1;
-    format!("{}{}", s[x], y)
-}
-
 impl Game {
     pub fn new(board: [Piece; 64]) -> Self {
         //println!("size of TTable {}", std::mem::size_of::<TTable>());
@@ -324,7 +317,7 @@ impl Game {
         } else {
             if matches!(self.board[m.frm()], Pawn(_)) {
                 if self.board[m.to()] != Nil || m.en_passant() {
-                    let s = i2str(m.frm());
+                    let s = I2SQ[m.frm()];
                     label.push(s.chars().nth(0).unwrap())
                 }
             } else {
@@ -360,17 +353,17 @@ impl Game {
             }
             if n > 1 {
                 if nx > 1 && ny > 1 {
-                    label.push_str(i2str(m.frm()).as_str())
+                    label.push_str(I2SQ[m.frm()])
                 } else if nx <= ny {
-                    label.push(i2str(m.frm()).chars().nth(0).unwrap())
+                    label.push(I2SQ[m.frm()].chars().nth(0).unwrap())
                 } else {
-                    label.push(i2str(m.frm()).chars().nth(1).unwrap())
+                    label.push(I2SQ[m.frm()].chars().nth(1).unwrap())
                 }
             }
             if m.en_passant() || self.board[m.to()] != Nil {
                 label.push('x');
             }
-            label.push_str(&i2str(m.to()));
+            label.push_str(&I2SQ[m.to()]);
             if m.transform() {
                 match m.ptransform(self.colour) {
                     Rook(_) => label.push_str("=R"),

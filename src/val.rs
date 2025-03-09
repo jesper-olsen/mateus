@@ -43,19 +43,14 @@ impl Piece {
     }
 
     pub const fn from_ascii(c: char) -> Piece {
-        match c {
-            'r' => Rook(BLACK),
-            'n' => Knight(BLACK),
-            'b' => Bishop(BLACK),
-            'q' => Queen(BLACK),
-            'k' => King(BLACK),
-            'p' => Pawn(BLACK),
-            'R' => Rook(WHITE),
-            'N' => Knight(WHITE),
-            'B' => Bishop(WHITE),
-            'Q' => Queen(WHITE),
-            'K' => King(WHITE),
-            'P' => Pawn(WHITE),
+        let colour = c.is_ascii_uppercase();
+        match c.to_ascii_lowercase() {
+            'r' => Rook(colour),
+            'n' => Knight(colour),
+            'b' => Bishop(colour),
+            'q' => Queen(colour),
+            'k' => King(colour),
+            'p' => Pawn(colour),
             ' ' => Nil,
             _ => panic!("can not convert to Piece"),
         }
