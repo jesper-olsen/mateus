@@ -5,12 +5,12 @@
 
 use ::std::time::Instant;
 use clap::Parser;
+use puccinia_s_checkmate::Game;
 use puccinia_s_checkmate::benchmark;
 use puccinia_s_checkmate::mgen::Move;
 use puccinia_s_checkmate::misc::str2move;
 use puccinia_s_checkmate::openings::library_moves;
 use puccinia_s_checkmate::val::*;
-use puccinia_s_checkmate::Game;
 use rand::random;
 use std::collections::hash_map::HashMap;
 use std::io;
@@ -161,8 +161,10 @@ fn benchmark(
         }
         println!(
             "Position {:>2}; Searched: {:>9}, Score: {score:>5 }, Move ({colour}): {} = {clabel:>4 }; Expected: {label}\n",
-            i+1,
-            game.n_searched, best);
+            i + 1,
+            game.n_searched,
+            best
+        );
         if (*label).contains(clabel.as_str()) {
             //if clabel.as_str() == *label {
             correct.push(i + 1);
@@ -217,8 +219,8 @@ fn play(
                     println!("#library moves from {}: {}", game.hash, lmoves.len());
                     println!("{:?}", lmoves);
                 };
-                let i = random::<usize>() % lmoves.len();
-                let (frm, to) = lmoves[i];
+                let i = random::<u32>() % lmoves.len() as u32;
+                let (frm, to) = lmoves[i as usize];
                 if let Some(m) = moves.iter().find(|m| (m.frm(), m.to()) == (frm, to)) {
                     println!("Library Move {} ", m);
                     vec![(*m, 0i16)]

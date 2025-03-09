@@ -67,11 +67,7 @@ const fn bm_bishop_moves() -> [u64; 64] {
 }
 
 const fn min_usize(i1: usize, i2: usize) -> usize {
-    if i1 <= i2 {
-        i1
-    } else {
-        i2
-    }
+    if i1 <= i2 { i1 } else { i2 }
 }
 
 const fn bm_bishop_moves_from(frm: usize) -> u64 {

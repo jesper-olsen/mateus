@@ -69,8 +69,8 @@ impl fmt::Display for Game {
         // ANSI escape codes for background and foreground colors
         let light_square_bg = "\x1b[48;5;229m"; // Light background
         let dark_square_bg = "\x1b[48;5;94m"; // Dark background
-                                              //let light_square_bg = "\x1b[48;5;15m"; // White background
-                                              //let dark_square_bg = "\x1b[48;5;8m";   // Gray background
+        //let light_square_bg = "\x1b[48;5;15m"; // White background
+        //let dark_square_bg = "\x1b[48;5;8m";   // Gray background
         let black_fg = "\x1b[38;5;0m"; // Black foreground
         let white_fg = "\x1b[38;5;15m"; // White foreground
         let reset_colour = "\x1b[0m"; // Reset to default colour
@@ -178,14 +178,10 @@ impl Game {
                     v.push(if i == idx { 1 } else { 0 });
                 }
             } else {
-                for _ in 0..64 {
-                    v.push(0);
-                }
+                v.resize(v.len() + 64, 0);
             }
         } else {
-            for _ in 0..64 {
-                v.push(0);
-            }
+            v.resize(v.len() + 64, 0);
         };
 
         v
@@ -291,7 +287,7 @@ impl Game {
         }
         if parts.len() > 3 {
             // en passant attack
-            if let Some(sq) = misc::parse_chess_coord(&parts[3]) {
+            if let Some(sq) = misc::parse_chess_coord(parts[3]) {
                 let sq = sq as isize;
                 let o = if !game.colour { 1 } else { -1 };
                 let to: usize = (sq + o).try_into().expect("must be positive");
@@ -731,11 +727,7 @@ impl Game {
 
     pub fn eval(&self, colour: bool) -> i16 {
         let s = self.material + self.score_pawn_structure() + self.mobility();
-        if colour {
-            s
-        } else {
-            -s
-        }
+        if colour { s } else { -s }
         //s * (2 * (colour as i16) - 1)
     }
 
@@ -859,7 +851,7 @@ impl Game {
         let depth = match (depth, in_check) {
             (_, true) => depth + 1,
             (0, false) if self.is_quiescent(last) => {
-                return self.quiescence_fab(alpha, beta, last, false)
+                return self.quiescence_fab(alpha, beta, last, false);
             }
             (0, false) => 1,
             (_, false) => depth,
