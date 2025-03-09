@@ -1,11 +1,10 @@
 // convert board move coordinates "d2d4" to int tuple
 pub fn str2move(s: &str) -> Option<(usize, usize)> {
-    if let Some(frm) = parse_chess_coord(&s[0..2]) {
-        if let Some(to) = parse_chess_coord(&s[2..4]) {
-            return Some((frm, to));
-        }
+    if let (Some(frm), Some(to)) = (parse_chess_coord(&s[0..2]), parse_chess_coord(&s[2..4])) {
+        Some((frm, to))
+    } else {
+        None
     }
-    None
 }
 
 pub fn parse_chess_coord(coord: &str) -> Option<usize> {

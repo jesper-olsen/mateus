@@ -1,5 +1,5 @@
-use std::fmt;
 use Piece::*;
+use std::fmt;
 
 #[derive(Debug, PartialEq, Eq, Hash, Copy, Clone)]
 pub enum Piece {
@@ -14,8 +14,20 @@ pub enum Piece {
 pub const WHITE: bool = true;
 pub const BLACK: bool = false;
 
-pub static PIECES: [Piece;12] = [Pawn(WHITE), Rook(WHITE), Knight(WHITE), Bishop(WHITE), Queen(WHITE), King(WHITE),
-                                 Pawn(BLACK), Rook(BLACK), Knight(BLACK), Bishop(BLACK), Queen(BLACK), King(BLACK)];
+pub static PIECES: [Piece; 12] = [
+    Pawn(WHITE),
+    Rook(WHITE),
+    Knight(WHITE),
+    Bishop(WHITE),
+    Queen(WHITE),
+    King(WHITE),
+    Pawn(BLACK),
+    Rook(BLACK),
+    Knight(BLACK),
+    Bishop(BLACK),
+    Queen(BLACK),
+    King(BLACK),
+];
 
 impl Piece {
     pub const fn val(&self, pos: usize) -> i16 {
@@ -32,7 +44,7 @@ impl Piece {
             Queen(BLACK) => QUEENVAL2[pos],
             Pawn(WHITE) => PAWNVAL1[pos],
             Pawn(BLACK) => PAWNVAL2[pos],
-            _ => 0,
+            Nil => 0,
         }
     }
 

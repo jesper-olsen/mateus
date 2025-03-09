@@ -55,14 +55,12 @@ impl Move {
     }
     #[inline]
     pub fn ptransform(&self, colour: bool) -> Piece {
-        if self.data & (1 << 15) != 0 {
-            Rook(colour)
-        } else if self.data & (1 << 12) != 0 {
-            Knight(colour)
-        } else if self.data & (1 << 13) != 0 {
-            Bishop(colour)
-        } else {
-            Queen(colour)
+        const MASK: u16 = 1 << 15 | 1 << 13 | 1 << 12;
+        match self.data & MASK {
+            0b10000000_00000000 => Rook(colour),
+            0b00100000_00000000 => Bishop(colour),
+            0b00010000_00000000 => Knight(colour),
+            _ => Queen(colour),
         }
     }
     #[inline]
