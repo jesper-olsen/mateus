@@ -317,8 +317,7 @@ impl Game {
         } else {
             if matches!(self.board[m.frm()], Pawn(_)) {
                 if self.board[m.to()] != Nil || m.en_passant() {
-                    let s = I2SQ[m.frm()];
-                    label.push(s.chars().nth(0).unwrap())
+                    label.push_str(&I2SQ[m.frm()][0..1])
                 }
             } else {
                 let p = format!("{}", self.board[m.frm()]).to_uppercase();
@@ -355,9 +354,9 @@ impl Game {
                 if nx > 1 && ny > 1 {
                     label.push_str(I2SQ[m.frm()])
                 } else if nx <= ny {
-                    label.push(I2SQ[m.frm()].chars().nth(0).unwrap())
+                    label.push_str(&I2SQ[m.frm()][0..1])
                 } else {
-                    label.push(I2SQ[m.frm()].chars().nth(1).unwrap())
+                    label.push_str(&I2SQ[m.frm()][1..])
                 }
             }
             if m.en_passant() || self.board[m.to()] != Nil {
