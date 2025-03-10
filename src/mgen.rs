@@ -54,7 +54,7 @@ impl Move {
         (self.data & EN_PASSANT_BIT) != 0 && !self.transform()
     }
     #[inline]
-    pub fn ptransform(&self, colour: bool) -> Piece {
+    pub fn ptransform(&self, colour: Colour) -> Piece {
         const MASK: u16 = 1 << 15 | 1 << 13 | 1 << 12;
         match self.data & MASK {
             0b10000000_00000000 => Rook(colour),
@@ -108,8 +108,8 @@ impl fmt::Display for Move {
 }
 
 // count pseudo legal moves - ignoring en passant & castling
-pub fn count_moves(board: &[Piece; 64], colour: bool, bm_white: u64, bm_black: u64) -> u32 {
-    let (bm_own, bm_opp) = if colour == WHITE {
+pub fn count_moves(board: &[Piece; 64], colour: Colour, bm_white: u64, bm_black: u64) -> u32 {
+    let (bm_own, bm_opp) = if colour.is_white() {
         (bm_white, bm_black)
     } else {
         (bm_black, bm_white)
@@ -137,12 +137,16 @@ pub fn count_moves(board: &[Piece; 64], colour: bool, bm_white: u64, bm_black: u
 // +8   0 -8
 // +7  -1 -9
 
-fn count_pawn_moves(frm: usize, bm_opp: u64, bm_board: u64, colour: bool) -> u32 {
+fn count_pawn_moves(frm: usize, bm_opp: u64, bm_board: u64, colour: Colour) -> u32 {
     // TODO  - calc all at the same time;
-    let cidx = if colour { 0 } else { 1 };
+    let cidx = if colour.is_white() { 0 } else { 1 };
     let cap = BM_PAWN_CAPTURES[cidx][frm] & bm_opp;
     let step1 = BM_PAWN_STEP1[cidx][frm] & !bm_board;
-    let step2 = if colour { step1 << 1 } else { step1 >> 1 };
+    let step2 = if colour.is_white() {
+        step1 << 1
+    } else {
+        step1 >> 1
+    };
     let step2 = step2 & BM_PAWN_STEP2[cidx][frm] & !bm_board;
     (cap | step1 | step2).count_ones()
 }
@@ -157,7 +161,7 @@ fn count_ray_moves(frm: usize, moves: u64, bm_board: u64, bm_own: u64) -> u32 {
 // true if !colour side can capture colour king
 pub fn in_check(
     board: &[Piece; 64],
-    colour: bool,
+    colour: Colour,
     bm_wking: u64,
     bm_bking: u64,
     bm_board: u64,
@@ -194,7 +198,7 @@ struct Bitmaps {
 
 pub fn moves(
     board: &[Piece; 64],
-    colour: bool,
+    colour: Colour,
     in_check: bool,
     end_game: bool,
     can_castle: &[bool; 4],
@@ -202,7 +206,7 @@ pub fn moves(
     bm_white: u64,
     bm_black: u64,
 ) -> Vec<Move> {
-    let (bm_own, bm_opp) = if colour == WHITE {
+    let (bm_own, bm_opp) = if colour.is_white() {
         (bm_white, bm_black)
     } else {
         (bm_black, bm_white)
@@ -262,12 +266,16 @@ fn pawn_moves(
     frm: usize,
     last: &Move,
     bitmaps: &Bitmaps,
-    colour: bool,
+    colour: Colour,
 ) {
-    let cidx = if colour { 0 } else { 1 };
+    let cidx = if colour.is_white() { 0 } else { 1 };
     let cap = BM_PAWN_CAPTURES[cidx][frm] & bitmaps.bm_opp;
     let step1: u64 = BM_PAWN_STEP1[cidx][frm] & !bitmaps.bm_board;
-    let step2: u64 = if colour { step1 << 1 } else { step1 >> 1 };
+    let step2: u64 = if colour.is_white() {
+        step1 << 1
+    } else {
+        step1 >> 1
+    };
     let step2: u64 = step2 & BM_PAWN_STEP2[cidx][frm] & !bitmaps.bm_board;
     let vto = bm2vec(cap | step1 | step2);
 
@@ -303,7 +311,7 @@ fn pawn_moves(
     // en passant
     if matches!(board[last.to()], Pawn(_)) && last.to().abs_diff(last.frm()) == 2 {
         // square attacked if last move was a step-2 pawn move
-        let idx = last.frm() as isize + if colour { -1 } else { 1 };
+        let idx = last.frm() as isize + if colour.is_white() { -1 } else { 1 };
 
         v.extend(
             bm2vec(BM_PAWN_CAPTURES[cidx][frm] & 1 << idx)

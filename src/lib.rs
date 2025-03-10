@@ -31,7 +31,7 @@ pub struct TTable {
 
 pub struct Game {
     pub board: [Piece; 64],
-    pub colour: bool,
+    pub colour: Colour,
     pub n_searched: usize,
     material: i16,
     half_move_clock: usize, // since last irreversible move
@@ -156,7 +156,7 @@ impl Game {
         }
 
         //turn
-        v.push(if self.turn() == WHITE { 1 } else { 0 });
+        v.push(if self.turn().is_white() { 1 } else { 0 });
 
         // O-O O-O-O
         for c in self.can_castle.last().unwrap() {
@@ -166,7 +166,7 @@ impl Game {
         // en passant
         if let Some(last) = self.move_log.last() {
             if matches!(self.board[last.to()], Pawn(_)) && last.to().abs_diff(last.frm()) == 2 {
-                let idx = last.to() as isize + if self.colour { 1 } else { -1 };
+                let idx = last.to() as isize + if self.colour.is_white() { 1 } else { -1 };
                 for i in 0..64 {
                     v.push(if i == idx { 1 } else { 0 });
                 }
@@ -228,7 +228,7 @@ impl Game {
         s.push(' ');
         if let Some(last) = self.move_log.last() {
             if matches!(self.board[last.to()], Pawn(_)) && last.to().abs_diff(last.frm()) == 2 {
-                let idx = last.to() as isize + if self.colour { 1 } else { -1 };
+                let idx = last.to() as isize + if self.colour.is_white() { 1 } else { -1 };
                 s.push_str(I2SQ[idx as usize])
             } else {
                 s.push('-');
@@ -269,7 +269,11 @@ impl Game {
 
         let mut game = Game::new(board);
         if parts.len() > 1 {
-            game.colour = matches!(parts[1].chars().nth(0), Some('w') | Some('W'));
+            game.colour = if matches!(parts[1].chars().nth(0), Some('w') | Some('W')) {
+                Colour::White
+            } else {
+                Colour::Black
+            };
         }
         if parts.len() > 2 {
             let cc = game.can_castle.last_mut().unwrap();
@@ -282,7 +286,7 @@ impl Game {
             // en passant attack
             if let Some(sq) = misc::parse_chess_coord(parts[3]) {
                 let sq = sq as isize;
-                let o = if !game.colour { 1 } else { -1 };
+                let o = if game.colour.is_white() { -1 } else { 1 };
                 let to: usize = (sq + o).try_into().expect("must be positive");
                 let frm: usize = (sq - o).try_into().expect("must be positive");
                 let m = mgen::Move::new(false, true, frm, to);
@@ -496,7 +500,7 @@ impl Game {
         self.half_move_clock + self.rep.iter().map(|(_, &v)| v).sum::<usize>()
     }
 
-    pub fn in_check(&self, colour: bool) -> bool {
+    pub fn in_check(&self, colour: Colour) -> bool {
         // true if other side can capture king
 
         mgen::in_check(
@@ -526,7 +530,7 @@ impl Game {
         moves
     }
 
-    fn moves(&mut self, colour: bool, last: Option<&Move>, in_check: bool) -> Vec<Move> {
+    fn moves(&mut self, colour: Colour, last: Option<&Move>, in_check: bool) -> Vec<Move> {
         let mut l = moves(
             &self.board,
             colour,
@@ -537,7 +541,7 @@ impl Game {
             self.bm_white,
             self.bm_black,
         );
-        if colour {
+        if colour.is_white() {
             //l.sort_by(|b, a| a.val.cmp(&b.val)); // decreasing
             l.sort_unstable_by(|b, a| a.val.cmp(&b.val)); // decreasing
         } else {
@@ -548,7 +552,7 @@ impl Game {
         l
     }
 
-    pub fn turn(&self) -> bool {
+    pub fn turn(&self) -> Colour {
         self.colour
     }
 
@@ -645,7 +649,7 @@ impl Game {
                 _ => (),
             }
         }
-        self.colour = !self.colour;
+        self.colour.flip();
     }
 
     pub fn backdate(&mut self, m: &Move) {
@@ -660,7 +664,7 @@ impl Game {
             capture,
             self.hash,
         ) = bms;
-        self.colour = !self.colour;
+        self.colour.flip();
         //self.hash ^= m.hash ^ WHITE_HASH;
         self.rep_dec();
         if m.castle() {
@@ -722,9 +726,9 @@ impl Game {
             - count_moves(&self.board, BLACK, self.bm_white, self.bm_black) as i16
     }
 
-    pub fn eval(&self, colour: bool) -> i16 {
+    pub fn eval(&self, colour: Colour) -> i16 {
         let s = self.material + self.score_pawn_structure() + self.mobility();
-        if colour { s } else { -s }
+        if colour.is_white() { s } else { -s }
         //s * (2 * (colour as i16) - 1)
     }
 

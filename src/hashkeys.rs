@@ -54,10 +54,10 @@ impl Piece {
     }
 }
 
-pub const fn board2hash(board: &[Piece; 64], colour: bool) -> u64 {
+pub const fn board2hash(board: &[Piece; 64], colour: Colour) -> u64 {
     let mut key = match colour {
-        WHITE => WHITE_HASH,
-        BLACK => 0,
+        Colour::White => WHITE_HASH,
+        Colour::Black => 0,
     };
 
     let mut i = 0;

@@ -140,7 +140,11 @@ fn benchmark(
         let (best, score) = l[0];
         n_searched += game.n_searched;
         let clabel = game.move2label(&best, &moves);
-        let colour = if game.colour { "white" } else { "black" };
+        let colour = if game.colour.is_white() {
+            "white"
+        } else {
+            "black"
+        };
         println!("{game}");
 
         for (i, (m, score)) in l.iter().enumerate() {
@@ -187,7 +191,7 @@ fn benchmark(
 }
 
 fn play(
-    players: HashMap<bool, bool>,
+    players: HashMap<Colour, bool>,
     verbose: bool,
     search_threshold: usize,
     max_depth: u16,

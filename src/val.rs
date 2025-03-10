@@ -2,31 +2,61 @@ use Piece::*;
 use std::fmt;
 
 #[derive(Debug, PartialEq, Eq, Hash, Copy, Clone)]
+pub enum Colour {
+    Black,
+    White,
+}
+use Colour::*;
+
+impl Colour {
+    pub const fn opposite(&self) -> Colour {
+        match *self {
+            White => Black,
+            Black => White,
+        }
+    }
+
+    pub const fn flip(&mut self) {
+        *self = match *self {
+            White => Black,
+            Black => White,
+        }
+    }
+
+    pub const fn is_white(&self) -> bool {
+        match *self {
+            White => true,
+            Black => false,
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, Hash, Copy, Clone)]
 pub enum Piece {
-    Rook(bool),
-    Knight(bool),
-    Bishop(bool),
-    Queen(bool),
-    King(bool),
-    Pawn(bool),
+    Rook(Colour),
+    Knight(Colour),
+    Bishop(Colour),
+    Queen(Colour),
+    King(Colour),
+    Pawn(Colour),
     Nil,
 }
-pub const WHITE: bool = true;
-pub const BLACK: bool = false;
+pub const WHITE: Colour = White;
+pub const BLACK: Colour = Black;
 
 pub static PIECES: [Piece; 12] = [
-    Pawn(WHITE),
-    Rook(WHITE),
-    Knight(WHITE),
-    Bishop(WHITE),
-    Queen(WHITE),
-    King(WHITE),
-    Pawn(BLACK),
-    Rook(BLACK),
-    Knight(BLACK),
-    Bishop(BLACK),
-    Queen(BLACK),
-    King(BLACK),
+    Pawn(White),
+    Rook(White),
+    Knight(White),
+    Bishop(White),
+    Queen(White),
+    King(White),
+    Pawn(Black),
+    Rook(Black),
+    Knight(Black),
+    Bishop(Black),
+    Queen(Black),
+    King(Black),
 ];
 
 impl Piece {
@@ -43,7 +73,7 @@ impl Piece {
     }
 
     pub const fn from_ascii(c: char) -> Piece {
-        let colour = c.is_ascii_uppercase();
+        let colour = if c.is_ascii_uppercase() { White } else { Black };
         match c.to_ascii_lowercase() {
             'r' => Rook(colour),
             'n' => Knight(colour),
@@ -75,18 +105,18 @@ impl Piece {
 
     pub const fn to_unicode(&self) -> char {
         match self {
-            Rook(WHITE) => '\u{2656}',
-            Knight(WHITE) => '\u{2658}',
-            Bishop(WHITE) => '\u{2657}',
-            Queen(WHITE) => '\u{2655}',
-            King(WHITE) => '\u{2654}',
-            Pawn(WHITE) => '\u{2659}',
-            Rook(BLACK) => '\u{265C}',
-            Knight(BLACK) => '\u{265E}',
-            Bishop(BLACK) => '\u{265D}',
-            Queen(BLACK) => '\u{265B}',
-            King(BLACK) => '\u{265A}',
-            Pawn(BLACK) => '\u{265F}',
+            Rook(White) => '\u{2656}',
+            Knight(White) => '\u{2658}',
+            Bishop(White) => '\u{2657}',
+            Queen(White) => '\u{2655}',
+            King(White) => '\u{2654}',
+            Pawn(White) => '\u{2659}',
+            Rook(Black) => '\u{265C}',
+            Knight(Black) => '\u{265E}',
+            Bishop(Black) => '\u{265D}',
+            Queen(Black) => '\u{265B}',
+            King(Black) => '\u{265A}',
+            Pawn(Black) => '\u{265F}',
             Nil => ' ',
         }
     }
@@ -94,7 +124,7 @@ impl Piece {
     pub const fn is_white(&self) -> bool {
         matches!(
             self,
-            Rook(WHITE) | Knight(WHITE) | Bishop(WHITE) | Queen(WHITE) | King(WHITE) | Pawn(WHITE)
+            Rook(White) | Knight(White) | Bishop(White) | Queen(White) | King(White) | Pawn(White)
         )
     }
 }
