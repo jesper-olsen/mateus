@@ -1,6 +1,6 @@
 use crate::bitmaps::*;
-use crate::val::Piece::*;
 use crate::val::*;
+use crate::val::{Colour::*, Piece::*};
 use std::fmt;
 
 // bitpacking - 1st 12 bits (6+6) for from/to, remaining 4 bits for castling and
@@ -94,7 +94,7 @@ impl fmt::Display for Move {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let (frm, to) = (self.frm(), self.to());
         let t = if self.transform() {
-            match self.ptransform(WHITE) {
+            match self.ptransform(White) {
                 Rook(_) => "=R",
                 Knight(_) => "=N",
                 Bishop(_) => "=B",
@@ -167,18 +167,18 @@ pub fn in_check(
     bm_board: u64,
 ) -> bool {
     board.iter().enumerate().any(|(frm, &p)| match (colour, p) {
-        (WHITE, Knight(BLACK)) => (BM_KNIGHT_MOVES[frm] & bm_wking) != 0,
-        (BLACK, Knight(WHITE)) => (BM_KNIGHT_MOVES[frm] & bm_bking) != 0,
-        (WHITE, King(BLACK)) => (BM_KING_MOVES[frm] & bm_wking) != 0,
-        (BLACK, King(WHITE)) => (BM_KING_MOVES[frm] & bm_bking) != 0,
-        (WHITE, Pawn(BLACK)) => BM_PAWN_CAPTURES[1][frm] & bm_wking != 0,
-        (BLACK, Pawn(WHITE)) => BM_PAWN_CAPTURES[0][frm] & bm_bking != 0,
-        (WHITE, Rook(BLACK)) => ray_check(frm, BM_ROOK_MOVES[frm], bm_board, bm_wking),
-        (BLACK, Rook(WHITE)) => ray_check(frm, BM_ROOK_MOVES[frm], bm_board, bm_bking),
-        (WHITE, Bishop(BLACK)) => ray_check(frm, BM_BISHOP_MOVES[frm], bm_board, bm_wking),
-        (BLACK, Bishop(WHITE)) => ray_check(frm, BM_BISHOP_MOVES[frm], bm_board, bm_bking),
-        (WHITE, Queen(BLACK)) => ray_check(frm, BM_QUEEN_MOVES[frm], bm_board, bm_wking),
-        (BLACK, Queen(WHITE)) => ray_check(frm, BM_QUEEN_MOVES[frm], bm_board, bm_bking),
+        (White, Knight(Black)) => (BM_KNIGHT_MOVES[frm] & bm_wking) != 0,
+        (Black, Knight(White)) => (BM_KNIGHT_MOVES[frm] & bm_bking) != 0,
+        (White, King(Black)) => (BM_KING_MOVES[frm] & bm_wking) != 0,
+        (Black, King(White)) => (BM_KING_MOVES[frm] & bm_bking) != 0,
+        (White, Pawn(Black)) => BM_PAWN_CAPTURES[1][frm] & bm_wking != 0,
+        (Black, Pawn(White)) => BM_PAWN_CAPTURES[0][frm] & bm_bking != 0,
+        (White, Rook(Black)) => ray_check(frm, BM_ROOK_MOVES[frm], bm_board, bm_wking),
+        (Black, Rook(White)) => ray_check(frm, BM_ROOK_MOVES[frm], bm_board, bm_bking),
+        (White, Bishop(Black)) => ray_check(frm, BM_BISHOP_MOVES[frm], bm_board, bm_wking),
+        (Black, Bishop(White)) => ray_check(frm, BM_BISHOP_MOVES[frm], bm_board, bm_bking),
+        (White, Queen(Black)) => ray_check(frm, BM_QUEEN_MOVES[frm], bm_board, bm_wking),
+        (Black, Queen(White)) => ray_check(frm, BM_QUEEN_MOVES[frm], bm_board, bm_bking),
         _ => false,
     })
 }
@@ -335,10 +335,9 @@ fn king_moves(
 ) {
     // change king valuation in end_game
     let p = match (board[frm], end_game) {
-        (King(WHITE), false) => King(WHITE),
-        (King(WHITE), true) => King(BLACK),
-        (King(BLACK), false) => King(BLACK),
-        (King(BLACK), true) => King(WHITE),
+        (King(White), true) => King(Black),
+        (King(Black), true) => King(White),
+        (_, false) => board[frm],
         _ => panic!(),
     };
 
@@ -351,14 +350,14 @@ fn king_moves(
 
     #[rustfmt::skip]
     let cc2 = [
-        (can_castle[0] && frm == 24 && !in_check && board[0] == Rook(WHITE) && bitmaps.bm_board & WSHORT == 0,
-         Rook(WHITE), 8, 0, 16,),
-        (can_castle[1] && frm == 24 && !in_check && board[56] == Rook(WHITE) && bitmaps.bm_board & WLONG == 0,
-         Rook(WHITE), 40, 56, 32,),
-        (can_castle[2] && frm == 31 && !in_check && board[7] == Rook(BLACK) && bitmaps.bm_board & BSHORT == 0,
-         Rook(BLACK), 15, 7, 23,),
-        (can_castle[3] && frm == 31 && !in_check && board[63] == Rook(BLACK) && bitmaps.bm_board & BLONG == 0,
-         Rook(BLACK), 47, 63, 39,),
+        (can_castle[0] && frm == 24 && !in_check && board[0] == Rook(White) && bitmaps.bm_board & WSHORT == 0,
+         Rook(White), 8, 0, 16,),
+        (can_castle[1] && frm == 24 && !in_check && board[56] == Rook(White) && bitmaps.bm_board & WLONG == 0,
+         Rook(White), 40, 56, 32,),
+        (can_castle[2] && frm == 31 && !in_check && board[7] == Rook(Black) && bitmaps.bm_board & BSHORT == 0,
+         Rook(Black), 15, 7, 23,),
+        (can_castle[3] && frm == 31 && !in_check && board[63] == Rook(Black) && bitmaps.bm_board & BLONG == 0,
+         Rook(Black), 47, 63, 39,),
     ];
 
     v.extend(
@@ -386,12 +385,12 @@ pub const fn board2bm(board: &[Piece; 64]) -> (u64, u64) {
     let (mut w, mut b): (u64, u64) = (0, 0);
     let mut i = 0;
     while i < 64 {
-        match board[i] {
-            Rook(BLACK) | Knight(BLACK) | Bishop(BLACK) | King(BLACK) | Queen(BLACK)
-            | Pawn(BLACK) => b |= 1 << i,
-            Rook(WHITE) | Knight(WHITE) | Bishop(WHITE) | King(WHITE) | Queen(WHITE)
-            | Pawn(WHITE) => w |= 1 << i,
-            _ => (),
+        if let Rook(c) | Knight(c) | Bishop(c) | King(c) | Queen(c) | Pawn(c) = board[i] {
+            if c.is_white() {
+                w |= 1 << i
+            } else {
+                b |= 1 << i
+            }
         }
         i += 1;
     }

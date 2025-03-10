@@ -41,24 +41,6 @@ pub enum Piece {
     Pawn(Colour),
     Nil,
 }
-pub const WHITE: Colour = White;
-pub const BLACK: Colour = Black;
-
-pub static PIECES: [Piece; 12] = [
-    Pawn(White),
-    Rook(White),
-    Knight(White),
-    Bishop(White),
-    Queen(White),
-    King(White),
-    Pawn(Black),
-    Rook(Black),
-    Knight(Black),
-    Bishop(Black),
-    Queen(Black),
-    King(Black),
-];
-
 impl Piece {
     pub const fn val(&self, pos: usize) -> i16 {
         match self {

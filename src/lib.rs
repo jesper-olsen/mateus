@@ -7,7 +7,7 @@ pub mod mgen;
 pub mod misc;
 pub mod openings;
 pub mod val;
-use crate::Piece::*;
+use crate::{Colour::*, Piece::*};
 use core::cmp::max;
 use core::cmp::min;
 use hashkeys::*;
@@ -122,11 +122,11 @@ fn move_to_head(moves: &mut Vec<Move>, frmto: &(u8, u8)) {
 impl Game {
     pub fn new(board: [Piece; 64]) -> Self {
         //println!("size of TTable {}", std::mem::size_of::<TTable>());
-        let key = board2hash(&board, WHITE);
+        let key = board2hash(&board, White);
         let (bm_white, bm_black) = board2bm(&board);
         Game {
             board,
-            colour: WHITE,
+            colour: White,
             n_searched: 0,
             material: material(&board),
             half_move_clock: 0,
@@ -149,7 +149,20 @@ impl Game {
     const CSV_SIZE: usize = 2 * 6 * 64 + 1 + 4 + 64 + 1;
     pub fn to_csv(&self) -> Vec<u8> {
         let mut v = Vec::with_capacity(Self::CSV_SIZE);
-        for p in PIECES {
+        for p in [
+            Pawn(White),
+            Rook(White),
+            Knight(White),
+            Bishop(White),
+            Queen(White),
+            King(White),
+            Pawn(Black),
+            Rook(Black),
+            Knight(Black),
+            Bishop(Black),
+            Queen(Black),
+            King(Black),
+        ] {
             for pb in self.board {
                 v.push(if p == pb { 1 } else { 0 });
             }
@@ -204,7 +217,7 @@ impl Game {
                 s.push('/')
             }
         }
-        s.push_str(if self.turn() == WHITE { " w" } else { " b" });
+        s.push_str(if self.turn().is_white() { " w" } else { " b" });
         let cc = self.can_castle.last().unwrap();
         s.push(' ');
         if *cc == [false, false, false, false] {
@@ -405,8 +418,8 @@ impl Game {
         // quiescent unless last move was pawn near promotion
         // !self.in_check(self.colour) &&
         match self.board[last.to()] {
-            Pawn(WHITE) => last.to() % 8 != 6,
-            Pawn(BLACK) => last.to() % 8 != 1,
+            Pawn(White) => last.to() % 8 != 6,
+            Pawn(Black) => last.to() % 8 != 1,
             _ => true,
         }
     }
@@ -484,14 +497,14 @@ impl Game {
         //update castling permissions
         let cc = self.can_castle.last_mut().unwrap();
         match (*cc, self.board[m.to()], m.frm()) {
-            ([true, _, _, _], King(WHITE), 24) => (cc[0], cc[1]) = (false, false),
-            ([_, true, _, _], King(WHITE), 24) => (cc[0], cc[1]) = (false, false),
-            ([_, _, true, _], King(BLACK), 31) => (cc[2], cc[3]) = (false, false),
-            ([_, _, _, true], King(BLACK), 31) => (cc[2], cc[3]) = (false, false),
-            ([true, _, _, _], Rook(WHITE), 0) => cc[0] = false,
-            ([_, true, _, _], Rook(WHITE), 56) => cc[1] = false,
-            ([_, _, true, _], Rook(BLACK), 7) => cc[2] = false,
-            ([_, _, _, true], Rook(BLACK), 63) => cc[3] = false,
+            ([true, _, _, _], King(White), 24) => (cc[0], cc[1]) = (false, false),
+            ([_, true, _, _], King(White), 24) => (cc[0], cc[1]) = (false, false),
+            ([_, _, true, _], King(Black), 31) => (cc[2], cc[3]) = (false, false),
+            ([_, _, _, true], King(Black), 31) => (cc[2], cc[3]) = (false, false),
+            ([true, _, _, _], Rook(White), 0) => cc[0] = false,
+            ([_, true, _, _], Rook(White), 56) => cc[1] = false,
+            ([_, _, true, _], Rook(Black), 7) => cc[2] = false,
+            ([_, _, _, true], Rook(Black), 63) => cc[3] = false,
             _ => (),
         }
     }
@@ -570,8 +583,8 @@ impl Game {
         self.board[m.to()] = if m.castle() {
             let cc = self.can_castle.last().unwrap();
             match self.board[m.frm()] {
-                King(WHITE) => self.can_castle.push([false, false, cc[2], cc[3]]),
-                King(BLACK) => self.can_castle.push([cc[0], cc[1], false, false]),
+                King(White) => self.can_castle.push([false, false, cc[2], cc[3]]),
+                King(Black) => self.can_castle.push([cc[0], cc[1], false, false]),
                 _ => (),
             }
 
@@ -624,25 +637,25 @@ impl Game {
         self.bm_black = 0;
         for i in 0..64 {
             match self.board[i] {
-                Pawn(WHITE) => {
+                Pawn(White) => {
                     self.bm_pawns |= 1 << i;
                     self.bm_white |= 1 << i;
                 }
-                Pawn(BLACK) => {
+                Pawn(Black) => {
                     self.bm_pawns |= 1 << i;
                     self.bm_black |= 1 << i;
                 }
-                Rook(WHITE) | Knight(WHITE) | Bishop(WHITE) | Queen(WHITE) => {
+                Rook(White) | Knight(White) | Bishop(White) | Queen(White) => {
                     self.bm_white |= 1 << i
                 }
-                Rook(BLACK) | Knight(BLACK) | Bishop(BLACK) | Queen(BLACK) => {
+                Rook(Black) | Knight(Black) | Bishop(Black) | Queen(Black) => {
                     self.bm_black |= 1 << i
                 }
-                King(WHITE) => {
+                King(White) => {
                     self.bm_white |= 1 << i;
                     self.bm_wking = 1 << i
                 }
-                King(BLACK) => {
+                King(Black) => {
                     self.bm_black |= 1 << i;
                     self.bm_bking = 1 << i
                 }
@@ -690,8 +703,8 @@ impl Game {
                 false => m.frm() - 8, // w east
             };
             self.board[x] = match self.board[m.frm()] {
-                Pawn(WHITE) => Pawn(BLACK),
-                Pawn(BLACK) => Pawn(WHITE),
+                Pawn(White) => Pawn(Black),
+                Pawn(Black) => Pawn(White),
                 _ => unreachable!(),
             }
         }
@@ -722,8 +735,8 @@ impl Game {
     }
 
     pub fn mobility(&self) -> i16 {
-        count_moves(&self.board, WHITE, self.bm_white, self.bm_black) as i16
-            - count_moves(&self.board, BLACK, self.bm_white, self.bm_black) as i16
+        count_moves(&self.board, White, self.bm_white, self.bm_black) as i16
+            - count_moves(&self.board, Black, self.bm_white, self.bm_black) as i16
     }
 
     pub fn eval(&self, colour: Colour) -> i16 {
@@ -735,7 +748,7 @@ impl Game {
     pub fn score_pawn_structure(&self) -> i16 {
         let mut pen: i16 = 0;
         let bm: [u64; 2] = [self.bm_pawns & self.bm_white, self.bm_pawns & self.bm_black];
-        for (i, &p) in [Pawn(WHITE), Pawn(BLACK)].iter().enumerate() {
+        for (i, &p) in [Pawn(White), Pawn(Black)].iter().enumerate() {
             let nfiles = (0..8)
                 .filter(|&q| 0b11111111 << (q * 8) & bm[i] > 0)
                 .count() as i16;
@@ -754,7 +767,7 @@ impl Game {
                 .count() as i16;
 
             let x = 20 * double_pawns + 4 * isolated_pawns;
-            pen += if p == Pawn(WHITE) { -x } else { x };
+            pen += if p == Pawn(White) { -x } else { x };
         }
 
         // passed pawn bonus
