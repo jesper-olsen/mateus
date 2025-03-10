@@ -700,7 +700,7 @@ impl Game {
         if m.en_passant() {
             let x = match m.to() > m.frm() {
                 true => m.frm() + 8,  // west
-                false => m.frm() - 8, // w east
+                false => m.frm() - 8, // east
             };
             self.board[x] = match self.board[m.frm()] {
                 Pawn(White) => Pawn(Black),

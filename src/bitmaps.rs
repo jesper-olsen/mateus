@@ -1,12 +1,12 @@
-pub const BM_BLOCKED: [[u64; 64]; 64] = bm_queen_blockers();
-pub const BM_QUEEN_MOVES: [u64; 64] = bm_queen_moves();
-pub const BM_BISHOP_MOVES: [u64; 64] = bm_bishop_moves();
-pub const BM_ROOK_MOVES: [u64; 64] = bm_rook_moves();
-pub const BM_KNIGHT_MOVES: [u64; 64] = bm_knight_moves();
-pub const BM_KING_MOVES: [u64; 64] = bm_king_moves();
-pub const BM_PAWN_CAPTURES: [[u64; 64]; 2] = bm_pawn_captures();
-pub const BM_PAWN_STEP1: [[u64; 64]; 2] = bm_pawn_step1();
-pub const BM_PAWN_STEP2: [[u64; 64]; 2] = bm_pawn_step2();
+pub static BM_BLOCKED: [[u64; 64]; 64] = bm_queen_blockers();
+pub static BM_QUEEN_MOVES: [u64; 64] = bm_queen_moves();
+pub static BM_BISHOP_MOVES: [u64; 64] = bm_bishop_moves();
+pub static BM_ROOK_MOVES: [u64; 64] = bm_rook_moves();
+pub static BM_KNIGHT_MOVES: [u64; 64] = bm_knight_moves();
+pub static BM_KING_MOVES: [u64; 64] = bm_king_moves();
+pub static BM_PAWN_CAPTURES: [[u64; 64]; 2] = bm_pawn_captures();
+pub static BM_PAWN_STEP1: [[u64; 64]; 2] = bm_pawn_step1();
+pub static BM_PAWN_STEP2: [[u64; 64]; 2] = bm_pawn_step2();
 
 const fn bm_queen_blockers() -> [[u64; 64]; 64] {
     let mut bm = [[0; 64]; 64];
