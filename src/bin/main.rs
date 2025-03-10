@@ -48,7 +48,7 @@ struct Args {
 }
 
 fn pick_move(game: &mut Game, moves: &[Move]) -> Vec<(Move, i16)> {
-    let label = if game.turn() == WHITE {
+    let label = if game.turn().is_white() {
         "White"
     } else {
         "Black"
@@ -105,11 +105,11 @@ fn check_game_over(game: &Game, moves: &[Move], half_moves: isize) -> String {
     } else if half_moves != -1 && half_moves <= game.move_log.len() as isize {
         format!("stopping after {} half move(s)", game.move_log.len())
     } else if moves.is_empty() {
-        (match (game.in_check(game.turn()), game.turn()) {
-            (true, BLACK) => "1-0",
-            (true, WHITE) => "0-1",
-            (false, _) => "1/2-1/2 Draw",
-        })
+        if game.in_check(game.turn()) {
+            if game.turn().is_white() { "0-1" } else { "1-0" }
+        } else {
+            "1/2-1/2 Draw"
+        }
         .to_string()
     } else {
         "".to_string()
@@ -314,7 +314,7 @@ fn main() {
             _ => benchmark(args.v, args.n, args.d, "Lasker", &benchmark::LASKER),
         }
     } else {
-        let players = HashMap::from([(WHITE, args.w), (BLACK, args.b)]);
+        let players = HashMap::from([(Colour::White, args.w), (Colour::Black, args.b)]);
         play(
             players,
             args.v,

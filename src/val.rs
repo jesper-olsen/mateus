@@ -163,14 +163,14 @@ pub const I2SQ: [&str;64] = ["h1", "h2", "h3", "h4","h5","h6","h7","h8",
 
 #[rustfmt::skip]
 pub const ROOT_BOARD: [Piece; 64] = [
-    Rook(WHITE), Pawn(WHITE), Nil, Nil, Nil, Nil, Pawn(BLACK), Rook(BLACK), 
-    Knight(WHITE), Pawn(WHITE), Nil, Nil, Nil, Nil, Pawn(BLACK), Knight(BLACK), 
-    Bishop(WHITE), Pawn(WHITE), Nil, Nil, Nil, Nil, Pawn(BLACK), Bishop(BLACK), 
-    King(WHITE), Pawn(WHITE), Nil, Nil, Nil, Nil, Pawn(BLACK), King(BLACK), 
-    Queen(WHITE), Pawn(WHITE), Nil, Nil, Nil, Nil, Pawn(BLACK), Queen(BLACK), 
-    Bishop(WHITE), Pawn(WHITE), Nil, Nil, Nil, Nil, Pawn(BLACK), Bishop(BLACK), 
-    Knight(WHITE), Pawn(WHITE), Nil, Nil, Nil, Nil, Pawn(BLACK), Knight(BLACK), 
-    Rook(WHITE), Pawn(WHITE), Nil, Nil, Nil, Nil, Pawn(BLACK), Rook(BLACK),
+    Rook(White),   Pawn(White), Nil, Nil, Nil, Nil, Pawn(Black), Rook(Black), 
+    Knight(White), Pawn(White), Nil, Nil, Nil, Nil, Pawn(Black), Knight(Black), 
+    Bishop(White), Pawn(White), Nil, Nil, Nil, Nil, Pawn(Black), Bishop(Black), 
+    King(White),   Pawn(White), Nil, Nil, Nil, Nil, Pawn(Black), King(Black), 
+    Queen(White),  Pawn(White), Nil, Nil, Nil, Nil, Pawn(Black), Queen(Black), 
+    Bishop(White), Pawn(White), Nil, Nil, Nil, Nil, Pawn(Black), Bishop(Black), 
+    Knight(White), Pawn(White), Nil, Nil, Nil, Nil, Pawn(Black), Knight(Black), 
+    Rook(White),   Pawn(White), Nil, Nil, Nil, Nil, Pawn(Black), Rook(Black),
 ];
 
 pub const ROOT_FEN: &str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR";
