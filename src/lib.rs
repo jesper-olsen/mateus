@@ -491,7 +491,7 @@ impl Game {
         self.update(&m);
 
         //adjust king value in end game
-        self.end_game = abs_material(&self.board) < END_GAME_MATERIAL / 3;
+        self.end_game = abs_material(&self.board) < END_GAME_MATERIAL;
         self.move_log.push(m);
 
         //update castling permissions
