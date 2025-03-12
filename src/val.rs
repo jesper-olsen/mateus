@@ -1,5 +1,6 @@
-use Piece::*;
+use crate::hashkeys_generated::*;
 use std::fmt;
+use Piece::*;
 
 #[derive(Debug, PartialEq, Eq, Hash, Copy, Clone)]
 pub enum Colour {
@@ -42,6 +43,18 @@ pub enum Piece {
     Nil,
 }
 impl Piece {
+    pub const fn hashkey(&self, pos: usize) -> u64 {
+        match self {
+            Piece::Rook(c) => R_HASH[*c as usize][pos],
+            Piece::Knight(c) => N_HASH[*c as usize][pos],
+            Piece::Bishop(c) => B_HASH[*c as usize][pos],
+            Piece::King(c) => K_HASH[*c as usize][pos],
+            Piece::Queen(c) => Q_HASH[*c as usize][pos],
+            Piece::Pawn(c) => P_HASH[*c as usize][pos],
+            Piece::Nil => NIL_HASH[pos],
+        }
+    }
+
     pub const fn val(&self, pos: usize) -> i16 {
         match self {
             Rook(c) => ROOKVAL[*c as usize][pos],
@@ -111,28 +124,6 @@ impl Piece {
     }
 }
 
-pub const END_GAME_MATERIAL: i16 = abs_material(&ROOT_BOARD) / 3;
-
-pub const fn abs_material(board: &[Piece; 64]) -> i16 {
-    let mut i = 0;
-    let mut val: i16 = 0;
-    while i < board.len() {
-        val += board[i].val(i).abs();
-        i += 1;
-    }
-    val
-}
-
-pub const fn material(board: &[Piece; 64]) -> i16 {
-    let mut i = 0;
-    let mut val: i16 = 0;
-    while i < board.len() {
-        val += board[i].val(i);
-        i += 1;
-    }
-    val
-}
-
 #[rustfmt::skip]
 pub const I2SQ: [&str;64] = ["h1", "h2", "h3", "h4","h5","h6","h7","h8",
                              "g1", "g2", "g3", "g4","g5","g6","g7","g8",
@@ -142,18 +133,6 @@ pub const I2SQ: [&str;64] = ["h1", "h2", "h3", "h4","h5","h6","h7","h8",
                              "c1", "c2", "c3", "c4","c5","c6","c7","c8",
                              "b1", "b2", "b3", "b4","b5","b6","b7","b8",
                              "a1", "a2", "a3", "a4","a5","a6","a7","a8"];
-
-#[rustfmt::skip]
-pub const ROOT_BOARD: [Piece; 64] = [
-    Rook(White),   Pawn(White), Nil, Nil, Nil, Nil, Pawn(Black), Rook(Black), 
-    Knight(White), Pawn(White), Nil, Nil, Nil, Nil, Pawn(Black), Knight(Black), 
-    Bishop(White), Pawn(White), Nil, Nil, Nil, Nil, Pawn(Black), Bishop(Black), 
-    King(White),   Pawn(White), Nil, Nil, Nil, Nil, Pawn(Black), King(Black), 
-    Queen(White),  Pawn(White), Nil, Nil, Nil, Nil, Pawn(Black), Queen(Black), 
-    Bishop(White), Pawn(White), Nil, Nil, Nil, Nil, Pawn(Black), Bishop(Black), 
-    Knight(White), Pawn(White), Nil, Nil, Nil, Nil, Pawn(Black), Knight(Black), 
-    Rook(White),   Pawn(White), Nil, Nil, Nil, Nil, Pawn(Black), Rook(Black),
-];
 
 pub const ROOT_FEN: &str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR";
 

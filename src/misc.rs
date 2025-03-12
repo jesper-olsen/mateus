@@ -2,12 +2,11 @@
 pub fn str2move(s: &str) -> Option<(usize, usize)> {
     if s.len() < 4 {
         None
+    } else if let (Some(frm), Some(to)) = (parse_chess_coord(&s[0..2]), parse_chess_coord(&s[2..4]))
+    {
+        Some((frm, to))
     } else {
-        if let (Some(frm), Some(to)) = (parse_chess_coord(&s[0..2]), parse_chess_coord(&s[2..4])) {
-            Some((frm, to))
-        } else {
-            None
-        }
+        None
     }
 }
 

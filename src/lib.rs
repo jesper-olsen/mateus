@@ -1,5 +1,4 @@
 pub mod bitmaps;
-pub mod hashkeys;
 pub mod hashkeys_generated;
 use crate::hashkeys_generated::WHITE_HASH;
 pub mod benchmark;
@@ -10,7 +9,6 @@ pub mod val;
 use crate::{Colour::*, Piece::*};
 use core::cmp::max;
 use core::cmp::min;
-use hashkeys::*;
 use mgen::*;
 use std::collections::hash_map::{Entry, HashMap};
 use std::fmt;
@@ -30,7 +28,7 @@ pub struct TTable {
 }
 
 pub struct Game {
-    pub board: [Piece; 64],
+    pub board: Board,
     pub colour: Colour,
     pub n_searched: usize,
     material: i16,
@@ -52,56 +50,14 @@ pub struct Game {
 
 impl fmt::Debug for Game {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        writeln!(f)?;
-        for y in (0..8).rev() {
-            write!(f, "{} ", y + 1)?;
-            for x in 0..8 {
-                write!(f, "{}", self.board[(7 - x) * 8 + y])?;
-            }
-            writeln!(f)?;
-        }
-        write!(f, "  ABCDEFGH")
+        write!(f, "{:?}", self.board)
     }
 }
 
 impl fmt::Display for Game {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        // ANSI escape codes for background and foreground colors
-        let light_square_bg = "\x1b[48;5;229m"; // Light background
-        let dark_square_bg = "\x1b[48;5;94m"; // Dark background
-        //let light_square_bg = "\x1b[48;5;15m"; // White background
-        //let dark_square_bg = "\x1b[48;5;8m";   // Gray background
-        let black_fg = "\x1b[38;5;0m"; // Black foreground
-        let white_fg = "\x1b[38;5;15m"; // White foreground
-        let reset_colour = "\x1b[0m"; // Reset to default colour
-
         writeln!(f, "{}", self.to_fen())?;
-        for y in (0..8).rev() {
-            write!(f, "{} ", y + 1)?;
-            for x in 0..8 {
-                let i = (7 - x) * 8 + y;
-                let ch = self.board[i].to_unicode();
-                let fg = if self.board[i].is_white() {
-                    white_fg
-                } else {
-                    black_fg
-                };
-                let is_light_square = (x + y) % 2 != 0;
-                let background_color = if is_light_square {
-                    light_square_bg
-                } else {
-                    dark_square_bg
-                };
-                let fg_colour = if is_light_square && fg == white_fg {
-                    black_fg
-                } else {
-                    fg
-                };
-                write!(f, "{background_color}{fg_colour} {ch} {reset_colour}")?;
-            }
-            writeln!(f)?;
-        }
-        write!(f, "   A  B  C  D  E  F  G  H")
+        write!(f, "{}", self.board)
     }
 }
 
@@ -120,15 +76,17 @@ fn move_to_head(moves: &mut Vec<Move>, frmto: &(u8, u8)) {
 }
 
 impl Game {
-    pub fn new(board: [Piece; 64]) -> Self {
+    pub fn new(board: Board) -> Self {
         //println!("size of TTable {}", std::mem::size_of::<TTable>());
-        let key = board2hash(&board, White);
-        let (bm_white, bm_black) = board2bm(&board);
+        let key = board.hash(White);
+        let (bm_white, bm_black) = board.to_bitmap();
+        let material = board.material();
+        let bm_pawns = board.to_pawns_bitmap();
         Game {
             board,
             colour: White,
             n_searched: 0,
-            material: material(&board),
+            material,
             half_move_clock: 0,
             full_move_count: 0,
             rep: HashMap::from([(key, 1)]),
@@ -139,7 +97,7 @@ impl Game {
             hash: key,
             bm_white,
             bm_black,
-            bm_pawns: board2bm_pawns(&board),
+            bm_pawns,
             log_bms: vec![],
             bm_wking: 0,
             bm_bking: 0,
@@ -163,8 +121,8 @@ impl Game {
             Queen(Black),
             King(Black),
         ] {
-            for pb in self.board {
-                v.push(if p == pb { 1 } else { 0 });
+            for pb in &self.board {
+                v.push(if p == *pb { 1 } else { 0 });
             }
         }
 
@@ -263,7 +221,7 @@ impl Game {
     }
 
     pub fn from_fen(s: &str) -> Self {
-        let mut board = [Nil; 64];
+        let mut board = Board::new();
         let mut offset = 0i16;
         let parts = s.split(' ').collect::<Vec<&str>>();
         for (i, c) in parts[0].chars().enumerate() {
@@ -491,7 +449,7 @@ impl Game {
         self.update(&m);
 
         //adjust king value in end game
-        self.end_game = abs_material(&self.board) < END_GAME_MATERIAL;
+        self.end_game = self.board.abs_material() < END_GAME_MATERIAL;
         self.move_log.push(m);
 
         //update castling permissions
@@ -516,8 +474,7 @@ impl Game {
     pub fn in_check(&self, colour: Colour) -> bool {
         // true if other side can capture king
 
-        mgen::in_check(
-            &self.board,
+        self.board.in_check(
             colour,
             self.bm_wking,
             self.bm_bking,
@@ -544,8 +501,7 @@ impl Game {
     }
 
     fn moves(&mut self, colour: Colour, last: Option<&Move>, in_check: bool) -> Vec<Move> {
-        let mut l = moves(
-            &self.board,
+        let mut l = self.board.moves(
             colour,
             in_check,
             self.end_game,
@@ -735,8 +691,8 @@ impl Game {
     }
 
     pub fn mobility(&self) -> i16 {
-        count_moves(&self.board, White, self.bm_white, self.bm_black) as i16
-            - count_moves(&self.board, Black, self.bm_white, self.bm_black) as i16
+        self.board.count_moves(White, self.bm_white, self.bm_black) as i16
+            - self.board.count_moves(Black, self.bm_white, self.bm_black) as i16
     }
 
     pub fn eval(&self, colour: Colour) -> i16 {
