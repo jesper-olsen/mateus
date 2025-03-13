@@ -277,24 +277,16 @@ impl Board {
 
     // true if !colour side can capture colour king
     pub fn in_check(&self, colour: Colour, bm_wking: u64, bm_bking: u64, bm_board: u64) -> bool {
-        self.0
-            .iter()
-            .enumerate()
-            .any(|(frm, &p)| match (colour, p) {
-                (White, Knight(Black)) => (BM_KNIGHT_MOVES[frm] & bm_wking) != 0,
-                (Black, Knight(White)) => (BM_KNIGHT_MOVES[frm] & bm_bking) != 0,
-                (White, King(Black)) => (BM_KING_MOVES[frm] & bm_wking) != 0,
-                (Black, King(White)) => (BM_KING_MOVES[frm] & bm_bking) != 0,
-                (White, Pawn(Black)) => BM_PAWN_CAPTURES[1][frm] & bm_wking != 0,
-                (Black, Pawn(White)) => BM_PAWN_CAPTURES[0][frm] & bm_bking != 0,
-                (White, Rook(Black)) => ray_check(frm, BM_ROOK_MOVES[frm], bm_board, bm_wking),
-                (Black, Rook(White)) => ray_check(frm, BM_ROOK_MOVES[frm], bm_board, bm_bking),
-                (White, Bishop(Black)) => ray_check(frm, BM_BISHOP_MOVES[frm], bm_board, bm_wking),
-                (Black, Bishop(White)) => ray_check(frm, BM_BISHOP_MOVES[frm], bm_board, bm_bking),
-                (White, Queen(Black)) => ray_check(frm, BM_QUEEN_MOVES[frm], bm_board, bm_wking),
-                (Black, Queen(White)) => ray_check(frm, BM_QUEEN_MOVES[frm], bm_board, bm_bking),
-                _ => false,
-            })
+        let bm_king = if colour == White { bm_wking } else { bm_bking };
+        self.0.iter().enumerate().any(|(frm, &p)| match p {
+            Knight(c) if c != colour => BM_KNIGHT_MOVES[frm] & bm_king != 0,
+            King(c) if c != colour => BM_KING_MOVES[frm] & bm_king != 0,
+            Pawn(c) if c != colour => BM_PAWN_CAPTURES[colour as usize][frm] & bm_king != 0,
+            Rook(c) if c != colour => ray_check(frm, BM_ROOK_MOVES[frm], bm_board, bm_king),
+            Bishop(c) if c != colour => ray_check(frm, BM_BISHOP_MOVES[frm], bm_board, bm_king),
+            Queen(c) if c != colour => ray_check(frm, BM_QUEEN_MOVES[frm], bm_board, bm_king),
+            _ => false,
+        })
     }
 
     pub fn moves(
