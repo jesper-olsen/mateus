@@ -308,7 +308,9 @@ impl Board {
     }
 
     // true if !colour side can capture colour king
-    pub fn in_check(&self, colour: Colour, bm_king: u64, bm_board: u64) -> bool {
+    pub fn in_check(&self, colour: Colour, bm: &Bitmaps) -> bool {
+        let bm_king = bm.kings & bm.pieces[colour as usize];
+        let bm_board = bm.pieces[Black as usize] | bm.pieces[White as usize];
         self.0.iter().enumerate().any(|(frm, &p)| match p {
             Knight(c) if c != colour => BM_KNIGHT_MOVES[frm] & bm_king != 0,
             King(c) if c != colour => BM_KING_MOVES[frm] & bm_king != 0,

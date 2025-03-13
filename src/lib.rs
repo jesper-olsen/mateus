@@ -14,8 +14,7 @@ use std::collections::hash_map::{Entry, HashMap};
 use std::fmt;
 use val::*;
 
-pub const INFINITE: i16 = 10000;
-
+const INFINITE: i16 = 10000;
 const EXACT_BIT: u16 = 1 << 12;
 const LOWER_BIT: u16 = 1 << 13;
 const UPPER_BIT: u16 = 1 << 14;
@@ -465,11 +464,7 @@ impl Game {
     pub fn in_check(&self, colour: Colour) -> bool {
         // true if other side can capture king
 
-        self.board.in_check(
-            colour,
-            self.bitmaps.kings & self.bitmaps.pieces[colour as usize],
-            self.bitmaps.pieces[Black as usize] | self.bitmaps.pieces[White as usize],
-        )
+        self.board.in_check(colour, &self.bitmaps)
     }
 
     fn legal_move(&mut self, m: &Move) -> bool {
