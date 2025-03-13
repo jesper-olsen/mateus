@@ -42,9 +42,8 @@ pub struct Game {
     pub hash: u64,
     bm_pieces: [u64; 2],
     bm_pawns: u64,
-    bm_wking: u64,
-    bm_bking: u64,
-    log_bms: Vec<(u64, [u64; 2], u64, u64, Piece, u64)>,
+    bm_kings: u64,
+    log_bms: Vec<(u64, [u64; 2], u64, Piece, u64)>,
 }
 
 impl fmt::Debug for Game {
@@ -97,8 +96,7 @@ impl Game {
             bm_pieces,
             bm_pawns,
             log_bms: vec![],
-            bm_wking: 0,
-            bm_bking: 0,
+            bm_kings: 0,
         }
     }
 
@@ -474,8 +472,7 @@ impl Game {
 
         self.board.in_check(
             colour,
-            self.bm_wking,
-            self.bm_bking,
+            self.bm_kings & self.bm_pieces[colour as usize],
             self.bm_pieces[Black as usize] | self.bm_pieces[White as usize],
         )
     }
@@ -527,8 +524,7 @@ impl Game {
         self.log_bms.push((
             self.bm_pawns,
             self.bm_pieces,
-            self.bm_wking,
-            self.bm_bking,
+            self.bm_kings,
             self.board[m.to()],
             self.hash,
         ));
@@ -585,6 +581,7 @@ impl Game {
         self.hash ^= hash ^ WHITE_HASH;
 
         // update bitmaps - TODO calculate incrementally; ~6% faster?
+        self.bm_kings = 0;
         self.bm_pawns = 0;
         self.bm_pieces = [0, 0];
         for i in 0..64 {
@@ -594,13 +591,9 @@ impl Game {
                     self.bm_pieces[c as usize] |= 1 << i;
                 }
                 Rook(c) | Knight(c) | Bishop(c) | Queen(c) => self.bm_pieces[c as usize] |= 1 << i,
-                King(White) => {
-                    self.bm_pieces[White as usize] |= 1 << i;
-                    self.bm_wking = 1 << i
-                }
-                King(Black) => {
-                    self.bm_pieces[Black as usize] |= 1 << i;
-                    self.bm_bking = 1 << i
+                King(c) => {
+                    self.bm_pieces[c as usize] |= 1 << i;
+                    self.bm_kings |= 1 << i
                 }
                 _ => (),
             }
@@ -614,8 +607,7 @@ impl Game {
         (
             self.bm_pawns,
             self.bm_pieces,
-            self.bm_wking,
-            self.bm_bking,
+            self.bm_kings,
             capture,
             self.hash,
         ) = bms;
