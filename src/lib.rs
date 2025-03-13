@@ -40,10 +40,8 @@ pub struct Game {
     pub move_log: Vec<Move>,
     end_game: bool,
     pub hash: u64,
-    bm_pieces: [u64; 2],
-    bm_pawns: u64,
-    bm_kings: u64,
-    log_bms: Vec<(u64, [u64; 2], u64, Piece, u64)>,
+    pub bitmaps: Bitmaps,
+    log_bms: Vec<(Bitmaps, Piece, u64)>,
 }
 
 impl fmt::Debug for Game {
@@ -77,9 +75,8 @@ impl Game {
     pub fn new(board: Board) -> Self {
         //println!("size of TTable {}", std::mem::size_of::<TTable>());
         let key = board.hash(White);
-        let bm_pieces = board.to_bitmap();
         let material = board.material();
-        let bm_pawns = board.to_pawns_bitmap();
+        let bitmaps = board.to_bitmaps();
         Game {
             board,
             colour: White,
@@ -93,10 +90,8 @@ impl Game {
             move_log: Vec::new(),
             end_game: false,
             hash: key,
-            bm_pieces,
-            bm_pawns,
+            bitmaps,
             log_bms: vec![],
-            bm_kings: 0,
         }
     }
 
@@ -472,8 +467,8 @@ impl Game {
 
         self.board.in_check(
             colour,
-            self.bm_kings & self.bm_pieces[colour as usize],
-            self.bm_pieces[Black as usize] | self.bm_pieces[White as usize],
+            self.bitmaps.kings & self.bitmaps.pieces[colour as usize],
+            self.bitmaps.pieces[Black as usize] | self.bitmaps.pieces[White as usize],
         )
     }
 
@@ -502,8 +497,8 @@ impl Game {
             self.end_game,
             self.can_castle.last().unwrap(),
             last,
-            self.bm_pieces[White as usize],
-            self.bm_pieces[Black as usize],
+            self.bitmaps.pieces[White as usize],
+            self.bitmaps.pieces[Black as usize],
         );
         if colour.is_white() {
             //l.sort_by(|b, a| a.val.cmp(&b.val)); // decreasing
@@ -521,13 +516,8 @@ impl Game {
     }
 
     pub fn update(&mut self, m: &Move) {
-        self.log_bms.push((
-            self.bm_pawns,
-            self.bm_pieces,
-            self.bm_kings,
-            self.board[m.to()],
-            self.hash,
-        ));
+        self.log_bms
+            .push((self.bitmaps, self.board[m.to()], self.hash));
         let hash;
         self.board[m.to()] = if m.castle() {
             let cc = self.can_castle.last().unwrap();
@@ -581,36 +571,14 @@ impl Game {
         self.hash ^= hash ^ WHITE_HASH;
 
         // update bitmaps - TODO calculate incrementally; ~6% faster?
-        self.bm_kings = 0;
-        self.bm_pawns = 0;
-        self.bm_pieces = [0, 0];
-        for i in 0..64 {
-            match self.board[i] {
-                Pawn(c) => {
-                    self.bm_pawns |= 1 << i;
-                    self.bm_pieces[c as usize] |= 1 << i;
-                }
-                Rook(c) | Knight(c) | Bishop(c) | Queen(c) => self.bm_pieces[c as usize] |= 1 << i,
-                King(c) => {
-                    self.bm_pieces[c as usize] |= 1 << i;
-                    self.bm_kings |= 1 << i
-                }
-                _ => (),
-            }
-        }
+        self.bitmaps = self.board.to_bitmaps();
         self.colour.flip();
     }
 
     pub fn backdate(&mut self, m: &Move) {
         let bms = self.log_bms.pop().unwrap();
         let capture;
-        (
-            self.bm_pawns,
-            self.bm_pieces,
-            self.bm_kings,
-            capture,
-            self.hash,
-        ) = bms;
+        (self.bitmaps, capture, self.hash) = bms;
         self.colour.flip();
         //self.hash ^= m.hash ^ WHITE_HASH;
         self.rep_dec();
@@ -671,13 +639,13 @@ impl Game {
     pub fn mobility(&self) -> i16 {
         self.board.count_moves(
             White,
-            self.bm_pieces[White as usize],
-            self.bm_pieces[Black as usize],
+            self.bitmaps.pieces[White as usize],
+            self.bitmaps.pieces[Black as usize],
         ) as i16
             - self.board.count_moves(
                 Black,
-                self.bm_pieces[White as usize],
-                self.bm_pieces[Black as usize],
+                self.bitmaps.pieces[White as usize],
+                self.bitmaps.pieces[Black as usize],
             ) as i16
     }
 
@@ -690,8 +658,8 @@ impl Game {
     pub fn score_pawn_structure(&self) -> i16 {
         let mut pen: i16 = 0;
         let bm: [u64; 2] = [
-            self.bm_pawns & self.bm_pieces[White as usize],
-            self.bm_pawns & self.bm_pieces[Black as usize],
+            self.bitmaps.pawns & self.bitmaps.pieces[White as usize],
+            self.bitmaps.pawns & self.bitmaps.pieces[Black as usize],
         ];
         for (i, &p) in [Pawn(White), Pawn(Black)].iter().enumerate() {
             let nfiles = (0..8)

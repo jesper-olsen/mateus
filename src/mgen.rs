@@ -7,6 +7,13 @@ use std::fmt;
 use std::ops::{Index, IndexMut};
 use std::slice::Iter;
 
+#[derive(Debug, Copy, Clone)]
+pub struct Bitmaps {
+    pub pieces: [u64; 2],
+    pub pawns: u64,
+    pub kings: u64,
+}
+
 // bitpacking - 1st 12 bits (6+6) for from/to, remaining 4 bits for castling and
 // pawn transforms & enpassant. Castling, en passant & transform are mutually exclusive.
 const CASTLE_BIT: u16 = 1 << 12;
@@ -275,6 +282,31 @@ impl Board {
         b
     }
 
+    pub const fn to_bitmaps(&self) -> Bitmaps {
+        let mut bm = Bitmaps {
+            pieces: [0, 0],
+            pawns: 0,
+            kings: 0,
+        };
+        let mut i = 0;
+        while i < 64 {
+            match self.0[i] {
+                Rook(c) | Knight(c) | Bishop(c) | Queen(c) => bm.pieces[c as usize] |= 1 << i,
+                Pawn(c) => {
+                    bm.pieces[c as usize] |= 1 << i;
+                    bm.pawns |= 1 << i
+                }
+                King(c) => {
+                    bm.pieces[c as usize] |= 1 << i;
+                    bm.kings |= 1 << i
+                }
+                Nil => (),
+            }
+            i += 1;
+        }
+        bm
+    }
+
     // true if !colour side can capture colour king
     pub fn in_check(&self, colour: Colour, bm_king: u64, bm_board: u64) -> bool {
         self.0.iter().enumerate().any(|(frm, &p)| match p {
@@ -304,7 +336,7 @@ impl Board {
             (bm_black, bm_white)
         };
         let bm_board = bm_white | bm_black;
-        let bitmaps = Bitmaps {
+        let bitmaps = OBitmaps {
             bm_board,
             bm_own,
             bm_opp,
@@ -327,7 +359,7 @@ impl Board {
         v
     }
 
-    fn knight_moves(&self, v: &mut Vec<Move>, frm: usize, bitmaps: &Bitmaps) {
+    fn knight_moves(&self, v: &mut Vec<Move>, frm: usize, bitmaps: &OBitmaps) {
         v.extend(
             bm2vec(BM_KNIGHT_MOVES[frm] & !bitmaps.bm_own)
                 .iter()
@@ -338,7 +370,7 @@ impl Board {
         );
     }
 
-    fn ray_moves(&self, v: &mut Vec<Move>, frm: usize, moves: u64, bitmaps: &Bitmaps) {
+    fn ray_moves(&self, v: &mut Vec<Move>, frm: usize, moves: u64, bitmaps: &OBitmaps) {
         let bl: u64 = bm2vec(moves & bitmaps.bm_board)
             .iter()
             .fold(0, |a, i| a | BM_BLOCKED[frm][*i]);
@@ -357,7 +389,7 @@ impl Board {
         v: &mut Vec<Move>,
         frm: usize,
         last: &Move,
-        bitmaps: &Bitmaps,
+        bitmaps: &OBitmaps,
         colour: Colour,
     ) {
         let cidx = if colour.is_white() { 0 } else { 1 };
@@ -430,7 +462,7 @@ impl Board {
         &self,
         v: &mut Vec<Move>,
         frm: usize,
-        bitmaps: &Bitmaps,
+        bitmaps: &OBitmaps,
         end_game: bool,
         can_castle: &[bool; 4],
         in_check: bool,
@@ -546,7 +578,7 @@ fn ray_check(frm: usize, moves: u64, bm_board: u64, bm_king: u64) -> bool {
     (moves & !bl & bm_king) != 0
 }
 
-struct Bitmaps {
+struct OBitmaps {
     bm_board: u64,
     bm_own: u64,
     bm_opp: u64,
