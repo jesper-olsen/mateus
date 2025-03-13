@@ -251,20 +251,16 @@ impl Board {
         key
     }
 
-    pub const fn to_bitmap(&self) -> (u64, u64) {
-        let (mut w, mut b): (u64, u64) = (0, 0);
+    pub const fn to_bitmap(&self) -> [u64; 2] {
+        let mut pieces = [0u64; 2];
         let mut i = 0;
         while i < 64 {
             if let Rook(c) | Knight(c) | Bishop(c) | King(c) | Queen(c) | Pawn(c) = self.0[i] {
-                if c.is_white() {
-                    w |= 1 << i
-                } else {
-                    b |= 1 << i
-                }
+                pieces[c as usize] |= 1 << i
             }
             i += 1;
         }
-        (w, b)
+        pieces
     }
 
     pub const fn to_pawns_bitmap(&self) -> u64 {
