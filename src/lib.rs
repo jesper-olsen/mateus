@@ -492,8 +492,7 @@ impl Game {
             self.end_game,
             self.can_castle.last().unwrap(),
             last,
-            self.bitmaps.pieces[White as usize],
-            self.bitmaps.pieces[Black as usize],
+            &self.bitmaps,
         );
         if colour.is_white() {
             //l.sort_by(|b, a| a.val.cmp(&b.val)); // decreasing
@@ -632,16 +631,8 @@ impl Game {
     }
 
     pub fn mobility(&self) -> i16 {
-        self.board.count_moves(
-            White,
-            self.bitmaps.pieces[White as usize],
-            self.bitmaps.pieces[Black as usize],
-        ) as i16
-            - self.board.count_moves(
-                Black,
-                self.bitmaps.pieces[White as usize],
-                self.bitmaps.pieces[Black as usize],
-            ) as i16
+        self.board.count_moves(White, &self.bitmaps) as i16
+            - self.board.count_moves(Black, &self.bitmaps) as i16
     }
 
     pub fn eval(&self, colour: Colour) -> i16 {

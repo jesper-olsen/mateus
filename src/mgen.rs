@@ -329,19 +329,12 @@ impl Board {
         end_game: bool,
         can_castle: &[bool; 4],
         last: Option<&Move>,
-        bm_white: u64,
-        bm_black: u64,
+        bm: &Bitmaps,
     ) -> Vec<Move> {
-        let (bm_own, bm_opp) = if colour.is_white() {
-            (bm_white, bm_black)
-        } else {
-            (bm_black, bm_white)
-        };
-        let bm_board = bm_white | bm_black;
         let bitmaps = OBitmaps {
-            bm_board,
-            bm_own,
-            bm_opp,
+            bm_board: bm.pieces[White as usize] | bm.pieces[Black as usize],
+            bm_own: bm.pieces[colour as usize],
+            bm_opp: bm.pieces[colour.opposite() as usize],
         };
 
         let last = if let Some(m) = last { m } else { &NULL_MOVE };
@@ -518,13 +511,10 @@ impl Board {
     }
 
     // count pseudo legal moves - ignoring en passant & castling
-    pub fn count_moves(&self, colour: Colour, bm_white: u64, bm_black: u64) -> u32 {
-        let (bm_own, bm_opp) = if colour.is_white() {
-            (bm_white, bm_black)
-        } else {
-            (bm_black, bm_white)
-        };
-        let bm_board = bm_white | bm_black;
+    pub fn count_moves(&self, colour: Colour, bm: &Bitmaps) -> u32 {
+        let bm_board = bm.pieces[White as usize] | bm.pieces[Black as usize];
+        let bm_own = bm.pieces[colour as usize];
+        let bm_opp = bm.pieces[colour.opposite() as usize];
 
         self.0
             .iter()
