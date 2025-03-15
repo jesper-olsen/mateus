@@ -514,6 +514,19 @@ impl Game {
             .push((self.bitmaps, self.board[m.to()], self.hash));
         let hash;
         self.board[m.to()] = if m.castle() {
+            let (x, y) = if m.to() <= 15 {
+                (m.frm() - 24, m.frm() - 8) // short
+            } else {
+                (m.frm() + 32, m.frm() + 8) // long
+            };
+
+            self.bitmaps.kings |= 1 << m.to();
+            self.bitmaps.kings ^= 1 << m.frm();
+            self.bitmaps.pieces[self.colour as usize] |= 1 << m.to();
+            self.bitmaps.pieces[self.colour as usize] ^= 1 << m.frm();
+            self.bitmaps.pieces[self.colour as usize] |= 1 << y;
+            self.bitmaps.pieces[self.colour as usize] ^= 1 << x;
+
             let cc = self.can_castle.last().unwrap();
             match self.board[m.frm()] {
                 King(White) => self.can_castle.push([false, false, cc[2], cc[3]]),
@@ -521,11 +534,6 @@ impl Game {
                 _ => (),
             }
 
-            let (x, y) = if m.to() <= 15 {
-                (m.frm() - 24, m.frm() - 8) // short
-            } else {
-                (m.frm() + 32, m.frm() + 8) // long
-            };
             hash = self.board[m.frm()].hashkey(m.to())
                 ^ self.board[m.frm()].hashkey(m.frm())
                 ^ self.board[x].hashkey(y)
@@ -534,6 +542,13 @@ impl Game {
             self.board[x] = Nil;
             self.board[m.frm()]
         } else if m.transform() {
+            self.bitmaps.pieces[self.colour as usize] |= 1 << m.to();
+            self.bitmaps.pieces[self.colour as usize] ^= 1 << m.frm();
+            self.bitmaps.pawns ^= 1 << m.frm();
+            if let Rook(c) | Knight(c) | Bishop(c) | Queen(c) = self.board[m.to()] {
+                self.bitmaps.pieces[c as usize] ^= 1 << m.to();
+            }
+
             let p = m.ptransform(self.colour);
             hash = p.hashkey(m.to())
                 ^ self.board[m.frm()].hashkey(m.frm())
@@ -547,12 +562,62 @@ impl Game {
                 true => m.frm() + 8,  // west
                 false => m.frm() - 8, // east
             };
+
+            self.bitmaps.pieces[self.colour as usize] |= 1 << m.to();
+            self.bitmaps.pieces[self.colour as usize] ^= 1 << m.frm();
+            self.bitmaps.pieces[self.colour.opposite() as usize] ^= 1 << x;
+            self.bitmaps.pawns |= 1 << m.to();
+            self.bitmaps.pawns ^= 1 << m.frm();
+            self.bitmaps.pawns ^= 1 << x;
+
             hash = self.board[m.frm()].hashkey(m.to())
                 ^ self.board[m.frm()].hashkey(m.frm())
                 ^ self.board[x].hashkey(x);
             self.board[x] = Nil;
             self.board[m.frm()]
         } else {
+            self.bitmaps.pieces[self.colour as usize] |= 1 << m.to();
+            self.bitmaps.pieces[self.colour as usize] ^= 1 << m.frm();
+            match (self.board[m.frm()], self.board[m.to()]) {
+                (Pawn(_), Pawn(c)) => {
+                    self.bitmaps.pawns ^= 1 << m.frm();
+                    self.bitmaps.pieces[c as usize] ^= 1 << m.to();
+                }
+                (Pawn(_), Rook(c) | Bishop(c) | Queen(c) | Knight(c)) => {
+                    self.bitmaps.pawns |= 1 << m.to();
+                    self.bitmaps.pawns ^= 1 << m.frm();
+                    self.bitmaps.pieces[c as usize] ^= 1 << m.to();
+                }
+                (Pawn(_), _) => {
+                    self.bitmaps.pawns |= 1 << m.to();
+                    self.bitmaps.pawns ^= 1 << m.frm();
+                }
+                (King(_), Pawn(c)) => {
+                    self.bitmaps.pawns ^= 1 << m.to();
+                    self.bitmaps.kings |= 1 << m.to();
+                    self.bitmaps.kings ^= 1 << m.frm();
+                    self.bitmaps.pieces[c as usize] ^= 1 << m.to();
+                }
+                (King(_), Rook(c) | Bishop(c) | Queen(c) | Knight(c)) => {
+                    self.bitmaps.kings |= 1 << m.to();
+                    self.bitmaps.kings ^= 1 << m.frm();
+                    self.bitmaps.pieces[c as usize] ^= 1 << m.to();
+                }
+                (King(_), _) => {
+                    self.bitmaps.kings |= 1 << m.to();
+                    self.bitmaps.kings ^= 1 << m.frm();
+                }
+                (_, Nil) => (),
+                (_, Pawn(c)) => {
+                    self.bitmaps.pawns ^= 1 << m.to();
+                    self.bitmaps.pieces[c as usize] ^= 1 << m.to()
+                }
+                (_, Rook(c) | Knight(c) | Queen(c) | Bishop(c)) => {
+                    self.bitmaps.pieces[c as usize] ^= 1 << m.to()
+                }
+                _ => (),
+            }
+
             hash = self.board[m.frm()].hashkey(m.to())
                 ^ self.board[m.frm()].hashkey(m.frm())
                 ^ self.board[m.to()].hashkey(m.to());
@@ -561,11 +626,8 @@ impl Game {
         self.board[m.frm()] = Nil;
         self.material += m.val;
         self.rep_inc();
-        //self.hash ^= m.hash ^ WHITE_HASH;
         self.hash ^= hash ^ WHITE_HASH;
-
-        // update bitmaps - TODO calculate incrementally; ~6% faster?
-        self.bitmaps = self.board.to_bitmaps();
+        // self.bitmaps = self.board.to_bitmaps();
         self.colour.flip();
     }
 
