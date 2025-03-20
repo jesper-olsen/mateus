@@ -120,8 +120,8 @@ impl Game {
         v.push(if self.turn().is_white() { 1 } else { 0 });
 
         // O-O O-O-O
-        for c in self.can_castle.last().unwrap() {
-            v.push(if *c { 1 } else { 0 });
+        if let Some(cc) = self.can_castle.last() {
+            v.extend(cc.iter().map(|&c| c as u8));
         }
 
         // en passant
@@ -129,7 +129,7 @@ impl Game {
             if matches!(self.board[last.to()], Pawn(_)) && last.to().abs_diff(last.frm()) == 2 {
                 let idx = last.to() as isize + if self.colour.is_white() { 1 } else { -1 };
                 for i in 0..64 {
-                    v.push(if i == idx { 1 } else { 0 });
+                    v.push((i == idx) as u8);
                 }
             } else {
                 v.resize(v.len() + 64, 0);
@@ -166,23 +166,20 @@ impl Game {
             }
         }
         s.push_str(if self.turn().is_white() { " w" } else { " b" });
-        let cc = self.can_castle.last().unwrap();
         s.push(' ');
-        if *cc == [false, false, false, false] {
-            s.push('-');
-        } else {
-            if matches!(cc, [true, _, _, _]) {
-                s.push('K');
-            }
-            if matches!(cc, [_, true, _, _]) {
-                s.push('Q');
-            }
-            if matches!(cc, [_, _, true, _]) {
-                s.push('k');
-            }
-            if matches!(cc, [_, _, _, true]) {
-                s.push('q');
-            }
+
+        if let Some(cc) = self.can_castle.last() {
+            let castling_rights: String = ['K', 'Q', 'k', 'q']
+                .iter()
+                .zip(cc.iter())
+                .filter(|(_, c)| **c)
+                .map(|(x, _)| x)
+                .collect();
+            s.push_str(if castling_rights.is_empty() {
+                "-"
+            } else {
+                &castling_rights
+            });
         }
 
         // en passant sq
@@ -230,12 +227,13 @@ impl Game {
 
         let mut game = Game::new(board);
         if parts.len() > 1 {
-            game.colour = if matches!(parts[1].chars().nth(0), Some('w') | Some('W')) {
+            game.colour = if parts[1].to_lowercase().starts_with('w') {
                 Colour::White
             } else {
                 Colour::Black
             };
         }
+
         if parts.len() > 2 {
             let cc = game.can_castle.last_mut().unwrap();
             cc[0] = parts[2].contains('K');
@@ -444,15 +442,13 @@ impl Game {
 
         //update castling permissions
         let cc = self.can_castle.last_mut().unwrap();
-        match (*cc, self.board[m.to()], m.frm()) {
-            ([true, _, _, _], King(White), 24) => (cc[0], cc[1]) = (false, false),
-            ([_, true, _, _], King(White), 24) => (cc[0], cc[1]) = (false, false),
-            ([_, _, true, _], King(Black), 31) => (cc[2], cc[3]) = (false, false),
-            ([_, _, _, true], King(Black), 31) => (cc[2], cc[3]) = (false, false),
-            ([true, _, _, _], Rook(White), 0) => cc[0] = false,
-            ([_, true, _, _], Rook(White), 56) => cc[1] = false,
-            ([_, _, true, _], Rook(Black), 7) => cc[2] = false,
-            ([_, _, _, true], Rook(Black), 63) => cc[3] = false,
+        match (self.board[m.to()], m.frm()) {
+            (King(White), 24) => (cc[0], cc[1]) = (false, false),
+            (King(Black), 31) => (cc[2], cc[3]) = (false, false),
+            (Rook(White), 0) => cc[0] = false,
+            (Rook(White), 56) => cc[1] = false,
+            (Rook(Black), 7) => cc[2] = false,
+            (Rook(Black), 63) => cc[3] = false,
             _ => (),
         }
     }
@@ -531,7 +527,7 @@ impl Game {
             match self.board[m.frm()] {
                 King(White) => self.can_castle.push([false, false, cc[2], cc[3]]),
                 King(Black) => self.can_castle.push([cc[0], cc[1], false, false]),
-                _ => (),
+                _ => panic!("not castle..."),
             }
 
             hash = self.board[m.frm()].hashkey(m.to())
@@ -934,4 +930,18 @@ impl Game {
         }
         pq0
     } // fn score_moves
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::*;
+
+    #[test]
+    fn test_fen() {
+        let game = Game::new(ROOT_BOARD);
+        assert_eq!(
+            game.to_fen().as_str(),
+            "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        )
+    }
 }
