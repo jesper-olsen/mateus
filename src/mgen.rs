@@ -125,8 +125,7 @@ pub struct Board {
 impl Default for Board {
     #[rustfmt::skip]
     fn default() -> Self {
-        Board {
-            squares: [
+        let squares =  [
                 Rook(White),   Pawn(White), Nil, Nil, Nil, Nil, Pawn(Black), Rook(Black), 
                 Knight(White), Pawn(White), Nil, Nil, Nil, Nil, Pawn(Black), Knight(Black), 
                 Bishop(White), Pawn(White), Nil, Nil, Nil, Nil, Pawn(Black), Bishop(Black), 
@@ -135,7 +134,9 @@ impl Default for Board {
                 Bishop(White), Pawn(White), Nil, Nil, Nil, Nil, Pawn(Black), Bishop(Black), 
                 Knight(White), Pawn(White), Nil, Nil, Nil, Nil, Pawn(Black), Knight(Black), 
                 Rook(White),   Pawn(White), Nil, Nil, Nil, Nil, Pawn(Black), Rook(Black),
-            ]
+            ];
+        Board {
+            squares
         }
     }
 }
@@ -218,7 +219,8 @@ impl fmt::Display for Board {
 
 impl Board {
     pub fn new() -> Self {
-        Board { squares: [Nil; 64] }
+        let squares = [Nil;64];
+        Board { squares }
     }
 
     pub const fn abs_material(&self) -> i16 {
@@ -259,28 +261,7 @@ impl Board {
     }
 
     pub const fn to_bitmaps(&self) -> Bitmaps {
-        let mut bm = Bitmaps {
-            pieces: [0, 0],
-            pawns: 0,
-            kings: 0,
-        };
-        let mut i = 0;
-        while i < 64 {
-            match self.squares[i] {
-                Rook(c) | Knight(c) | Bishop(c) | Queen(c) => bm.pieces[c as usize] |= 1 << i,
-                Pawn(c) => {
-                    bm.pieces[c as usize] |= 1 << i;
-                    bm.pawns |= 1 << i
-                }
-                King(c) => {
-                    bm.pieces[c as usize] |= 1 << i;
-                    bm.kings |= 1 << i
-                }
-                Nil => (),
-            }
-            i += 1;
-        }
-        bm
+        to_bitmaps(&self.squares)
     }
 
     // true if !colour side can capture colour king
@@ -564,3 +545,29 @@ struct OBitmaps {
     bm_own: u64,
     bm_opp: u64,
 }
+
+const fn to_bitmaps(squares: &[Piece;64]) -> Bitmaps {
+    let mut bm = Bitmaps {
+        pieces: [0, 0],
+        pawns: 0,
+        kings: 0,
+    };
+    let mut i = 0;
+    while i < 64 {
+        match squares[i] {
+            Rook(c) | Knight(c) | Bishop(c) | Queen(c) => bm.pieces[c as usize] |= 1 << i,
+            Pawn(c) => {
+                bm.pieces[c as usize] |= 1 << i;
+                bm.pawns |= 1 << i
+            }
+            King(c) => {
+                bm.pieces[c as usize] |= 1 << i;
+                bm.kings |= 1 << i
+            }
+            Nil => (),
+        }
+        i += 1;
+    }
+    bm
+}
+
