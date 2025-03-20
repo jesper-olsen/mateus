@@ -40,6 +40,7 @@ pub struct Game {
 
     pub can_castle: Vec<[bool; 4]>, // white short, long, black short, long
     material: i16,
+    end_game_material: i16,
     pub bitmaps: Bitmaps,
     log_bms: Vec<(Bitmaps, Piece, u64)>,
 }
@@ -76,12 +77,14 @@ impl Game {
         //println!("size of TTable {}", std::mem::size_of::<TTable>());
         let key = board.hash(White);
         let material = board.material();
+        let end_game_material = Board::default().abs_material() / 3;
         let bitmaps = board.to_bitmaps();
         Game {
             board,
             colour: White,
             n_searched: 0,
             material,
+            end_game_material,
             half_move_clock: 0,
             full_move_count: 0,
             rep: HashMap::from([(key, 1)]),
@@ -438,7 +441,7 @@ impl Game {
         self.update(&m);
 
         //adjust king value in end game
-        self.end_game = self.board.abs_material() < END_GAME_MATERIAL;
+        self.end_game = self.board.abs_material() < self.end_game_material;
         self.move_log.push(m);
 
         //update castling permissions
@@ -940,7 +943,7 @@ mod tests {
 
     #[test]
     fn test_fen() {
-        let game = Game::new(ROOT_BOARD);
+        let game = Game::new(Board::default());
         assert_eq!(
             game.to_fen().as_str(),
             "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"

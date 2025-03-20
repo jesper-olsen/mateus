@@ -118,28 +118,25 @@ impl fmt::Display for Move {
     }
 }
 
-#[rustfmt::skip]
-pub const ROOT_BOARD: Board = Board {
-    squares: [
-        Rook(White),   Pawn(White), Nil, Nil, Nil, Nil, Pawn(Black), Rook(Black), 
-        Knight(White), Pawn(White), Nil, Nil, Nil, Nil, Pawn(Black), Knight(Black), 
-        Bishop(White), Pawn(White), Nil, Nil, Nil, Nil, Pawn(Black), Bishop(Black), 
-        King(White),   Pawn(White), Nil, Nil, Nil, Nil, Pawn(Black), King(Black), 
-        Queen(White),  Pawn(White), Nil, Nil, Nil, Nil, Pawn(Black), Queen(Black), 
-        Bishop(White), Pawn(White), Nil, Nil, Nil, Nil, Pawn(Black), Bishop(Black), 
-        Knight(White), Pawn(White), Nil, Nil, Nil, Nil, Pawn(Black), Knight(Black), 
-        Rook(White),   Pawn(White), Nil, Nil, Nil, Nil, Pawn(Black), Rook(Black),
-    ]};
-
-pub const END_GAME_MATERIAL: i16 = ROOT_BOARD.abs_material() / 3;
-
 pub struct Board {
     squares: [Piece; 64],
 }
 
 impl Default for Board {
+    #[rustfmt::skip]
     fn default() -> Self {
-        ROOT_BOARD
+        Board {
+            squares: [
+                Rook(White),   Pawn(White), Nil, Nil, Nil, Nil, Pawn(Black), Rook(Black), 
+                Knight(White), Pawn(White), Nil, Nil, Nil, Nil, Pawn(Black), Knight(Black), 
+                Bishop(White), Pawn(White), Nil, Nil, Nil, Nil, Pawn(Black), Bishop(Black), 
+                King(White),   Pawn(White), Nil, Nil, Nil, Nil, Pawn(Black), King(Black), 
+                Queen(White),  Pawn(White), Nil, Nil, Nil, Nil, Pawn(Black), Queen(Black), 
+                Bishop(White), Pawn(White), Nil, Nil, Nil, Nil, Pawn(Black), Bishop(Black), 
+                Knight(White), Pawn(White), Nil, Nil, Nil, Nil, Pawn(Black), Knight(Black), 
+                Rook(White),   Pawn(White), Nil, Nil, Nil, Nil, Pawn(Black), Rook(Black),
+            ]
+        }
     }
 }
 
