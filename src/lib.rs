@@ -41,7 +41,6 @@ pub struct Game {
     pub can_castle: Vec<[bool; 4]>, // white short, long, black short, long
     material: i16,
     end_game_material: i16,
-    pub bitmaps: Bitmaps,
     log_bms: Vec<(Bitmaps, Piece, u64)>,
 }
 
@@ -78,7 +77,6 @@ impl Game {
         let key = board.hash(White);
         let material = board.material();
         let end_game_material = Board::default().abs_material() / 3;
-        let bitmaps = board.to_bitmaps();
         Game {
             board,
             colour: White,
@@ -93,7 +91,6 @@ impl Game {
             move_log: Vec::new(),
             end_game: false,
             hash: key,
-            bitmaps,
             log_bms: vec![],
         }
     }
@@ -228,6 +225,7 @@ impl Game {
                 board[q] = Piece::from_ascii(c);
             }
         }
+        board.bitmaps = board.to_bitmaps();
 
         let mut game = Game::new(board);
         if parts.len() > 1 {
@@ -465,7 +463,7 @@ impl Game {
     pub fn in_check(&self, colour: Colour) -> bool {
         // true if other side can capture king
 
-        self.board.in_check(colour, &self.bitmaps)
+        self.board.in_check(colour)
     }
 
     fn legal_move(&mut self, m: &Move) -> bool {
@@ -493,7 +491,6 @@ impl Game {
             self.end_game,
             self.can_castle.last().unwrap(),
             last,
-            &self.bitmaps,
         );
         if colour.is_white() {
             //l.sort_by(|b, a| a.val.cmp(&b.val)); // decreasing
@@ -512,7 +509,7 @@ impl Game {
 
     pub fn update(&mut self, m: &Move) {
         self.log_bms
-            .push((self.bitmaps, self.board[m.to()], self.hash));
+            .push((self.board.bitmaps, self.board[m.to()], self.hash));
         let hash;
         self.board[m.to()] = if m.castle() {
             let (x, y) = if m.to() <= 15 {
@@ -521,12 +518,12 @@ impl Game {
                 (m.frm() + 32, m.frm() + 8) // long
             };
 
-            self.bitmaps.kings |= 1 << m.to();
-            self.bitmaps.kings ^= 1 << m.frm();
-            self.bitmaps.pieces[self.colour as usize] |= 1 << m.to();
-            self.bitmaps.pieces[self.colour as usize] ^= 1 << m.frm();
-            self.bitmaps.pieces[self.colour as usize] |= 1 << y;
-            self.bitmaps.pieces[self.colour as usize] ^= 1 << x;
+            self.board.bitmaps.kings |= 1 << m.to();
+            self.board.bitmaps.kings ^= 1 << m.frm();
+            self.board.bitmaps.pieces[self.colour as usize] |= 1 << m.to();
+            self.board.bitmaps.pieces[self.colour as usize] ^= 1 << m.frm();
+            self.board.bitmaps.pieces[self.colour as usize] |= 1 << y;
+            self.board.bitmaps.pieces[self.colour as usize] ^= 1 << x;
 
             let cc = self.can_castle.last().unwrap();
             match self.board[m.frm()] {
@@ -543,11 +540,11 @@ impl Game {
             self.board[x] = Nil;
             self.board[m.frm()]
         } else if m.transform() {
-            self.bitmaps.pieces[self.colour as usize] |= 1 << m.to();
-            self.bitmaps.pieces[self.colour as usize] ^= 1 << m.frm();
-            self.bitmaps.pawns ^= 1 << m.frm();
+            self.board.bitmaps.pieces[self.colour as usize] |= 1 << m.to();
+            self.board.bitmaps.pieces[self.colour as usize] ^= 1 << m.frm();
+            self.board.bitmaps.pawns ^= 1 << m.frm();
             if let Rook(c) | Knight(c) | Bishop(c) | Queen(c) = self.board[m.to()] {
-                self.bitmaps.pieces[c as usize] ^= 1 << m.to();
+                self.board.bitmaps.pieces[c as usize] ^= 1 << m.to();
             }
 
             let p = m.ptransform(self.colour);
@@ -564,12 +561,12 @@ impl Game {
                 false => m.frm() - 8, // east
             };
 
-            self.bitmaps.pieces[self.colour as usize] |= 1 << m.to();
-            self.bitmaps.pieces[self.colour as usize] ^= 1 << m.frm();
-            self.bitmaps.pieces[self.colour.opposite() as usize] ^= 1 << x;
-            self.bitmaps.pawns |= 1 << m.to();
-            self.bitmaps.pawns ^= 1 << m.frm();
-            self.bitmaps.pawns ^= 1 << x;
+            self.board.bitmaps.pieces[self.colour as usize] |= 1 << m.to();
+            self.board.bitmaps.pieces[self.colour as usize] ^= 1 << m.frm();
+            self.board.bitmaps.pieces[self.colour.opposite() as usize] ^= 1 << x;
+            self.board.bitmaps.pawns |= 1 << m.to();
+            self.board.bitmaps.pawns ^= 1 << m.frm();
+            self.board.bitmaps.pawns ^= 1 << x;
 
             hash = self.board[m.frm()].hashkey(m.to())
                 ^ self.board[m.frm()].hashkey(m.frm())
@@ -577,44 +574,44 @@ impl Game {
             self.board[x] = Nil;
             self.board[m.frm()]
         } else {
-            self.bitmaps.pieces[self.colour as usize] |= 1 << m.to();
-            self.bitmaps.pieces[self.colour as usize] ^= 1 << m.frm();
+            self.board.bitmaps.pieces[self.colour as usize] |= 1 << m.to();
+            self.board.bitmaps.pieces[self.colour as usize] ^= 1 << m.frm();
             match (self.board[m.frm()], self.board[m.to()]) {
                 (Pawn(_), Pawn(c)) => {
-                    self.bitmaps.pawns ^= 1 << m.frm();
-                    self.bitmaps.pieces[c as usize] ^= 1 << m.to();
+                    self.board.bitmaps.pawns ^= 1 << m.frm();
+                    self.board.bitmaps.pieces[c as usize] ^= 1 << m.to();
                 }
                 (Pawn(_), Rook(c) | Bishop(c) | Queen(c) | Knight(c)) => {
-                    self.bitmaps.pawns |= 1 << m.to();
-                    self.bitmaps.pawns ^= 1 << m.frm();
-                    self.bitmaps.pieces[c as usize] ^= 1 << m.to();
+                    self.board.bitmaps.pawns |= 1 << m.to();
+                    self.board.bitmaps.pawns ^= 1 << m.frm();
+                    self.board.bitmaps.pieces[c as usize] ^= 1 << m.to();
                 }
                 (Pawn(_), _) => {
-                    self.bitmaps.pawns |= 1 << m.to();
-                    self.bitmaps.pawns ^= 1 << m.frm();
+                    self.board.bitmaps.pawns |= 1 << m.to();
+                    self.board.bitmaps.pawns ^= 1 << m.frm();
                 }
                 (King(_), Pawn(c)) => {
-                    self.bitmaps.pawns ^= 1 << m.to();
-                    self.bitmaps.kings |= 1 << m.to();
-                    self.bitmaps.kings ^= 1 << m.frm();
-                    self.bitmaps.pieces[c as usize] ^= 1 << m.to();
+                    self.board.bitmaps.pawns ^= 1 << m.to();
+                    self.board.bitmaps.kings |= 1 << m.to();
+                    self.board.bitmaps.kings ^= 1 << m.frm();
+                    self.board.bitmaps.pieces[c as usize] ^= 1 << m.to();
                 }
                 (King(_), Rook(c) | Bishop(c) | Queen(c) | Knight(c)) => {
-                    self.bitmaps.kings |= 1 << m.to();
-                    self.bitmaps.kings ^= 1 << m.frm();
-                    self.bitmaps.pieces[c as usize] ^= 1 << m.to();
+                    self.board.bitmaps.kings |= 1 << m.to();
+                    self.board.bitmaps.kings ^= 1 << m.frm();
+                    self.board.bitmaps.pieces[c as usize] ^= 1 << m.to();
                 }
                 (King(_), _) => {
-                    self.bitmaps.kings |= 1 << m.to();
-                    self.bitmaps.kings ^= 1 << m.frm();
+                    self.board.bitmaps.kings |= 1 << m.to();
+                    self.board.bitmaps.kings ^= 1 << m.frm();
                 }
                 (_, Nil) => (),
                 (_, Pawn(c)) => {
-                    self.bitmaps.pawns ^= 1 << m.to();
-                    self.bitmaps.pieces[c as usize] ^= 1 << m.to()
+                    self.board.bitmaps.pawns ^= 1 << m.to();
+                    self.board.bitmaps.pieces[c as usize] ^= 1 << m.to()
                 }
                 (_, Rook(c) | Knight(c) | Queen(c) | Bishop(c)) => {
-                    self.bitmaps.pieces[c as usize] ^= 1 << m.to()
+                    self.board.bitmaps.pieces[c as usize] ^= 1 << m.to()
                 }
                 _ => (),
             }
@@ -635,7 +632,7 @@ impl Game {
     pub fn backdate(&mut self, m: &Move) {
         let bms = self.log_bms.pop().unwrap();
         let capture;
-        (self.bitmaps, capture, self.hash) = bms;
+        (self.board.bitmaps, capture, self.hash) = bms;
         self.colour.flip();
         //self.hash ^= m.hash ^ WHITE_HASH;
         self.rep_dec();
@@ -694,8 +691,7 @@ impl Game {
     }
 
     pub fn mobility(&self) -> i16 {
-        self.board.count_moves(White, &self.bitmaps) as i16
-            - self.board.count_moves(Black, &self.bitmaps) as i16
+        self.board.count_moves(White) as i16 - self.board.count_moves(Black) as i16
     }
 
     pub fn eval(&self, colour: Colour) -> i16 {
@@ -707,8 +703,8 @@ impl Game {
     pub fn score_pawn_structure(&self) -> i16 {
         let mut pen: i16 = 0;
         let bm: [u64; 2] = [
-            self.bitmaps.pawns & self.bitmaps.pieces[White as usize],
-            self.bitmaps.pawns & self.bitmaps.pieces[Black as usize],
+            self.board.bitmaps.pawns & self.board.bitmaps.pieces[White as usize],
+            self.board.bitmaps.pawns & self.board.bitmaps.pieces[Black as usize],
         ];
         for (i, &p) in [Pawn(White), Pawn(Black)].iter().enumerate() {
             let nfiles = (0..8)

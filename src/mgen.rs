@@ -120,6 +120,7 @@ impl fmt::Display for Move {
 
 pub struct Board {
     squares: [Piece; 64],
+    pub bitmaps: Bitmaps,
 }
 
 impl Default for Board {
@@ -135,8 +136,9 @@ impl Default for Board {
                 Knight(White), Pawn(White), Nil, Nil, Nil, Nil, Pawn(Black), Knight(Black), 
                 Rook(White),   Pawn(White), Nil, Nil, Nil, Nil, Pawn(Black), Rook(Black),
             ];
+        let bitmaps = to_bitmaps(&squares);
         Board {
-            squares
+            squares, bitmaps
         }
     }
 }
@@ -220,7 +222,8 @@ impl fmt::Display for Board {
 impl Board {
     pub fn new() -> Self {
         let squares = [Nil;64];
-        Board { squares }
+        let bitmaps = to_bitmaps(&squares);
+        Board { squares, bitmaps }
     }
 
     pub const fn abs_material(&self) -> i16 {
@@ -265,9 +268,9 @@ impl Board {
     }
 
     // true if !colour side can capture colour king
-    pub fn in_check(&self, colour: Colour, bm: &Bitmaps) -> bool {
-        let bm_king = bm.kings & bm.pieces[colour as usize];
-        let bm_board = bm.pieces[Black as usize] | bm.pieces[White as usize];
+    pub fn in_check(&self, colour: Colour) -> bool {
+        let bm_king = self.bitmaps.kings & self.bitmaps.pieces[colour as usize];
+        let bm_board = self.bitmaps.pieces[Black as usize] | self.bitmaps.pieces[White as usize];
         self.squares.iter().enumerate().any(|(frm, &p)| match p {
             Knight(c) if c != colour => BM_KNIGHT_MOVES[frm] & bm_king != 0,
             King(c) if c != colour => BM_KING_MOVES[frm] & bm_king != 0,
@@ -286,12 +289,11 @@ impl Board {
         end_game: bool,
         can_castle: &[bool; 4],
         last: Option<&Move>,
-        bm: &Bitmaps,
     ) -> Vec<Move> {
         let bitmaps = OBitmaps {
-            bm_board: bm.pieces[White as usize] | bm.pieces[Black as usize],
-            bm_own: bm.pieces[colour as usize],
-            bm_opp: bm.pieces[colour.opposite() as usize],
+            bm_board: self.bitmaps.pieces[White as usize] | self.bitmaps.pieces[Black as usize],
+            bm_own: self.bitmaps.pieces[colour as usize],
+            bm_opp: self.bitmaps.pieces[colour.opposite() as usize],
         };
 
         let last = if let Some(m) = last { m } else { &NULL_MOVE };
@@ -481,10 +483,10 @@ impl Board {
     }
 
     // count pseudo legal moves - ignoring en passant & castling
-    pub fn count_moves(&self, colour: Colour, bm: &Bitmaps) -> u32 {
-        let bm_board = bm.pieces[White as usize] | bm.pieces[Black as usize];
-        let bm_own = bm.pieces[colour as usize];
-        let bm_opp = bm.pieces[colour.opposite() as usize];
+    pub fn count_moves(&self, colour: Colour) -> u32 {
+        let bm_board = self.bitmaps.pieces[White as usize] | self.bitmaps.pieces[Black as usize];
+        let bm_own = self.bitmaps.pieces[colour as usize];
+        let bm_opp = self.bitmaps.pieces[colour.opposite() as usize];
 
         self.squares
             .iter()
