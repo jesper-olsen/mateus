@@ -30,15 +30,16 @@ pub struct Game {
     pub board: Board,
     pub colour: Colour,
     pub n_searched: usize,
-    material: i16,
     half_move_clock: usize, // since last irreversible move
     full_move_count: usize,
     rep: HashMap<u64, usize>,
     pub ttable: HashMap<u64, TTable>,
-    pub can_castle: Vec<[bool; 4]>, // white short, long, black short, long
     pub move_log: Vec<Move>,
     end_game: bool,
     pub hash: u64,
+
+    pub can_castle: Vec<[bool; 4]>, // white short, long, black short, long
+    material: i16,
     pub bitmaps: Bitmaps,
     log_bms: Vec<(Bitmaps, Piece, u64)>,
 }
@@ -235,11 +236,11 @@ impl Game {
         }
 
         if parts.len() > 2 {
-            let cc = game.can_castle.last_mut().unwrap();
-            cc[0] = parts[2].contains('K');
-            cc[1] = parts[2].contains('Q');
-            cc[2] = parts[2].contains('k');
-            cc[3] = parts[2].contains('q');
+            if let Some(cc) = game.can_castle.last_mut() {
+                for (i, c) in ['K', 'Q', 'k', 'q'].iter().enumerate() {
+                    cc[i] = parts[2].contains(*c)
+                }
+            }
         }
         if parts.len() > 3 {
             // en passant attack
@@ -441,15 +442,16 @@ impl Game {
         self.move_log.push(m);
 
         //update castling permissions
-        let cc = self.can_castle.last_mut().unwrap();
-        match (self.board[m.to()], m.frm()) {
-            (King(White), 24) => (cc[0], cc[1]) = (false, false),
-            (King(Black), 31) => (cc[2], cc[3]) = (false, false),
-            (Rook(White), 0) => cc[0] = false,
-            (Rook(White), 56) => cc[1] = false,
-            (Rook(Black), 7) => cc[2] = false,
-            (Rook(Black), 63) => cc[3] = false,
-            _ => (),
+        if let Some(cc) = self.can_castle.last_mut() {
+            match (self.board[m.to()], m.frm()) {
+                (King(White), 24) => (cc[0], cc[1]) = (false, false),
+                (King(Black), 31) => (cc[2], cc[3]) = (false, false),
+                (Rook(White), 0) => cc[0] = false,
+                (Rook(White), 56) => cc[1] = false,
+                (Rook(Black), 7) => cc[2] = false,
+                (Rook(Black), 63) => cc[3] = false,
+                _ => (),
+            }
         }
     }
 
