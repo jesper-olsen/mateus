@@ -75,7 +75,7 @@ fn main() {
     for s in &OPENINGS {
         if &s[0..1] == "#" {
             //println!("Opening: {s}");
-            game = Game::from_fen(ROOT_FEN);
+            game = Game::default();
             log = vec![];
             continue;
         }

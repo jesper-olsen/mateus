@@ -3,6 +3,7 @@ use crate::bitmaps::*;
 use crate::hashkeys_generated::WHITE_HASH;
 use crate::val::*;
 use crate::val::{Colour::*, Piece::*};
+use crate::misc;
 use std::fmt;
 use std::ops::{Index, IndexMut};
 use std::slice::Iter;
@@ -247,7 +248,84 @@ impl fmt::Display for Board {
 }
 
 impl Board {
-    pub fn new(squares: [Piece;64], colour: Colour) -> Self {
+    pub fn from_fen(s: &str) -> Self {
+        let mut squares = [Nil; 64];
+        let mut offset = 0i16;
+        let parts = s.split(' ').collect::<Vec<&str>>();
+        for (i, c) in parts[0].chars().enumerate() {
+            if let Some(d) = c.to_digit(10) {
+                offset += d as i16 - 1;
+            } else if c == '/' {
+                offset -= 1;
+            } else {
+                let k: usize = (i as i16 + offset).try_into().unwrap();
+                let x = 7 - k % 8;
+                let y = 7 - k / 8;
+                let q = x * 8 + y;
+                squares[q] = Piece::from_ascii(c);
+            }
+        }
+
+        let colour = if parts.len() > 1 {
+            if parts[1].to_lowercase().starts_with('w') {
+                Colour::White
+            } else {
+                Colour::Black
+            }
+        } else {
+            Colour::White
+        };
+
+        let mut can_castle = 0;
+        if parts.len() > 2 {
+            for (c, q) in ['K', 'Q', 'k', 'q'].into_iter().zip([
+                CASTLE_W_SHORT,
+                CASTLE_W_LONG,
+                CASTLE_B_SHORT,
+                CASTLE_B_LONG,
+            ]) {
+                if parts[2].contains(c) {
+                    can_castle |= q
+                }
+            }
+        }
+
+        let mut move_log = Vec::new();
+        if parts.len() > 3 {
+            // en passant attack
+            if let Some(sq) = misc::parse_chess_coord(parts[3]) {
+                let sq = sq as isize;
+                let o = if colour.is_white() { -1 } else { 1 };
+                let to: usize = (sq + o).try_into().expect("must be positive");
+                let frm: usize = (sq - o).try_into().expect("must be positive");
+                let m = Move::new(false, true, frm, to);
+                move_log.push(m);
+            }
+        }
+
+        
+        let half_move_clock = if parts.len() > 4 {
+            // moves since last irreversible move
+            if let Ok(value) = parts[4].parse::<usize>() {
+                value
+            } else {
+                0
+                }
+        } else {
+            0
+            };
+
+        let full_move_count = if parts.len() > 5 {
+            // full-move count
+            if let Ok(value) = parts[5].parse::<usize>() {
+                value
+            } else {
+                0  // TODO - Err ?
+            }
+        } else {
+            0
+        };
+
         let bitmaps = to_bitmaps(&squares);
         let end_game_material = abs_material(&Board::default().squares); // TODO
         let hash = calc_hash(&squares, colour);
@@ -257,15 +335,17 @@ impl Board {
             squares,
             bitmaps,
             colour,
-            can_castle: 0,
+            can_castle,
             end_game_material,
             log_bms: vec![],
-            move_log: Vec::new(),
+            move_log,
             material,
             hash,
-            half_move_clock: 0,
-            full_move_count: 0,
+            half_move_clock,
+            full_move_count,
         }
+
+        
     }
 
     pub fn eval(&self) -> i16 {

@@ -7,7 +7,7 @@ use ::std::time::Instant;
 use clap::Parser;
 use puccinia_s_checkmate::Game;
 use puccinia_s_checkmate::benchmark;
-use puccinia_s_checkmate::mgen::Move;
+use puccinia_s_checkmate::mgen::{Board, Move};
 use puccinia_s_checkmate::misc::str2move;
 use puccinia_s_checkmate::openings::library_moves;
 use puccinia_s_checkmate::val::*;
@@ -132,7 +132,7 @@ fn benchmark(
     let mut n_searched: usize = 0;
     let start = Instant::now();
     for (i, (fen, label)) in tpos.iter().enumerate() {
-        let mut game = Game::from_fen(fen);
+        let mut game = Game::new(Board::from_fen(fen));
         let moves = game.legal_moves(None);
         game.n_searched = 0;
 
@@ -199,7 +199,7 @@ fn play(
     library_bypass: bool,
     fen: &str,
 ) {
-    let mut game = Game::from_fen(fen);
+    let mut game = Game::new(Board::from_fen(fen));
     println!("{}", game);
 
     let mut tot = 0;
