@@ -31,14 +31,12 @@ pub struct Game {
     pub n_searched: usize,
     half_move_clock: usize, // since last irreversible move
     full_move_count: usize,
-    rep: HashMap<u64, usize>,
     pub ttable: HashMap<u64, TTable>,
     end_game: bool,
     pub hash: u64,
 
-    pub move_log: Vec<Move>,
+    rep: HashMap<u64, usize>,
     material: i16,
-    log_bms: Vec<(Bitmaps, Piece, u64, u8)>,
 }
 
 impl fmt::Debug for Game {
@@ -79,13 +77,11 @@ impl Game {
             half_move_clock: 0,
             full_move_count: 0,
             ttable: HashMap::new(),
-            move_log: Vec::new(),
             end_game: false,
 
             material,
             rep: HashMap::from([(key, 1)]),
             hash: key,
-            log_bms: vec![],
         }
     }
 
@@ -121,7 +117,7 @@ impl Game {
         );
 
         // en passant
-        if let Some(last) = self.move_log.last() {
+        if let Some(last) = self.board.move_log.last() {
             if matches!(self.board[last.to()], Pawn(_)) && last.to().abs_diff(last.frm()) == 2 {
                 let idx = last.to() as isize + if self.board.colour.is_white() { 1 } else { -1 };
                 for i in 0..64 {
@@ -178,7 +174,7 @@ impl Game {
 
         // en passant sq
         s.push(' ');
-        if let Some(last) = self.move_log.last() {
+        if let Some(last) = self.board.move_log.last() {
             if matches!(self.board[last.to()], Pawn(_)) && last.to().abs_diff(last.frm()) == 2 {
                 let idx = last.to() as isize + if self.board.colour.is_white() { 1 } else { -1 };
                 s.push_str(I2SQ[idx as usize])
@@ -194,7 +190,7 @@ impl Game {
             format!(
                 " {} {}",
                 self.check_50_move_rule() - 1,
-                self.full_move_count + self.move_log.len() / 2 + 1
+                self.full_move_count + self.board.move_log.len() / 2 + 1
             )
             .as_str(),
         );
@@ -250,7 +246,7 @@ impl Game {
                 let to: usize = (sq + o).try_into().expect("must be positive");
                 let frm: usize = (sq - o).try_into().expect("must be positive");
                 let m = mgen::Move::new(false, true, frm, to);
-                game.move_log.push(m);
+                game.board.move_log.push(m);
             }
         }
         if parts.len() > 4 {
@@ -439,7 +435,7 @@ impl Game {
 
         //adjust king value in end game
         self.end_game = self.board.is_end_game();
-        self.move_log.push(m);
+        self.board.move_log.push(m);
 
         //update castling permissions
         match (self.board[m.to()], m.frm()) {
@@ -501,7 +497,7 @@ impl Game {
     }
 
     pub fn update(&mut self, m: &Move) {
-        self.log_bms.push((
+        self.board.log_bms.push((
             self.board.bitmaps,
             self.board[m.to()],
             self.hash,
@@ -626,7 +622,7 @@ impl Game {
     }
 
     pub fn backdate(&mut self, m: &Move) {
-        let bms = self.log_bms.pop().unwrap();
+        let bms = self.board.log_bms.pop().unwrap();
         let capture;
         (
             self.board.bitmaps,

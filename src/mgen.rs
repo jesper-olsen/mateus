@@ -128,6 +128,8 @@ pub struct Board {
     pub bitmaps: Bitmaps,
     pub can_castle: u8, // white short, long, black short, long
     pub end_game_material: i16,
+    pub log_bms: Vec<(Bitmaps, Piece, u64, u8)>,
+    pub move_log: Vec<Move>,
 }
 
 impl Default for Board {
@@ -151,6 +153,8 @@ impl Default for Board {
             colour: White,
             can_castle: CASTLE_W_SHORT | CASTLE_W_LONG | CASTLE_B_SHORT | CASTLE_B_LONG,
             end_game_material,
+            log_bms: vec![],
+            move_log: Vec::new(),
         }
     }
 }
@@ -236,7 +240,15 @@ impl Board {
         let squares = [Nil;64];
         let bitmaps = to_bitmaps(&squares);
         let end_game_material = abs_material(&Board::default().squares); // TODO
-        Board { squares, bitmaps, colour: White, can_castle: 0, end_game_material }
+        Board {
+            squares,
+            bitmaps,
+            colour: White,
+            can_castle: 0,
+            end_game_material,
+            log_bms: vec![],
+            move_log: Vec::new(),
+        }
     }
 
     pub const fn is_end_game(&self) -> bool {

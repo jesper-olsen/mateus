@@ -102,8 +102,8 @@ fn check_game_over(game: &Game, moves: &[Move], half_moves: isize) -> String {
         "1/2-1/2 Draw by repetition".to_string()
     } else if game.check_50_move_rule() >= 100 {
         "1/2-1/2 Draw by the 50-move rule".to_string()
-    } else if half_moves != -1 && half_moves <= game.move_log.len() as isize {
-        format!("stopping after {} half move(s)", game.move_log.len())
+    } else if half_moves != -1 && half_moves <= game.board.move_log.len() as isize {
+        format!("stopping after {} half move(s)", game.board.move_log.len())
     } else if moves.is_empty() {
         if game.in_check(game.turn()) {
             if game.turn().is_white() { "0-1" } else { "1-0" }
@@ -262,7 +262,7 @@ fn play(
         game.make_move(m);
         println!("{game}");
         moves = game.legal_moves(Some(&m));
-        println!("{}. {label}", game.move_log.len() / 2 + 1);
+        println!("{}. {label}", game.board.move_log.len() / 2 + 1);
 
         if verbose {
             if game.rep_count() > 1 {
