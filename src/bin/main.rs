@@ -273,8 +273,8 @@ fn play(
                 score,
                 game.board.material(),
                 game.board.abs_material(),
-                game.score_pawn_structure(),
-                game.mobility()
+                game.board.score_pawn_structure(),
+                game.board.mobility()
             );
         }
     }

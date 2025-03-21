@@ -20,6 +20,10 @@ const CASTLE_BIT: u16 = 1 << 12;
 const EN_PASSANT_BIT: u16 = 1 << 13;
 const TRANSFORM_BIT: u16 = 1 << 14;
 const TO_SHIFT: u16 = 6;
+pub const CASTLE_W_SHORT: u8 = 0b0001;
+pub const CASTLE_W_LONG: u8 = 0b0010;
+pub const CASTLE_B_SHORT: u8 = 0b0100;
+pub const CASTLE_B_LONG: u8 = 0b1000;
 pub const FRM_MASK: u16 = 0b111111;
 pub const TO_MASK: u16 = FRM_MASK << TO_SHIFT;
 
@@ -267,6 +271,60 @@ impl Board {
         to_bitmaps(&self.squares)
     }
 
+    
+    pub fn score_pawn_structure(&self) -> i16 {
+        let mut pen: i16 = 0;
+        let bm: [u64; 2] = [
+            self.bitmaps.pawns & self.bitmaps.pieces[White as usize],
+            self.bitmaps.pawns & self.bitmaps.pieces[Black as usize],
+        ];
+        for (i, &p) in [Pawn(White), Pawn(Black)].iter().enumerate() {
+            let nfiles = (0..8)
+                .filter(|&q| 0b11111111 << (q * 8) & bm[i] > 0)
+                .count() as i16;
+            let npawns = bm[i].count_ones() as i16;
+            let double_pawns = npawns - nfiles;
+
+            let l = (0..8)
+                .map(|q| (0b11111111 << (q * 8)) & bm[i] > 0)
+                .collect::<Vec<bool>>();
+            let isolated_pawns = (0..8)
+                .filter(|&q| {
+                    (q == 0 && l[0] && !l[1])
+                        || (q > 0 && q < 7 && l[q] && !l[q - 1] && !l[q + 1])
+                        || (q == 7 && l[7] && !l[6])
+                })
+                .count() as i16;
+
+            let x = 20 * double_pawns + 4 * isolated_pawns;
+            pen += if p == Pawn(White) { -x } else { x };
+        }
+
+        // passed pawn bonus
+        for i in 0..8 {
+            let file: u64 = 0b11111111 << (i * 8);
+            let w = file & bm[0];
+            let b = file & bm[1];
+            if w > 0 && w > b {
+                let k = 63 - w.leading_zeros();
+                let q = (k % 8) as i16;
+                pen += 2 * q * q;
+            }
+            if b > 0 && (w == 0 || b < w) {
+                let k = b.trailing_zeros();
+                let q = (7 - k % 8) as i16;
+                pen -= 2 * q * q;
+            }
+        }
+
+        pen
+    }
+
+
+    pub fn mobility(&self) -> i16 {
+        self.count_moves(White) as i16 - self.count_moves(Black) as i16
+    }
+
     // true if !colour side can capture colour king
     pub fn in_check(&self, colour: Colour) -> bool {
         let bm_king = self.bitmaps.kings & self.bitmaps.pieces[colour as usize];
@@ -287,7 +345,7 @@ impl Board {
         colour: Colour,
         in_check: bool,
         end_game: bool,
-        can_castle: &[bool; 4],
+        can_castle: u8,
         last: Option<&Move>,
     ) -> Vec<Move> {
         let bitmaps = OBitmaps {
@@ -431,7 +489,7 @@ impl Board {
         frm: usize,
         bitmaps: &OBitmaps,
         end_game: bool,
-        can_castle: &[bool; 4],
+        can_castle: u8,
         in_check: bool,
     ) {
         // change king valuation in end_game
@@ -451,13 +509,13 @@ impl Board {
 
         #[rustfmt::skip]
     let cc2 = [
-        (can_castle[0] && frm == 24 && !in_check && self.squares[0] == Rook(White) && bitmaps.bm_board & WSHORT == 0,
+        (can_castle & CASTLE_W_SHORT!=0 && frm == 24 && !in_check && self.squares[0] == Rook(White) && bitmaps.bm_board & WSHORT == 0,
          Rook(White), 8, 0, 16,),
-        (can_castle[1] && frm == 24 && !in_check && self.squares[56] == Rook(White) && bitmaps.bm_board & WLONG == 0,
+        (can_castle & CASTLE_W_LONG!=0 && frm == 24 && !in_check && self.squares[56] == Rook(White) && bitmaps.bm_board & WLONG == 0,
          Rook(White), 40, 56, 32,),
-        (can_castle[2] && frm == 31 && !in_check && self.squares[7] == Rook(Black) && bitmaps.bm_board & BSHORT == 0,
+        (can_castle & CASTLE_B_SHORT!=0 && frm == 31 && !in_check && self.squares[7] == Rook(Black) && bitmaps.bm_board & BSHORT == 0,
          Rook(Black), 15, 7, 23,),
-        (can_castle[3] && frm == 31 && !in_check && self.squares[63] == Rook(Black) && bitmaps.bm_board & BLONG == 0,
+        (can_castle & CASTLE_B_LONG!=0 && frm == 31 && !in_check && self.squares[63] == Rook(Black) && bitmaps.bm_board & BLONG == 0,
          Rook(Black), 47, 63, 39,),
     ];
 
@@ -483,7 +541,7 @@ impl Board {
     }
 
     // count pseudo legal moves - ignoring en passant & castling
-    pub fn count_moves(&self, colour: Colour) -> u32 {
+    fn count_moves(&self, colour: Colour) -> u32 {
         let bm_board = self.bitmaps.pieces[White as usize] | self.bitmaps.pieces[Black as usize];
         let bm_own = self.bitmaps.pieces[colour as usize];
         let bm_opp = self.bitmaps.pieces[colour.opposite() as usize];

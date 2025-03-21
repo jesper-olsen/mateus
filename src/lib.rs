@@ -38,10 +38,10 @@ pub struct Game {
     end_game: bool,
     pub hash: u64,
 
-    pub can_castle: Vec<[bool; 4]>, // white short, long, black short, long
+    pub can_castle: u8, // white short, long, black short, long
     material: i16,
     end_game_material: i16,
-    log_bms: Vec<(Bitmaps, Piece, u64)>,
+    log_bms: Vec<(Bitmaps, Piece, u64, u8)>,
 }
 
 impl fmt::Debug for Game {
@@ -87,7 +87,7 @@ impl Game {
             full_move_count: 0,
             rep: HashMap::from([(key, 1)]),
             ttable: HashMap::new(),
-            can_castle: vec![[true; 4]],
+            can_castle: CASTLE_W_SHORT | CASTLE_W_LONG | CASTLE_B_SHORT | CASTLE_B_LONG,
             move_log: Vec::new(),
             end_game: false,
             hash: key,
@@ -121,9 +121,10 @@ impl Game {
         v.push(if self.turn().is_white() { 1 } else { 0 });
 
         // O-O O-O-O
-        if let Some(cc) = self.can_castle.last() {
-            v.extend(cc.iter().map(|&c| c as u8));
-        }
+        v.extend(
+            [CASTLE_W_SHORT, CASTLE_W_LONG, CASTLE_B_SHORT, CASTLE_B_LONG]
+                .map(|c| (self.can_castle & c != 0) as u8),
+        );
 
         // en passant
         if let Some(last) = self.move_log.last() {
@@ -169,19 +170,17 @@ impl Game {
         s.push_str(if self.turn().is_white() { " w" } else { " b" });
         s.push(' ');
 
-        if let Some(cc) = self.can_castle.last() {
-            let castling_rights: String = ['K', 'Q', 'k', 'q']
-                .iter()
-                .zip(cc.iter())
-                .filter(|(_, c)| **c)
-                .map(|(x, _)| x)
-                .collect();
-            s.push_str(if castling_rights.is_empty() {
-                "-"
-            } else {
-                &castling_rights
-            });
-        }
+        let castling_rights: String = ['K', 'Q', 'k', 'q']
+            .into_iter()
+            .zip([CASTLE_W_SHORT, CASTLE_W_LONG, CASTLE_B_SHORT, CASTLE_B_LONG])
+            .filter(|(_, c)| self.can_castle & c != 0)
+            .map(|(x, _)| x)
+            .collect();
+        s.push_str(if castling_rights.is_empty() {
+            "-"
+        } else {
+            &castling_rights
+        });
 
         // en passant sq
         s.push(' ');
@@ -237,9 +236,14 @@ impl Game {
         }
 
         if parts.len() > 2 {
-            if let Some(cc) = game.can_castle.last_mut() {
-                for (i, c) in ['K', 'Q', 'k', 'q'].iter().enumerate() {
-                    cc[i] = parts[2].contains(*c)
+            for (c, q) in ['K', 'Q', 'k', 'q'].into_iter().zip([
+                CASTLE_W_SHORT,
+                CASTLE_W_LONG,
+                CASTLE_B_SHORT,
+                CASTLE_B_LONG,
+            ]) {
+                if parts[2].contains(c) {
+                    game.can_castle |= q
                 }
             }
         }
@@ -443,16 +447,14 @@ impl Game {
         self.move_log.push(m);
 
         //update castling permissions
-        if let Some(cc) = self.can_castle.last_mut() {
-            match (self.board[m.to()], m.frm()) {
-                (King(White), 24) => (cc[0], cc[1]) = (false, false),
-                (King(Black), 31) => (cc[2], cc[3]) = (false, false),
-                (Rook(White), 0) => cc[0] = false,
-                (Rook(White), 56) => cc[1] = false,
-                (Rook(Black), 7) => cc[2] = false,
-                (Rook(Black), 63) => cc[3] = false,
-                _ => (),
-            }
+        match (self.board[m.to()], m.frm()) {
+            (King(White), 24) => self.can_castle &= !CASTLE_W_SHORT & !CASTLE_W_LONG,
+            (King(Black), 31) => self.can_castle &= !CASTLE_B_SHORT & !CASTLE_B_LONG,
+            (Rook(White), 0) => self.can_castle &= !CASTLE_W_SHORT,
+            (Rook(White), 56) => self.can_castle &= !CASTLE_W_LONG,
+            (Rook(Black), 7) => self.can_castle &= !CASTLE_B_SHORT,
+            (Rook(Black), 63) => self.can_castle &= !CASTLE_B_LONG,
+            _ => (),
         }
     }
 
@@ -485,13 +487,9 @@ impl Game {
     }
 
     fn moves(&mut self, colour: Colour, last: Option<&Move>, in_check: bool) -> Vec<Move> {
-        let mut l = self.board.moves(
-            colour,
-            in_check,
-            self.end_game,
-            self.can_castle.last().unwrap(),
-            last,
-        );
+        let mut l = self
+            .board
+            .moves(colour, in_check, self.end_game, self.can_castle, last);
         if colour.is_white() {
             //l.sort_by(|b, a| a.val.cmp(&b.val)); // decreasing
             l.sort_unstable_by(|b, a| a.val.cmp(&b.val)); // decreasing
@@ -508,8 +506,12 @@ impl Game {
     }
 
     pub fn update(&mut self, m: &Move) {
-        self.log_bms
-            .push((self.board.bitmaps, self.board[m.to()], self.hash));
+        self.log_bms.push((
+            self.board.bitmaps,
+            self.board[m.to()],
+            self.hash,
+            self.can_castle,
+        ));
         let hash;
         self.board[m.to()] = if m.castle() {
             let (x, y) = if m.to() <= 15 {
@@ -525,10 +527,9 @@ impl Game {
             self.board.bitmaps.pieces[self.colour as usize] |= 1 << y;
             self.board.bitmaps.pieces[self.colour as usize] ^= 1 << x;
 
-            let cc = self.can_castle.last().unwrap();
             match self.board[m.frm()] {
-                King(White) => self.can_castle.push([false, false, cc[2], cc[3]]),
-                King(Black) => self.can_castle.push([cc[0], cc[1], false, false]),
+                King(White) => self.can_castle &= !CASTLE_W_SHORT & !CASTLE_W_LONG,
+                King(Black) => self.can_castle &= !CASTLE_B_SHORT & !CASTLE_B_LONG,
                 _ => panic!("not castle..."),
             }
 
@@ -632,12 +633,11 @@ impl Game {
     pub fn backdate(&mut self, m: &Move) {
         let bms = self.log_bms.pop().unwrap();
         let capture;
-        (self.board.bitmaps, capture, self.hash) = bms;
+        (self.board.bitmaps, capture, self.hash, self.can_castle) = bms;
         self.colour.flip();
         //self.hash ^= m.hash ^ WHITE_HASH;
         self.rep_dec();
         if m.castle() {
-            self.can_castle.pop();
             let (frm, to) = if m.to() <= 15 {
                 (m.frm() - 24, m.frm() - 8) // short
             } else {
@@ -690,62 +690,10 @@ impl Game {
             .or_insert(e);
     }
 
-    pub fn mobility(&self) -> i16 {
-        self.board.count_moves(White) as i16 - self.board.count_moves(Black) as i16
-    }
-
     pub fn eval(&self, colour: Colour) -> i16 {
-        let s = self.material + self.score_pawn_structure() + self.mobility();
+        let s = self.material + self.board.score_pawn_structure() + self.board.mobility();
         if colour.is_white() { s } else { -s }
         //s * (2 * (colour as i16) - 1)
-    }
-
-    pub fn score_pawn_structure(&self) -> i16 {
-        let mut pen: i16 = 0;
-        let bm: [u64; 2] = [
-            self.board.bitmaps.pawns & self.board.bitmaps.pieces[White as usize],
-            self.board.bitmaps.pawns & self.board.bitmaps.pieces[Black as usize],
-        ];
-        for (i, &p) in [Pawn(White), Pawn(Black)].iter().enumerate() {
-            let nfiles = (0..8)
-                .filter(|&q| 0b11111111 << (q * 8) & bm[i] > 0)
-                .count() as i16;
-            let npawns = bm[i].count_ones() as i16;
-            let double_pawns = npawns - nfiles;
-
-            let l = (0..8)
-                .map(|q| (0b11111111 << (q * 8)) & bm[i] > 0)
-                .collect::<Vec<bool>>();
-            let isolated_pawns = (0..8)
-                .filter(|&q| {
-                    (q == 0 && l[0] && !l[1])
-                        || (q > 0 && q < 7 && l[q] && !l[q - 1] && !l[q + 1])
-                        || (q == 7 && l[7] && !l[6])
-                })
-                .count() as i16;
-
-            let x = 20 * double_pawns + 4 * isolated_pawns;
-            pen += if p == Pawn(White) { -x } else { x };
-        }
-
-        // passed pawn bonus
-        for i in 0..8 {
-            let file: u64 = 0b11111111 << (i * 8);
-            let w = file & bm[0];
-            let b = file & bm[1];
-            if w > 0 && w > b {
-                let k = 63 - w.leading_zeros();
-                let q = (k % 8) as i16;
-                pen += 2 * q * q;
-            }
-            if b > 0 && (w == 0 || b < w) {
-                let k = b.trailing_zeros();
-                let q = (7 - k % 8) as i16;
-                pen -= 2 * q * q;
-            }
-        }
-
-        pen
     }
 
     fn quiescence_fab(&mut self, alp: i16, beta: i16, last: &Move, rfab: bool) -> i16 {
