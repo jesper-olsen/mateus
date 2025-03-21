@@ -28,7 +28,6 @@ pub struct TTable {
 
 pub struct Game {
     pub board: Board,
-    pub colour: Colour,
     pub n_searched: usize,
     half_move_clock: usize, // since last irreversible move
     full_move_count: usize,
@@ -79,7 +78,6 @@ impl Game {
         let end_game_material = Board::default().abs_material() / 3;
         Game {
             board,
-            colour: White,
             n_searched: 0,
             material,
             end_game_material,
@@ -129,7 +127,7 @@ impl Game {
         // en passant
         if let Some(last) = self.move_log.last() {
             if matches!(self.board[last.to()], Pawn(_)) && last.to().abs_diff(last.frm()) == 2 {
-                let idx = last.to() as isize + if self.colour.is_white() { 1 } else { -1 };
+                let idx = last.to() as isize + if self.board.colour.is_white() { 1 } else { -1 };
                 for i in 0..64 {
                     v.push((i == idx) as u8);
                 }
@@ -186,7 +184,7 @@ impl Game {
         s.push(' ');
         if let Some(last) = self.move_log.last() {
             if matches!(self.board[last.to()], Pawn(_)) && last.to().abs_diff(last.frm()) == 2 {
-                let idx = last.to() as isize + if self.colour.is_white() { 1 } else { -1 };
+                let idx = last.to() as isize + if self.board.colour.is_white() { 1 } else { -1 };
                 s.push_str(I2SQ[idx as usize])
             } else {
                 s.push('-');
@@ -228,7 +226,7 @@ impl Game {
 
         let mut game = Game::new(board);
         if parts.len() > 1 {
-            game.colour = if parts[1].to_lowercase().starts_with('w') {
+            game.board.colour = if parts[1].to_lowercase().starts_with('w') {
                 Colour::White
             } else {
                 Colour::Black
@@ -252,7 +250,7 @@ impl Game {
             // en passant attack
             if let Some(sq) = misc::parse_chess_coord(parts[3]) {
                 let sq = sq as isize;
-                let o = if game.colour.is_white() { -1 } else { 1 };
+                let o = if game.board.colour.is_white() { -1 } else { 1 };
                 let to: usize = (sq + o).try_into().expect("must be positive");
                 let frm: usize = (sq - o).try_into().expect("must be positive");
                 let m = mgen::Move::new(false, true, frm, to);
@@ -339,7 +337,7 @@ impl Game {
             }
             label.push_str(I2SQ[m.to()]);
             if m.transform() {
-                match m.ptransform(self.colour) {
+                match m.ptransform(self.board.colour) {
                     Rook(_) => label.push_str("=R"),
                     Knight(_) => label.push_str("=N"),
                     Bishop(_) => label.push_str("=B"),
@@ -481,8 +479,8 @@ impl Game {
     }
 
     pub fn legal_moves(&mut self, last: Option<&Move>) -> Vec<Move> {
-        let in_check = self.in_check(self.colour);
-        let mut moves = self.moves(self.colour, last, in_check);
+        let in_check = self.in_check(self.board.colour);
+        let mut moves = self.moves(self.board.colour, last, in_check);
         moves.retain(|m| self.legal_move(m));
         moves
     }
@@ -490,7 +488,7 @@ impl Game {
     fn moves(&mut self, colour: Colour, last: Option<&Move>, in_check: bool) -> Vec<Move> {
         let mut l = self
             .board
-            .moves(colour, in_check, self.end_game, self.can_castle, last);
+            .moves(in_check, self.end_game, self.can_castle, last);
         if colour.is_white() {
             //l.sort_by(|b, a| a.val.cmp(&b.val)); // decreasing
             l.sort_unstable_by(|b, a| a.val.cmp(&b.val)); // decreasing
@@ -503,7 +501,7 @@ impl Game {
     }
 
     pub fn turn(&self) -> Colour {
-        self.colour
+        self.board.colour
     }
 
     pub fn update(&mut self, m: &Move) {
@@ -523,10 +521,10 @@ impl Game {
 
             self.board.bitmaps.kings |= 1 << m.to();
             self.board.bitmaps.kings ^= 1 << m.frm();
-            self.board.bitmaps.pieces[self.colour as usize] |= 1 << m.to();
-            self.board.bitmaps.pieces[self.colour as usize] ^= 1 << m.frm();
-            self.board.bitmaps.pieces[self.colour as usize] |= 1 << y;
-            self.board.bitmaps.pieces[self.colour as usize] ^= 1 << x;
+            self.board.bitmaps.pieces[self.board.colour as usize] |= 1 << m.to();
+            self.board.bitmaps.pieces[self.board.colour as usize] ^= 1 << m.frm();
+            self.board.bitmaps.pieces[self.board.colour as usize] |= 1 << y;
+            self.board.bitmaps.pieces[self.board.colour as usize] ^= 1 << x;
 
             match self.board[m.frm()] {
                 King(White) => self.can_castle &= !CASTLE_W_SHORT & !CASTLE_W_LONG,
@@ -542,14 +540,14 @@ impl Game {
             self.board[x] = Nil;
             self.board[m.frm()]
         } else if m.transform() {
-            self.board.bitmaps.pieces[self.colour as usize] |= 1 << m.to();
-            self.board.bitmaps.pieces[self.colour as usize] ^= 1 << m.frm();
+            self.board.bitmaps.pieces[self.board.colour as usize] |= 1 << m.to();
+            self.board.bitmaps.pieces[self.board.colour as usize] ^= 1 << m.frm();
             self.board.bitmaps.pawns ^= 1 << m.frm();
             if let Rook(c) | Knight(c) | Bishop(c) | Queen(c) = self.board[m.to()] {
                 self.board.bitmaps.pieces[c as usize] ^= 1 << m.to();
             }
 
-            let p = m.ptransform(self.colour);
+            let p = m.ptransform(self.board.colour);
             hash = p.hashkey(m.to())
                 ^ self.board[m.frm()].hashkey(m.frm())
                 ^ self.board[m.to()].hashkey(m.to());
@@ -563,9 +561,9 @@ impl Game {
                 false => m.frm() - 8, // east
             };
 
-            self.board.bitmaps.pieces[self.colour as usize] |= 1 << m.to();
-            self.board.bitmaps.pieces[self.colour as usize] ^= 1 << m.frm();
-            self.board.bitmaps.pieces[self.colour.opposite() as usize] ^= 1 << x;
+            self.board.bitmaps.pieces[self.board.colour as usize] |= 1 << m.to();
+            self.board.bitmaps.pieces[self.board.colour as usize] ^= 1 << m.frm();
+            self.board.bitmaps.pieces[self.board.colour.opposite() as usize] ^= 1 << x;
             self.board.bitmaps.pawns |= 1 << m.to();
             self.board.bitmaps.pawns ^= 1 << m.frm();
             self.board.bitmaps.pawns ^= 1 << x;
@@ -576,8 +574,8 @@ impl Game {
             self.board[x] = Nil;
             self.board[m.frm()]
         } else {
-            self.board.bitmaps.pieces[self.colour as usize] |= 1 << m.to();
-            self.board.bitmaps.pieces[self.colour as usize] ^= 1 << m.frm();
+            self.board.bitmaps.pieces[self.board.colour as usize] |= 1 << m.to();
+            self.board.bitmaps.pieces[self.board.colour as usize] ^= 1 << m.frm();
             match (self.board[m.frm()], self.board[m.to()]) {
                 (Pawn(_), Pawn(c)) => {
                     self.board.bitmaps.pawns ^= 1 << m.frm();
@@ -628,14 +626,14 @@ impl Game {
         self.rep_inc();
         self.hash ^= hash ^ WHITE_HASH;
         // self.bitmaps = self.board.to_bitmaps();
-        self.colour.flip();
+        self.board.colour.flip();
     }
 
     pub fn backdate(&mut self, m: &Move) {
         let bms = self.log_bms.pop().unwrap();
         let capture;
         (self.board.bitmaps, capture, self.hash, self.can_castle) = bms;
-        self.colour.flip();
+        self.board.colour.flip();
         //self.hash ^= m.hash ^ WHITE_HASH;
         self.rep_dec();
         if m.castle() {
@@ -648,7 +646,7 @@ impl Game {
             self.board[to] = Nil;
         }
         self.board[m.frm()] = if m.transform() {
-            Pawn(self.colour)
+            Pawn(self.board.colour)
         } else {
             self.board[m.to()]
         };
@@ -698,7 +696,7 @@ impl Game {
     }
 
     fn quiescence_fab(&mut self, alp: i16, beta: i16, last: &Move, rfab: bool) -> i16 {
-        let colour = self.colour;
+        let colour = self.board.colour;
 
         let mut bscore = None;
         let mut alpha = alp;
@@ -747,7 +745,7 @@ impl Game {
         let mut beta = beta;
         let mut bscore = -INFINITE + ply as i16;
         let mut bmove = None;
-        let colour = self.colour;
+        let colour = self.board.colour;
 
         let kmove = if let Some(e) = self.ttable.get(&self.hash) {
             if e.depth >= depth {

@@ -124,6 +124,7 @@ impl fmt::Display for Move {
 
 pub struct Board {
     squares: [Piece; 64],
+    pub colour: Colour,
     pub bitmaps: Bitmaps,
 }
 
@@ -142,7 +143,9 @@ impl Default for Board {
             ];
         let bitmaps = to_bitmaps(&squares);
         Board {
-            squares, bitmaps
+            squares,
+            bitmaps,
+            colour: White
         }
     }
 }
@@ -227,7 +230,7 @@ impl Board {
     pub fn new() -> Self {
         let squares = [Nil;64];
         let bitmaps = to_bitmaps(&squares);
-        Board { squares, bitmaps }
+        Board { squares, bitmaps, colour: White }
     }
 
     pub const fn abs_material(&self) -> i16 {
@@ -342,12 +345,12 @@ impl Board {
 
     pub fn moves(
         &self,
-        colour: Colour,
         in_check: bool,
         end_game: bool,
         can_castle: u8,
         last: Option<&Move>,
     ) -> Vec<Move> {
+        let colour = self.colour;
         let bitmaps = OBitmaps {
             bm_board: self.bitmaps.pieces[White as usize] | self.bitmaps.pieces[Black as usize],
             bm_own: self.bitmaps.pieces[colour as usize],
@@ -507,17 +510,16 @@ impl Board {
         const BSHORT: u64 = 1 << 15 | 1 << 23;
         const BLONG: u64 = 1 << 55 | 1 << 47 | 1 << 39;
 
-        #[rustfmt::skip]
-    let cc2 = [
-        (can_castle & CASTLE_W_SHORT!=0 && frm == 24 && !in_check && self.squares[0] == Rook(White) && bitmaps.bm_board & WSHORT == 0,
-         Rook(White), 8, 0, 16,),
-        (can_castle & CASTLE_W_LONG!=0 && frm == 24 && !in_check && self.squares[56] == Rook(White) && bitmaps.bm_board & WLONG == 0,
-         Rook(White), 40, 56, 32,),
-        (can_castle & CASTLE_B_SHORT!=0 && frm == 31 && !in_check && self.squares[7] == Rook(Black) && bitmaps.bm_board & BSHORT == 0,
-         Rook(Black), 15, 7, 23,),
-        (can_castle & CASTLE_B_LONG!=0 && frm == 31 && !in_check && self.squares[63] == Rook(Black) && bitmaps.bm_board & BLONG == 0,
-         Rook(Black), 47, 63, 39,),
-    ];
+        let cc2 = [
+            (can_castle & CASTLE_W_SHORT!=0 && frm == 24 && !in_check && self.squares[0] == Rook(White) && bitmaps.bm_board & WSHORT == 0,
+             Rook(White), 8, 0, 16,),
+            (can_castle & CASTLE_W_LONG!=0 && frm == 24 && !in_check && self.squares[56] == Rook(White) && bitmaps.bm_board & WLONG == 0,
+             Rook(White), 40, 56, 32,),
+            (can_castle & CASTLE_B_SHORT!=0 && frm == 31 && !in_check && self.squares[7] == Rook(Black) && bitmaps.bm_board & BSHORT == 0,
+             Rook(Black), 15, 7, 23,),
+            (can_castle & CASTLE_B_LONG!=0 && frm == 31 && !in_check && self.squares[63] == Rook(Black) && bitmaps.bm_board & BLONG == 0,
+             Rook(Black), 47, 63, 39,),
+        ];
 
         v.extend(
             bm2vec(BM_KING_MOVES[frm] & !bitmaps.bm_own)

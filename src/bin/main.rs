@@ -140,7 +140,7 @@ fn benchmark(
         let (best, score) = l[0];
         n_searched += game.n_searched;
         let clabel = game.move2label(&best, &moves);
-        let colour = if game.colour.is_white() {
+        let colour = if game.board.colour.is_white() {
             "white"
         } else {
             "black"
