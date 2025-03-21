@@ -34,11 +34,11 @@ pub struct Game {
     full_move_count: usize,
     rep: HashMap<u64, usize>,
     pub ttable: HashMap<u64, TTable>,
-    pub move_log: Vec<Move>,
     end_game: bool,
     pub hash: u64,
 
-    pub can_castle: u8, // white short, long, black short, long
+    pub move_log: Vec<Move>,
+    can_castle: u8, // white short, long, black short, long
     material: i16,
     end_game_material: i16,
     log_bms: Vec<(Bitmaps, Piece, u64, u8)>,
@@ -95,9 +95,9 @@ impl Game {
         }
     }
 
-    const CSV_SIZE: usize = 2 * 6 * 64 + 1 + 4 + 64 + 1;
     pub fn to_csv(&self) -> Vec<u8> {
-        let mut v = Vec::with_capacity(Self::CSV_SIZE);
+        const CSV_SIZE: usize = 2 * 6 * 64 + 1 + 4 + 64 + 1;
+        let mut v = Vec::with_capacity(CSV_SIZE);
         for p in [
             Pawn(White),
             Rook(White),
@@ -236,6 +236,7 @@ impl Game {
         }
 
         if parts.len() > 2 {
+            game.can_castle = 0;
             for (c, q) in ['K', 'Q', 'k', 'q'].into_iter().zip([
                 CASTLE_W_SHORT,
                 CASTLE_W_LONG,

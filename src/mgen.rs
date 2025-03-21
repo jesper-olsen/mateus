@@ -21,9 +21,9 @@ const EN_PASSANT_BIT: u16 = 1 << 13;
 const TRANSFORM_BIT: u16 = 1 << 14;
 const TO_SHIFT: u16 = 6;
 pub const CASTLE_W_SHORT: u8 = 0b0001;
-pub const CASTLE_W_LONG: u8 = 0b0010;
+pub const CASTLE_W_LONG: u8  = 0b0010;
 pub const CASTLE_B_SHORT: u8 = 0b0100;
-pub const CASTLE_B_LONG: u8 = 0b1000;
+pub const CASTLE_B_LONG: u8  = 0b1000;
 pub const FRM_MASK: u16 = 0b111111;
 pub const TO_MASK: u16 = FRM_MASK << TO_SHIFT;
 
