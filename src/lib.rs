@@ -37,7 +37,6 @@ pub struct Game {
     pub hash: u64,
 
     pub move_log: Vec<Move>,
-    can_castle: u8, // white short, long, black short, long
     material: i16,
     end_game_material: i16,
     log_bms: Vec<(Bitmaps, Piece, u64, u8)>,
@@ -85,7 +84,6 @@ impl Game {
             full_move_count: 0,
             rep: HashMap::from([(key, 1)]),
             ttable: HashMap::new(),
-            can_castle: CASTLE_W_SHORT | CASTLE_W_LONG | CASTLE_B_SHORT | CASTLE_B_LONG,
             move_log: Vec::new(),
             end_game: false,
             hash: key,
@@ -121,7 +119,7 @@ impl Game {
         // O-O O-O-O
         v.extend(
             [CASTLE_W_SHORT, CASTLE_W_LONG, CASTLE_B_SHORT, CASTLE_B_LONG]
-                .map(|c| (self.can_castle & c != 0) as u8),
+                .map(|c| (self.board.can_castle & c != 0) as u8),
         );
 
         // en passant
@@ -171,7 +169,7 @@ impl Game {
         let castling_rights: String = ['K', 'Q', 'k', 'q']
             .into_iter()
             .zip([CASTLE_W_SHORT, CASTLE_W_LONG, CASTLE_B_SHORT, CASTLE_B_LONG])
-            .filter(|(_, c)| self.can_castle & c != 0)
+            .filter(|(_, c)| self.board.can_castle & c != 0)
             .map(|(x, _)| x)
             .collect();
         s.push_str(if castling_rights.is_empty() {
@@ -234,7 +232,7 @@ impl Game {
         }
 
         if parts.len() > 2 {
-            game.can_castle = 0;
+            game.board.can_castle = 0;
             for (c, q) in ['K', 'Q', 'k', 'q'].into_iter().zip([
                 CASTLE_W_SHORT,
                 CASTLE_W_LONG,
@@ -242,7 +240,7 @@ impl Game {
                 CASTLE_B_LONG,
             ]) {
                 if parts[2].contains(c) {
-                    game.can_castle |= q
+                    game.board.can_castle |= q
                 }
             }
         }
@@ -447,12 +445,12 @@ impl Game {
 
         //update castling permissions
         match (self.board[m.to()], m.frm()) {
-            (King(White), 24) => self.can_castle &= !CASTLE_W_SHORT & !CASTLE_W_LONG,
-            (King(Black), 31) => self.can_castle &= !CASTLE_B_SHORT & !CASTLE_B_LONG,
-            (Rook(White), 0) => self.can_castle &= !CASTLE_W_SHORT,
-            (Rook(White), 56) => self.can_castle &= !CASTLE_W_LONG,
-            (Rook(Black), 7) => self.can_castle &= !CASTLE_B_SHORT,
-            (Rook(Black), 63) => self.can_castle &= !CASTLE_B_LONG,
+            (King(White), 24) => self.board.can_castle &= !CASTLE_W_SHORT & !CASTLE_W_LONG,
+            (King(Black), 31) => self.board.can_castle &= !CASTLE_B_SHORT & !CASTLE_B_LONG,
+            (Rook(White), 0) => self.board.can_castle &= !CASTLE_W_SHORT,
+            (Rook(White), 56) => self.board.can_castle &= !CASTLE_W_LONG,
+            (Rook(Black), 7) => self.board.can_castle &= !CASTLE_B_SHORT,
+            (Rook(Black), 63) => self.board.can_castle &= !CASTLE_B_LONG,
             _ => (),
         }
     }
@@ -488,7 +486,7 @@ impl Game {
     fn moves(&mut self, colour: Colour, last: Option<&Move>, in_check: bool) -> Vec<Move> {
         let mut l = self
             .board
-            .moves(in_check, self.end_game, self.can_castle, last);
+            .moves(in_check, self.end_game, self.board.can_castle, last);
         if colour.is_white() {
             //l.sort_by(|b, a| a.val.cmp(&b.val)); // decreasing
             l.sort_unstable_by(|b, a| a.val.cmp(&b.val)); // decreasing
@@ -509,7 +507,7 @@ impl Game {
             self.board.bitmaps,
             self.board[m.to()],
             self.hash,
-            self.can_castle,
+            self.board.can_castle,
         ));
         let hash;
         self.board[m.to()] = if m.castle() {
@@ -527,8 +525,8 @@ impl Game {
             self.board.bitmaps.pieces[self.board.colour as usize] ^= 1 << x;
 
             match self.board[m.frm()] {
-                King(White) => self.can_castle &= !CASTLE_W_SHORT & !CASTLE_W_LONG,
-                King(Black) => self.can_castle &= !CASTLE_B_SHORT & !CASTLE_B_LONG,
+                King(White) => self.board.can_castle &= !CASTLE_W_SHORT & !CASTLE_W_LONG,
+                King(Black) => self.board.can_castle &= !CASTLE_B_SHORT & !CASTLE_B_LONG,
                 _ => panic!("not castle..."),
             }
 
@@ -632,7 +630,12 @@ impl Game {
     pub fn backdate(&mut self, m: &Move) {
         let bms = self.log_bms.pop().unwrap();
         let capture;
-        (self.board.bitmaps, capture, self.hash, self.can_castle) = bms;
+        (
+            self.board.bitmaps,
+            capture,
+            self.hash,
+            self.board.can_castle,
+        ) = bms;
         self.board.colour.flip();
         //self.hash ^= m.hash ^ WHITE_HASH;
         self.rep_dec();

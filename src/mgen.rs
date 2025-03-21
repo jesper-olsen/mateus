@@ -126,6 +126,7 @@ pub struct Board {
     squares: [Piece; 64],
     pub colour: Colour,
     pub bitmaps: Bitmaps,
+    pub can_castle: u8, // white short, long, black short, long
 }
 
 impl Default for Board {
@@ -145,7 +146,8 @@ impl Default for Board {
         Board {
             squares,
             bitmaps,
-            colour: White
+            colour: White,
+            can_castle: CASTLE_W_SHORT | CASTLE_W_LONG | CASTLE_B_SHORT | CASTLE_B_LONG
         }
     }
 }
@@ -230,7 +232,7 @@ impl Board {
     pub fn new() -> Self {
         let squares = [Nil;64];
         let bitmaps = to_bitmaps(&squares);
-        Board { squares, bitmaps, colour: White }
+        Board { squares, bitmaps, colour: White, can_castle: 0 }
     }
 
     pub const fn abs_material(&self) -> i16 {
