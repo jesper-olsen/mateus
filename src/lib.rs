@@ -29,7 +29,6 @@ pub struct TTable {
 pub struct Game {
     pub board: Board,
     pub n_searched: usize,
-    half_move_clock: usize, // since last irreversible move
     full_move_count: usize,
     pub ttable: HashMap<u64, TTable>,
     end_game: bool,
@@ -71,7 +70,6 @@ impl Game {
         Game {
             board,
             n_searched: 0,
-            half_move_clock: 0,
             full_move_count: 0,
             ttable: HashMap::new(),
             end_game: false,
@@ -249,7 +247,7 @@ impl Game {
         if parts.len() > 4 {
             // moves since last irreversible move
             if let Ok(value) = parts[4].parse::<usize>() {
-                game.half_move_clock = value;
+                game.board.half_move_clock = value;
             }
         }
 
@@ -425,7 +423,7 @@ impl Game {
     pub fn make_move(&mut self, m: Move) {
         if m.en_passant() || self.board[m.to()] != Nil || matches!(self.board[m.frm()], Pawn(_)) {
             self.rep_clear(); // ireversible move
-            self.half_move_clock = 0;
+            self.board.half_move_clock = 0;
         }
         self.ttable_clear();
         self.update(&m);
@@ -447,7 +445,7 @@ impl Game {
     }
 
     pub fn check_50_move_rule(&self) -> usize {
-        self.half_move_clock + self.rep.iter().map(|(_, &v)| v).sum::<usize>()
+        self.board.half_move_clock + self.rep.iter().map(|(_, &v)| v).sum::<usize>()
     }
 
     pub fn in_check(&self, colour: Colour) -> bool {

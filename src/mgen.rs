@@ -132,6 +132,7 @@ pub struct Board {
     pub move_log: Vec<Move>,
     pub material: i16,
     pub hash: u64,
+    pub half_move_clock: usize, // since last irreversible move
 }
 
 impl Default for Board {
@@ -162,6 +163,7 @@ impl Default for Board {
             move_log: Vec::new(),
             material,
             hash,
+            half_move_clock: 0,
         }
     }
 }
@@ -258,7 +260,8 @@ impl Board {
             log_bms: vec![],
             move_log: Vec::new(),
             material: 0,
-            hash
+            hash,
+            half_move_clock: 0,
         }
     }
 
