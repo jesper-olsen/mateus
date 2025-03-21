@@ -131,6 +131,7 @@ pub struct Board {
     pub log_bms: Vec<(Bitmaps, Piece, u64, u8)>,
     pub move_log: Vec<Move>,
     pub material: i16,
+    pub hash: u64,
 }
 
 impl Default for Board {
@@ -149,15 +150,18 @@ impl Default for Board {
         let bitmaps = to_bitmaps(&squares);
         let end_game_material = abs_material(&squares) / 3;
         let material = material(&squares);
+        let colour = White;
+        let hash = calc_hash(&squares, colour);
         Board {
             squares,
             bitmaps,
-            colour: White,
+            colour,
             can_castle: CASTLE_W_SHORT | CASTLE_W_LONG | CASTLE_B_SHORT | CASTLE_B_LONG,
             end_game_material,
             log_bms: vec![],
             move_log: Vec::new(),
             material,
+            hash,
         }
     }
 }
@@ -243,15 +247,18 @@ impl Board {
         let squares = [Nil;64];
         let bitmaps = to_bitmaps(&squares);
         let end_game_material = abs_material(&Board::default().squares); // TODO
+        let colour = White;
+        let hash = calc_hash(&squares, colour);
         Board {
             squares,
             bitmaps,
-            colour: White,
+            colour,
             can_castle: 0,
             end_game_material,
             log_bms: vec![],
             move_log: Vec::new(),
             material: 0,
+            hash
         }
     }
 
@@ -265,22 +272,6 @@ impl Board {
          abs_material(&self.squares) < self.end_game_material
     }
 
-    pub const fn hash(&self, colour: Colour) -> u64 {
-        let mut key = match colour {
-            Colour::White => WHITE_HASH,
-            Colour::Black => 0,
-        };
-
-        let mut i = 0;
-        while i < 64 {
-            match self.squares[i] {
-                Piece::Nil => (),
-                _ => key ^= self.squares[i].hashkey(i),
-            };
-            i += 1;
-        }
-        key
-    }
 
     pub const fn to_bitmaps(&self) -> Bitmaps {
         to_bitmaps(&self.squares)
@@ -665,3 +656,19 @@ pub const fn abs_material(squares: &[Piece;64]) -> i16 {
     val
 }
 
+    pub const fn calc_hash(squares: &[Piece;64], colour: Colour) -> u64 {
+        let mut key = match colour {
+            Colour::White => WHITE_HASH,
+            Colour::Black => 0,
+        };
+
+        let mut i = 0;
+        while i < 64 {
+            match squares[i] {
+                Piece::Nil => (),
+                _ => key ^= squares[i].hashkey(i),
+            };
+            i += 1;
+        }
+        key
+    }

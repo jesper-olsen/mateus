@@ -217,10 +217,10 @@ fn play(
             pick_move(&mut game, &moves)
         } else {
             // try library 1st - compute if not there
-            let lmoves = library_moves(game.hash);
+            let lmoves = library_moves(game.board.hash);
             if !library_bypass && !lmoves.is_empty() {
                 if verbose {
-                    println!("#library moves from {}: {}", game.hash, lmoves.len());
+                    println!("#library moves from {}: {}", game.board.hash, lmoves.len());
                     println!("{:?}", lmoves);
                 };
                 let i = random::<u32>() % lmoves.len() as u32;

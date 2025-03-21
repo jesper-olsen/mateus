@@ -33,7 +33,6 @@ pub struct Game {
     full_move_count: usize,
     pub ttable: HashMap<u64, TTable>,
     end_game: bool,
-    pub hash: u64,
 
     rep: HashMap<u64, usize>,
 }
@@ -68,7 +67,7 @@ fn move_to_head(moves: &mut Vec<Move>, frmto: &(u8, u8)) {
 impl Game {
     pub fn new(board: Board) -> Self {
         //println!("size of TTable {}", std::mem::size_of::<TTable>());
-        let key = board.hash(White);
+        let rep = HashMap::from([(board.hash, 1)]);
         Game {
             board,
             n_searched: 0,
@@ -77,8 +76,7 @@ impl Game {
             ttable: HashMap::new(),
             end_game: false,
 
-            rep: HashMap::from([(key, 1)]),
-            hash: key,
+            rep,
         }
     }
 
@@ -213,15 +211,16 @@ impl Game {
         }
         board.bitmaps = board.to_bitmaps();
         board.material = material(&board.squares);
+        board.hash = calc_hash(&board.squares, board.colour);
 
-        let mut game = Game::new(board);
         if parts.len() > 1 {
-            game.board.colour = if parts[1].to_lowercase().starts_with('w') {
+            board.colour = if parts[1].to_lowercase().starts_with('w') {
                 Colour::White
             } else {
                 Colour::Black
             };
         }
+        let mut game = Game::new(board);
 
         if parts.len() > 2 {
             game.board.can_castle = 0;
@@ -366,7 +365,7 @@ impl Game {
     }
 
     fn ttable_clear(&mut self) {
-        let key = self.hash;
+        let key = self.board.hash;
         if self.ttable.contains_key(&key) {
             self.ttable = HashMap::from([(key, self.ttable[&key])]);
         } else {
@@ -382,7 +381,7 @@ impl Game {
     fn rep_inc(&mut self) {
         //*self.rep.entry(self.hash).or_default() += 1;
         self.rep
-            .entry(self.hash)
+            .entry(self.board.hash)
             .and_modify(|x| *x += 1)
             .or_insert(1);
     }
@@ -390,11 +389,11 @@ impl Game {
     fn rep_dec(&mut self) {
         if let Entry::Occupied(entry) = self
             .rep
-            .entry(self.hash)
+            .entry(self.board.hash)
             .and_modify(|x| *x = x.saturating_sub(1))
         {
             if *entry.get() == 0 {
-                self.rep.remove(&self.hash);
+                self.rep.remove(&self.board.hash);
             }
         }
 
@@ -416,7 +415,7 @@ impl Game {
     }
 
     pub fn rep_count(&self) -> usize {
-        if let Some(count) = self.rep.get(&self.hash) {
+        if let Some(count) = self.rep.get(&self.board.hash) {
             *count
         } else {
             0
@@ -498,7 +497,7 @@ impl Game {
         self.board.log_bms.push((
             self.board.bitmaps,
             self.board[m.to()],
-            self.hash,
+            self.board.hash,
             self.board.can_castle,
         ));
         let hash;
@@ -614,7 +613,7 @@ impl Game {
         self.board[m.frm()] = Nil;
         self.board.material += m.val;
         self.rep_inc();
-        self.hash ^= hash ^ WHITE_HASH;
+        self.board.hash ^= hash ^ WHITE_HASH;
         // self.bitmaps = self.board.to_bitmaps();
         self.board.colour.flip();
     }
@@ -625,7 +624,7 @@ impl Game {
         (
             self.board.bitmaps,
             capture,
-            self.hash,
+            self.board.hash,
             self.board.can_castle,
         ) = bms;
         self.board.colour.flip();
@@ -664,7 +663,7 @@ impl Game {
 
     fn ttstore(&mut self, depth: u16, score: i16, alpha: i16, beta: i16, m: &Move) {
         // TODO - implement more efficient hashing function
-        let key = self.hash;
+        let key = self.board.hash;
         let bound = if score <= alpha {
             UPPER_BIT
         } else if score >= beta {
@@ -721,7 +720,7 @@ impl Game {
         if let Some(bs) = bscore {
             bs
         } else {
-            self.eval()
+            self.board.eval()
         }
     } // fn quiescence fab
 
@@ -736,7 +735,7 @@ impl Game {
         let mut bmove = None;
         let colour = self.board.colour;
 
-        let kmove = if let Some(e) = self.ttable.get(&self.hash) {
+        let kmove = if let Some(e) = self.ttable.get(&self.board.hash) {
             if e.depth >= depth {
                 match e.data & (EXACT_BIT | UPPER_BIT | LOWER_BIT) {
                     EXACT_BIT => return e.score,

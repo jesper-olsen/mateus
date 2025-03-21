@@ -87,7 +87,7 @@ fn main() {
         let Some(m) = moves.iter().find(|m| (m.frm(), m.to()) == (frm, to)) else {
             panic!("Not a legal move");
         };
-        h.entry(game.hash)
+        h.entry(game.board.hash)
             .and_modify(|x| {
                 if !x.iter().any(|(frm, to)| (*frm, *to) == (m.frm(), m.to())) {
                     x.push((m.frm(), m.to()))
