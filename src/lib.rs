@@ -29,11 +29,16 @@ pub struct TTable {
 pub struct Game {
     pub board: Board,
     pub n_searched: usize,
-    full_move_count: usize,
     pub ttable: HashMap<u64, TTable>,
     end_game: bool,
 
     rep: HashMap<u64, usize>,
+}
+
+impl Default for Game {
+    fn default() -> Game {
+        Game::new(Board::default())
+    }
 }
 
 impl fmt::Debug for Game {
@@ -70,7 +75,6 @@ impl Game {
         Game {
             board,
             n_searched: 0,
-            full_move_count: 0,
             ttable: HashMap::new(),
             end_game: false,
 
@@ -183,7 +187,7 @@ impl Game {
             format!(
                 " {} {}",
                 self.check_50_move_rule() - 1,
-                self.full_move_count + self.board.move_log.len() / 2 + 1
+                self.board.full_move_count + self.board.move_log.len() / 2 + 1
             )
             .as_str(),
         );
@@ -191,7 +195,7 @@ impl Game {
     }
 
     pub fn from_fen(s: &str) -> Self {
-        let mut board = Board::new();
+        let mut squares = [Nil; 64];
         let mut offset = 0i16;
         let parts = s.split(' ').collect::<Vec<&str>>();
         for (i, c) in parts[0].chars().enumerate() {
@@ -204,24 +208,24 @@ impl Game {
                 let x = 7 - k % 8;
                 let y = 7 - k / 8;
                 let q = x * 8 + y;
-                board[q] = Piece::from_ascii(c);
+                squares[q] = Piece::from_ascii(c);
             }
         }
-        board.bitmaps = board.to_bitmaps();
-        board.material = material(&board.squares);
-        board.hash = calc_hash(&board.squares, board.colour);
 
-        if parts.len() > 1 {
-            board.colour = if parts[1].to_lowercase().starts_with('w') {
+        let colour = if parts.len() > 1 {
+            if parts[1].to_lowercase().starts_with('w') {
                 Colour::White
             } else {
                 Colour::Black
-            };
-        }
-        let mut game = Game::new(board);
+            }
+        } else {
+            Colour::White
+        };
+
+        let mut board = Board::new(squares, colour);
 
         if parts.len() > 2 {
-            game.board.can_castle = 0;
+            board.can_castle = 0;
             for (c, q) in ['K', 'Q', 'k', 'q'].into_iter().zip([
                 CASTLE_W_SHORT,
                 CASTLE_W_LONG,
@@ -229,7 +233,7 @@ impl Game {
                 CASTLE_B_LONG,
             ]) {
                 if parts[2].contains(c) {
-                    game.board.can_castle |= q
+                    board.can_castle |= q
                 }
             }
         }
@@ -237,27 +241,27 @@ impl Game {
             // en passant attack
             if let Some(sq) = misc::parse_chess_coord(parts[3]) {
                 let sq = sq as isize;
-                let o = if game.board.colour.is_white() { -1 } else { 1 };
+                let o = if board.colour.is_white() { -1 } else { 1 };
                 let to: usize = (sq + o).try_into().expect("must be positive");
                 let frm: usize = (sq - o).try_into().expect("must be positive");
                 let m = mgen::Move::new(false, true, frm, to);
-                game.board.move_log.push(m);
+                board.move_log.push(m);
             }
         }
         if parts.len() > 4 {
             // moves since last irreversible move
             if let Ok(value) = parts[4].parse::<usize>() {
-                game.board.half_move_clock = value;
+                board.half_move_clock = value;
             }
         }
 
         if parts.len() > 5 {
             // full-move count
             if let Ok(value) = parts[5].parse::<usize>() {
-                game.full_move_count = value;
+                board.full_move_count = value;
             }
         }
-        game
+        Game::new(board)
     }
 
     //https://cheatography.com/davechild/cheat-sheets/chess-algebraic-notation/

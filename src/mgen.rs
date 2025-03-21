@@ -133,6 +133,7 @@ pub struct Board {
     pub material: i16,
     pub hash: u64,
     pub half_move_clock: usize, // since last irreversible move
+    pub full_move_count: usize,
 }
 
 impl Default for Board {
@@ -164,6 +165,7 @@ impl Default for Board {
             material,
             hash,
             half_move_clock: 0,
+            full_move_count: 0,
         }
     }
 }
@@ -245,12 +247,12 @@ impl fmt::Display for Board {
 }
 
 impl Board {
-    pub fn new() -> Self {
-        let squares = [Nil;64];
+    pub fn new(squares: [Piece;64], colour: Colour) -> Self {
         let bitmaps = to_bitmaps(&squares);
         let end_game_material = abs_material(&Board::default().squares); // TODO
-        let colour = White;
         let hash = calc_hash(&squares, colour);
+        let material = material(&squares);
+        
         Board {
             squares,
             bitmaps,
@@ -259,9 +261,10 @@ impl Board {
             end_game_material,
             log_bms: vec![],
             move_log: Vec::new(),
-            material: 0,
+            material,
             hash,
             half_move_clock: 0,
+            full_move_count: 0,
         }
     }
 

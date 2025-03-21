@@ -5,21 +5,21 @@
 // https://www.ficsgames.org/download.html
 
 use clap::Parser;
-use puccinia_s_checkmate::val::*;
+use csv::Writer;
+use flate2::read::GzDecoder;
 use puccinia_s_checkmate::Game;
+use puccinia_s_checkmate::val::*;
 use regex::Regex;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{self};
+use std::io::{BufRead, BufReader, Result};
 use std::path::{Path, PathBuf};
-use std::io::{Result, BufReader, BufRead};
-use flate2::read::GzDecoder;
-use csv::Writer;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
-    #[arg(short, long="elo", default_value_t = 2000)]
+    #[arg(short, long = "elo", default_value_t = 2000)]
     ///minimum elo for both players
     e: usize,
     /// Input files
@@ -79,8 +79,6 @@ impl FicsG {
         }
     }
 }
-
-
 
 const BLACK_CHECKMATED: &str = "Black checkmated";
 const BLACK_FORFEITS_BY_DISCONNECTION: &str = "Black forfeits by disconnection";
@@ -164,7 +162,7 @@ fn parse_moves(fg: &mut FicsG, line: String) -> (Vec<(usize, usize)>, Vec<Vec<u8
     let result = "000"; // dummy
     let mut lmoves = Vec::new();
     let mut lfens = Vec::new();
-    let mut game = Game::from_fen(ROOT_FEN);
+    let mut game = Game::default();
 
     let re_move_number = Regex::new(r"^\d+\.$").unwrap();
     let re_comment = Regex::new(r"\{([^}]*)\}").unwrap();
@@ -229,7 +227,7 @@ fn read_games(fname: &str, min_elo: usize) -> io::Result<Vec<FicsG>> {
     let input = File::open(fname).expect("Open file");
     let buffered = BufReader::new(input);
     let decoder = GzDecoder::new(buffered);
-    let buffered=BufReader::new(decoder);
+    let buffered = BufReader::new(decoder);
 
     let mut games = Vec::new();
     let mut current_game = FicsG::new();
@@ -289,12 +287,15 @@ fn read_games(fname: &str, min_elo: usize) -> io::Result<Vec<FicsG>> {
                 current_game.fens.extend(fens);
             }
         } else if line.is_empty() && in_moves_section {
-            if matches!(current_game.result,"1-0" | "0-1") &&  current_game.white_elo >= min_elo && current_game.black_elo >= min_elo {
+            if matches!(current_game.result, "1-0" | "0-1")
+                && current_game.white_elo >= min_elo
+                && current_game.black_elo >= min_elo
+            {
                 // add final outcome to positions
                 let z = match current_game.result {
                     "0-1" => 0,
-                    "1-0"=> 1,
-                    "1/2-1/2"=> 2,
+                    "1-0" => 1,
+                    "1/2-1/2" => 2,
                     _ => panic!("Unexpected game Result"),
                 };
                 for v in &mut current_game.fens {
@@ -347,7 +348,7 @@ fn summarise_games(games: &[FicsG]) {
     do_output("\nPlayers:", &pcounts);
 }
 
-fn write_games(fname: &str, l: &[FicsG]) ->Result<()> {
+fn write_games(fname: &str, l: &[FicsG]) -> Result<()> {
     println!("output to {}", fname);
     let f = File::create(fname)?;
     let mut wtr = Writer::from_writer(f);
@@ -372,7 +373,7 @@ fn main() {
                 let path = Path::new(&fname);
                 let mut new_path = PathBuf::from(path);
                 new_path.set_extension("csv");
-                let fname2= new_path.to_str().unwrap();
+                let fname2 = new_path.to_str().unwrap();
                 match write_games(fname2, &l) {
                     Ok(()) => (),
                     Err(m) => println!("Failed to write games: {m}"),
@@ -384,4 +385,3 @@ fn main() {
 
     summarise_games(&games);
 }
-
