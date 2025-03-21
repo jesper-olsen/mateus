@@ -123,13 +123,14 @@ impl fmt::Display for Move {
 }
 
 pub struct Board {
-    squares: [Piece; 64],
+    pub squares: [Piece; 64],
     pub colour: Colour,
     pub bitmaps: Bitmaps,
     pub can_castle: u8, // white short, long, black short, long
     pub end_game_material: i16,
     pub log_bms: Vec<(Bitmaps, Piece, u64, u8)>,
     pub move_log: Vec<Move>,
+    pub material: i16,
 }
 
 impl Default for Board {
@@ -147,6 +148,7 @@ impl Default for Board {
             ];
         let bitmaps = to_bitmaps(&squares);
         let end_game_material = abs_material(&squares) / 3;
+        let material = material(&squares);
         Board {
             squares,
             bitmaps,
@@ -155,6 +157,7 @@ impl Default for Board {
             end_game_material,
             log_bms: vec![],
             move_log: Vec::new(),
+            material,
         }
     }
 }
@@ -248,21 +251,18 @@ impl Board {
             end_game_material,
             log_bms: vec![],
             move_log: Vec::new(),
+            material: 0,
         }
+    }
+
+    pub fn eval(&self) -> i16 {
+        let s = self.material + self.score_pawn_structure() + self.mobility();
+        if self.colour.is_white() { s } else { -s }
+        //s * (2 * (colour as i16) - 1)
     }
 
     pub const fn is_end_game(&self) -> bool {
          abs_material(&self.squares) < self.end_game_material
-    }
-
-    pub const fn material(&self) -> i16 {
-        let mut i = 0;
-        let mut val: i16 = 0;
-        while i < self.squares.len() {
-            val += self.squares[i].val(i);
-            i += 1;
-        }
-        val
     }
 
     pub const fn hash(&self, colour: Colour) -> u64 {
@@ -645,13 +645,23 @@ const fn to_bitmaps(squares: &[Piece;64]) -> Bitmaps {
     bm
 }
 
-    pub const fn abs_material(squares: &[Piece;64]) -> i16 {
-        let mut i = 0;
-        let mut val: i16 = 0;
-        while i < squares.len() {
-            val += squares[i].val(i).abs();
-            i += 1;
-        }
-        val
+pub const fn material(squares: &[Piece;64]) -> i16 {
+    let mut i = 0;
+    let mut val: i16 = 0;
+    while i < squares.len() {
+        val += squares[i].val(i);
+        i += 1;
     }
+    val
+}
+
+pub const fn abs_material(squares: &[Piece;64]) -> i16 {
+    let mut i = 0;
+    let mut val: i16 = 0;
+    while i < squares.len() {
+        val += squares[i].val(i).abs();
+        i += 1;
+    }
+    val
+}
 

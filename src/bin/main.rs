@@ -271,7 +271,7 @@ fn play(
             println!(
                 "score: {}, material: {}, is_end_game: {}, pawns: {}, mobility: {}",
                 score,
-                game.board.material(),
+                game.board.material,
                 game.board.is_end_game(),
                 game.board.score_pawn_structure(),
                 game.board.mobility()

@@ -36,7 +36,6 @@ pub struct Game {
     pub hash: u64,
 
     rep: HashMap<u64, usize>,
-    material: i16,
 }
 
 impl fmt::Debug for Game {
@@ -70,7 +69,6 @@ impl Game {
     pub fn new(board: Board) -> Self {
         //println!("size of TTable {}", std::mem::size_of::<TTable>());
         let key = board.hash(White);
-        let material = board.material();
         Game {
             board,
             n_searched: 0,
@@ -79,7 +77,6 @@ impl Game {
             ttable: HashMap::new(),
             end_game: false,
 
-            material,
             rep: HashMap::from([(key, 1)]),
             hash: key,
         }
@@ -215,6 +212,7 @@ impl Game {
             }
         }
         board.bitmaps = board.to_bitmaps();
+        board.material = material(&board.squares);
 
         let mut game = Game::new(board);
         if parts.len() > 1 {
@@ -614,7 +612,7 @@ impl Game {
             self.board[m.frm()]
         };
         self.board[m.frm()] = Nil;
-        self.material += m.val;
+        self.board.material += m.val;
         self.rep_inc();
         self.hash ^= hash ^ WHITE_HASH;
         // self.bitmaps = self.board.to_bitmaps();
@@ -661,7 +659,7 @@ impl Game {
             }
         }
 
-        self.material -= m.val;
+        self.board.material -= m.val;
     }
 
     fn ttstore(&mut self, depth: u16, score: i16, alpha: i16, beta: i16, m: &Move) {
@@ -684,12 +682,6 @@ impl Game {
                 }
             })
             .or_insert(e);
-    }
-
-    pub fn eval(&self, colour: Colour) -> i16 {
-        let s = self.material + self.board.score_pawn_structure() + self.board.mobility();
-        if colour.is_white() { s } else { -s }
-        //s * (2 * (colour as i16) - 1)
     }
 
     fn quiescence_fab(&mut self, alp: i16, beta: i16, last: &Move, rfab: bool) -> i16 {
@@ -729,7 +721,7 @@ impl Game {
         if let Some(bs) = bscore {
             bs
         } else {
-            self.eval(colour)
+            self.eval()
         }
     } // fn quiescence fab
 
