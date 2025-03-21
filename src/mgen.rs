@@ -127,6 +127,7 @@ pub struct Board {
     pub colour: Colour,
     pub bitmaps: Bitmaps,
     pub can_castle: u8, // white short, long, black short, long
+    pub end_game_material: i16,
 }
 
 impl Default for Board {
@@ -143,11 +144,13 @@ impl Default for Board {
                 Rook(White),   Pawn(White), Nil, Nil, Nil, Nil, Pawn(Black), Rook(Black),
             ];
         let bitmaps = to_bitmaps(&squares);
+        let end_game_material = abs_material(&squares) / 3;
         Board {
             squares,
             bitmaps,
             colour: White,
-            can_castle: CASTLE_W_SHORT | CASTLE_W_LONG | CASTLE_B_SHORT | CASTLE_B_LONG
+            can_castle: CASTLE_W_SHORT | CASTLE_W_LONG | CASTLE_B_SHORT | CASTLE_B_LONG,
+            end_game_material,
         }
     }
 }
@@ -232,17 +235,12 @@ impl Board {
     pub fn new() -> Self {
         let squares = [Nil;64];
         let bitmaps = to_bitmaps(&squares);
-        Board { squares, bitmaps, colour: White, can_castle: 0 }
+        let end_game_material = abs_material(&Board::default().squares); // TODO
+        Board { squares, bitmaps, colour: White, can_castle: 0, end_game_material }
     }
 
-    pub const fn abs_material(&self) -> i16 {
-        let mut i = 0;
-        let mut val: i16 = 0;
-        while i < self.squares.len() {
-            val += self.squares[i].val(i).abs();
-            i += 1;
-        }
-        val
+    pub const fn is_end_game(&self) -> bool {
+         abs_material(&self.squares) < self.end_game_material
     }
 
     pub const fn material(&self) -> i16 {
@@ -634,4 +632,14 @@ const fn to_bitmaps(squares: &[Piece;64]) -> Bitmaps {
     }
     bm
 }
+
+    pub const fn abs_material(squares: &[Piece;64]) -> i16 {
+        let mut i = 0;
+        let mut val: i16 = 0;
+        while i < squares.len() {
+            val += squares[i].val(i).abs();
+            i += 1;
+        }
+        val
+    }
 

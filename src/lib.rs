@@ -38,7 +38,6 @@ pub struct Game {
 
     pub move_log: Vec<Move>,
     material: i16,
-    end_game_material: i16,
     log_bms: Vec<(Bitmaps, Piece, u64, u8)>,
 }
 
@@ -74,18 +73,17 @@ impl Game {
         //println!("size of TTable {}", std::mem::size_of::<TTable>());
         let key = board.hash(White);
         let material = board.material();
-        let end_game_material = Board::default().abs_material() / 3;
         Game {
             board,
             n_searched: 0,
-            material,
-            end_game_material,
             half_move_clock: 0,
             full_move_count: 0,
-            rep: HashMap::from([(key, 1)]),
             ttable: HashMap::new(),
             move_log: Vec::new(),
             end_game: false,
+
+            material,
+            rep: HashMap::from([(key, 1)]),
             hash: key,
             log_bms: vec![],
         }
@@ -440,7 +438,7 @@ impl Game {
         self.update(&m);
 
         //adjust king value in end game
-        self.end_game = self.board.abs_material() < self.end_game_material;
+        self.end_game = self.board.is_end_game();
         self.move_log.push(m);
 
         //update castling permissions
