@@ -127,16 +127,16 @@ impl fmt::Display for Move {
 pub struct Board {
     pub squares: [Piece; 64],
     pub colour: Colour,
-    pub bitmaps: Bitmaps,
     pub can_castle: u8, // white short, long, black short, long
-    pub end_game_material: i16,
-    pub log_bms: Vec<(Bitmaps, Piece, u64, u8)>,
     pub move_log: Vec<Move>,
     pub material: i16,
     pub hash: u64,
     pub half_move_clock: usize, // since last irreversible move
     pub full_move_count: usize,
     pub rep: HashMap<u64, usize>,
+    bitmaps: Bitmaps,
+    end_game_material: i16,
+    log_bms: Vec<(Bitmaps, Piece, u64, u8)>,
 }
 
 impl Default for Board {
@@ -350,8 +350,74 @@ impl Board {
             full_move_count,
             rep
         }
+    }
 
-        
+    pub fn to_fen(&self) -> String {
+        let mut s = String::new();
+        for y in (0..=7).rev() {
+            let mut n = 0;
+            for x in (0..=7).rev() {
+                let idx = x * 8 + y;
+                if self.squares[idx] == Nil {
+                    n += 1;
+                } else {
+                    if n > 0 {
+                        s.push_str(format!("{}", n).as_str());
+                        n = 0;
+                    }
+                    s.push(self.squares[idx].to_ascii())
+                }
+            }
+            if n > 0 {
+                s.push_str(format!("{}", n).as_str())
+            }
+
+            if y != 0 {
+                s.push('/')
+            }
+        }
+        s.push_str(if self.colour.is_white() { " w" } else { " b" });
+        s.push(' ');
+
+        let castling_rights: String = ['K', 'Q', 'k', 'q']
+            .into_iter()
+            .zip([CASTLE_W_SHORT, CASTLE_W_LONG, CASTLE_B_SHORT, CASTLE_B_LONG])
+            .filter(|(_, c)| self.can_castle & c != 0)
+            .map(|(x, _)| x)
+            .collect();
+        s.push_str(if castling_rights.is_empty() {
+            "-"
+        } else {
+            &castling_rights
+        });
+
+        // en passant sq
+        s.push(' ');
+        if let Some(last) = self.move_log.last() {
+            if matches!(self.squares[last.to()], Pawn(_)) && last.to().abs_diff(last.frm()) == 2 {
+                let idx = last.to() as isize + if self.colour.is_white() { 1 } else { -1 };
+                s.push_str(I2SQ[idx as usize])
+            } else {
+                s.push('-');
+            }
+        } else {
+            s.push('-');
+        }
+
+        // reversible moves,move nr
+        s.push_str(
+            format!(
+                " {} {}",
+                self.check_50_move_rule() - 1,
+                self.full_move_count + self.move_log.len() / 2 + 1
+            )
+            .as_str(),
+        );
+        s
+    }
+
+    pub fn check_50_move_rule(&self) -> usize {
+        self.half_move_clock + self.rep.iter().map(|(_, &v)| v).sum::<usize>()
     }
 
     fn rep_inc(&mut self) {

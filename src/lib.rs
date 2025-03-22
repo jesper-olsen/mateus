@@ -6,8 +6,7 @@ pub mod misc;
 pub mod openings;
 pub mod val;
 use crate::{Colour::*, Piece::*};
-use core::cmp::max;
-use core::cmp::min;
+use core::cmp::{max, min};
 use mgen::*;
 use std::collections::hash_map::HashMap;
 use std::fmt;
@@ -46,7 +45,7 @@ impl fmt::Debug for Game {
 
 impl fmt::Display for Game {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        writeln!(f, "{}", self.to_fen())?;
+        writeln!(f, "{}", self.board.to_fen())?;
         write!(f, "{}", self.board)
     }
 }
@@ -122,70 +121,6 @@ impl Game {
         };
 
         v
-    }
-
-    pub fn to_fen(&self) -> String {
-        let mut s = String::new();
-        for y in (0..=7).rev() {
-            let mut n = 0;
-            for x in (0..=7).rev() {
-                let idx = x * 8 + y;
-                if self.board[idx] == Nil {
-                    n += 1;
-                } else {
-                    if n > 0 {
-                        s.push_str(format!("{}", n).as_str());
-                        n = 0;
-                    }
-                    s.push(self.board[idx].to_ascii())
-                }
-            }
-            if n > 0 {
-                s.push_str(format!("{}", n).as_str())
-            }
-
-            if y != 0 {
-                s.push('/')
-            }
-        }
-        s.push_str(if self.turn().is_white() { " w" } else { " b" });
-        s.push(' ');
-
-        let castling_rights: String = ['K', 'Q', 'k', 'q']
-            .into_iter()
-            .zip([CASTLE_W_SHORT, CASTLE_W_LONG, CASTLE_B_SHORT, CASTLE_B_LONG])
-            .filter(|(_, c)| self.board.can_castle & c != 0)
-            .map(|(x, _)| x)
-            .collect();
-        s.push_str(if castling_rights.is_empty() {
-            "-"
-        } else {
-            &castling_rights
-        });
-
-        // en passant sq
-        s.push(' ');
-        if let Some(last) = self.board.move_log.last() {
-            if matches!(self.board[last.to()], Pawn(_)) && last.to().abs_diff(last.frm()) == 2 {
-                let idx = last.to() as isize + if self.board.colour.is_white() { 1 } else { -1 };
-                s.push_str(I2SQ[idx as usize])
-            } else {
-                s.push('-');
-            }
-        } else {
-            s.push('-');
-        }
-
-        // reversible moves,move nr
-        s.push_str(
-            format!(
-                " {} {}",
-                self.check_50_move_rule() - 1,
-                self.board.full_move_count + self.board.move_log.len() / 2 + 1
-            )
-            .as_str(),
-        );
-        s
     }
 
     //https://cheatography.com/davechild/cheat-sheets/chess-algebraic-notation/
@@ -334,10 +269,6 @@ impl Game {
             (Rook(Black), 63) => self.board.can_castle &= !CASTLE_B_LONG,
             _ => (),
         }
-    }
-
-    pub fn check_50_move_rule(&self) -> usize {
-        self.board.half_move_clock + self.board.rep.iter().map(|(_, &v)| v).sum::<usize>()
     }
 
     pub fn in_check(&self, colour: Colour) -> bool {

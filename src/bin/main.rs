@@ -100,7 +100,7 @@ fn pick_move(game: &mut Game, moves: &[Move]) -> Vec<(Move, i16)> {
 fn check_game_over(game: &Game, moves: &[Move], half_moves: isize) -> String {
     if game.rep_count() >= 3 {
         "1/2-1/2 Draw by repetition".to_string()
-    } else if game.check_50_move_rule() >= 100 {
+    } else if game.board.check_50_move_rule() >= 100 {
         "1/2-1/2 Draw by the 50-move rule".to_string()
     } else if half_moves != -1 && half_moves <= game.board.move_log.len() as isize {
         format!("stopping after {} half move(s)", game.board.move_log.len())
