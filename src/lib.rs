@@ -31,8 +31,6 @@ pub struct Game {
     pub n_searched: usize,
     pub ttable: HashMap<u64, TTable>,
     end_game: bool,
-
-    rep: HashMap<u64, usize>,
 }
 
 impl Default for Game {
@@ -71,14 +69,11 @@ fn move_to_head(moves: &mut Vec<Move>, frmto: &(u8, u8)) {
 impl Game {
     pub fn new(board: Board) -> Self {
         //println!("size of TTable {}", std::mem::size_of::<TTable>());
-        let rep = HashMap::from([(board.hash, 1)]);
         Game {
             board,
             n_searched: 0,
             ttable: HashMap::new(),
             end_game: false,
-
-            rep,
         }
     }
 
@@ -279,7 +274,7 @@ impl Game {
     }
 
     pub fn rep_len(&self) -> usize {
-        self.rep.len()
+        self.board.rep.len()
     }
 
     pub fn ttable_len(&self) -> usize {
@@ -307,12 +302,13 @@ impl Game {
     }
 
     fn rep_clear(&mut self) {
-        self.rep.clear();
+        self.board.rep.clear();
     }
 
     fn rep_inc(&mut self) {
         //*self.rep.entry(self.hash).or_default() += 1;
-        self.rep
+        self.board
+            .rep
             .entry(self.board.hash)
             .and_modify(|x| *x += 1)
             .or_insert(1);
@@ -320,12 +316,13 @@ impl Game {
 
     fn rep_dec(&mut self) {
         if let Entry::Occupied(entry) = self
+            .board
             .rep
             .entry(self.board.hash)
             .and_modify(|x| *x = x.saturating_sub(1))
         {
             if *entry.get() == 0 {
-                self.rep.remove(&self.board.hash);
+                self.board.rep.remove(&self.board.hash);
             }
         }
 
@@ -347,7 +344,7 @@ impl Game {
     }
 
     pub fn rep_count(&self) -> usize {
-        if let Some(count) = self.rep.get(&self.board.hash) {
+        if let Some(count) = self.board.rep.get(&self.board.hash) {
             *count
         } else {
             0
@@ -379,7 +376,7 @@ impl Game {
     }
 
     pub fn check_50_move_rule(&self) -> usize {
-        self.board.half_move_clock + self.rep.iter().map(|(_, &v)| v).sum::<usize>()
+        self.board.half_move_clock + self.board.rep.iter().map(|(_, &v)| v).sum::<usize>()
     }
 
     pub fn in_check(&self, colour: Colour) -> bool {
@@ -391,10 +388,7 @@ impl Game {
     fn legal_move(&mut self, m: &Move) -> bool {
         // verify move does not expose own king
         self.update(m);
-        let flag = match self.board[m.to()] {
-            Rook(c) | Knight(c) | Bishop(c) | Queen(c) | King(c) | Pawn(c) => self.in_check(c),
-            _ => false,
-        };
+        let flag = self.board.in_check(self.board.colour.opposite());
         self.backdate(m);
         !flag
     }

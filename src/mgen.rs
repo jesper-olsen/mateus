@@ -7,6 +7,7 @@ use crate::misc;
 use std::fmt;
 use std::ops::{Index, IndexMut};
 use std::slice::Iter;
+use std::collections::hash_map::{Entry, HashMap};
 
 #[derive(Debug, Copy, Clone)]
 pub struct Bitmaps {
@@ -135,6 +136,7 @@ pub struct Board {
     pub hash: u64,
     pub half_move_clock: usize, // since last irreversible move
     pub full_move_count: usize,
+    pub rep: HashMap<u64, usize>,
 }
 
 impl Default for Board {
@@ -155,6 +157,7 @@ impl Default for Board {
         let material = material(&squares);
         let colour = White;
         let hash = calc_hash(&squares, colour);
+        let rep = HashMap::from([(hash, 1)]);
         Board {
             squares,
             bitmaps,
@@ -167,6 +170,7 @@ impl Default for Board {
             hash,
             half_move_clock: 0,
             full_move_count: 0,
+            rep,
         }
     }
 }
@@ -330,6 +334,7 @@ impl Board {
         let end_game_material = abs_material(&Board::default().squares); // TODO
         let hash = calc_hash(&squares, colour);
         let material = material(&squares);
+        let rep = HashMap::from([(hash, 1)]);
         
         Board {
             squares,
@@ -343,6 +348,7 @@ impl Board {
             hash,
             half_move_clock,
             full_move_count,
+            rep
         }
 
         
