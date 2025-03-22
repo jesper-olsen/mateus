@@ -1,7 +1,6 @@
+pub mod benchmark;
 pub mod bitmaps;
 pub mod hashkeys_generated;
-use crate::hashkeys_generated::WHITE_HASH;
-pub mod benchmark;
 pub mod mgen;
 pub mod misc;
 pub mod openings;
@@ -10,7 +9,7 @@ use crate::{Colour::*, Piece::*};
 use core::cmp::max;
 use core::cmp::min;
 use mgen::*;
-use std::collections::hash_map::{Entry, HashMap};
+use std::collections::hash_map::HashMap;
 use std::fmt;
 use val::*;
 
@@ -262,14 +261,14 @@ impl Game {
             }
         }
 
-        self.update(m);
+        self.board.update(m);
         let in_check = self.in_check(self.turn());
         if self.legal_moves(Some(m)).is_empty() && in_check {
             label.push('#')
         } else if self.in_check(self.turn()) {
             label.push('+')
         }
-        self.backdate(m);
+        self.board.backdate(m);
         label
     }
 
@@ -305,44 +304,6 @@ impl Game {
         self.board.rep.clear();
     }
 
-    fn rep_inc(&mut self) {
-        //*self.rep.entry(self.hash).or_default() += 1;
-        self.board
-            .rep
-            .entry(self.board.hash)
-            .and_modify(|x| *x += 1)
-            .or_insert(1);
-    }
-
-    fn rep_dec(&mut self) {
-        if let Entry::Occupied(entry) = self
-            .board
-            .rep
-            .entry(self.board.hash)
-            .and_modify(|x| *x = x.saturating_sub(1))
-        {
-            if *entry.get() == 0 {
-                self.board.rep.remove(&self.board.hash);
-            }
-        }
-
-        // self.rep
-        //     .entry(self.hash)
-        //     .and_modify(|x| *x = x.saturating_sub(1));
-        // if let Some(0) = self.rep.get(&self.hash) {
-        //     self.rep.remove(&self.hash);
-        // }
-
-        // self.rep
-        //     .entry(self.hash)
-        //     .and_modify(|x| *x = if *x == 0 { 0 } else { *x - 1 });
-        // if let Some(count) = self.rep.get(&self.hash) {
-        //     if *count == 0 {
-        //         self.rep.remove(&self.hash);
-        //     }
-        // }
-    }
-
     pub fn rep_count(&self) -> usize {
         if let Some(count) = self.board.rep.get(&self.board.hash) {
             *count
@@ -357,7 +318,7 @@ impl Game {
             self.board.half_move_clock = 0;
         }
         self.ttable_clear();
-        self.update(&m);
+        self.board.update(&m);
 
         //adjust king value in end game
         self.end_game = self.board.is_end_game();
@@ -387,9 +348,9 @@ impl Game {
 
     fn legal_move(&mut self, m: &Move) -> bool {
         // verify move does not expose own king
-        self.update(m);
+        self.board.update(m);
         let flag = self.board.in_check(self.board.colour.opposite());
-        self.backdate(m);
+        self.board.backdate(m);
         !flag
     }
 
@@ -417,174 +378,6 @@ impl Game {
 
     pub fn turn(&self) -> Colour {
         self.board.colour
-    }
-
-    pub fn update(&mut self, m: &Move) {
-        self.board.log_bms.push((
-            self.board.bitmaps,
-            self.board[m.to()],
-            self.board.hash,
-            self.board.can_castle,
-        ));
-        let hash;
-        self.board[m.to()] = if m.castle() {
-            let (x, y) = if m.to() <= 15 {
-                (m.frm() - 24, m.frm() - 8) // short
-            } else {
-                (m.frm() + 32, m.frm() + 8) // long
-            };
-
-            self.board.bitmaps.kings |= 1 << m.to();
-            self.board.bitmaps.kings ^= 1 << m.frm();
-            self.board.bitmaps.pieces[self.board.colour as usize] |= 1 << m.to();
-            self.board.bitmaps.pieces[self.board.colour as usize] ^= 1 << m.frm();
-            self.board.bitmaps.pieces[self.board.colour as usize] |= 1 << y;
-            self.board.bitmaps.pieces[self.board.colour as usize] ^= 1 << x;
-
-            match self.board[m.frm()] {
-                King(White) => self.board.can_castle &= !CASTLE_W_SHORT & !CASTLE_W_LONG,
-                King(Black) => self.board.can_castle &= !CASTLE_B_SHORT & !CASTLE_B_LONG,
-                _ => panic!("not castle..."),
-            }
-
-            hash = self.board[m.frm()].hashkey(m.to())
-                ^ self.board[m.frm()].hashkey(m.frm())
-                ^ self.board[x].hashkey(y)
-                ^ self.board[x].hashkey(x);
-            self.board[y] = self.board[x]; // move rook
-            self.board[x] = Nil;
-            self.board[m.frm()]
-        } else if m.transform() {
-            self.board.bitmaps.pieces[self.board.colour as usize] |= 1 << m.to();
-            self.board.bitmaps.pieces[self.board.colour as usize] ^= 1 << m.frm();
-            self.board.bitmaps.pawns ^= 1 << m.frm();
-            if let Rook(c) | Knight(c) | Bishop(c) | Queen(c) = self.board[m.to()] {
-                self.board.bitmaps.pieces[c as usize] ^= 1 << m.to();
-            }
-
-            let p = m.ptransform(self.board.colour);
-            hash = p.hashkey(m.to())
-                ^ self.board[m.frm()].hashkey(m.frm())
-                ^ self.board[m.to()].hashkey(m.to());
-            p
-        } else if m.en_passant() {
-            // +9  +1 -7
-            // +8   0 -8
-            // +7  -1 -9
-            let x = match m.to() > m.frm() {
-                true => m.frm() + 8,  // west
-                false => m.frm() - 8, // east
-            };
-
-            self.board.bitmaps.pieces[self.board.colour as usize] |= 1 << m.to();
-            self.board.bitmaps.pieces[self.board.colour as usize] ^= 1 << m.frm();
-            self.board.bitmaps.pieces[self.board.colour.opposite() as usize] ^= 1 << x;
-            self.board.bitmaps.pawns |= 1 << m.to();
-            self.board.bitmaps.pawns ^= 1 << m.frm();
-            self.board.bitmaps.pawns ^= 1 << x;
-
-            hash = self.board[m.frm()].hashkey(m.to())
-                ^ self.board[m.frm()].hashkey(m.frm())
-                ^ self.board[x].hashkey(x);
-            self.board[x] = Nil;
-            self.board[m.frm()]
-        } else {
-            self.board.bitmaps.pieces[self.board.colour as usize] |= 1 << m.to();
-            self.board.bitmaps.pieces[self.board.colour as usize] ^= 1 << m.frm();
-            match (self.board[m.frm()], self.board[m.to()]) {
-                (Pawn(_), Pawn(c)) => {
-                    self.board.bitmaps.pawns ^= 1 << m.frm();
-                    self.board.bitmaps.pieces[c as usize] ^= 1 << m.to();
-                }
-                (Pawn(_), Rook(c) | Bishop(c) | Queen(c) | Knight(c)) => {
-                    self.board.bitmaps.pawns |= 1 << m.to();
-                    self.board.bitmaps.pawns ^= 1 << m.frm();
-                    self.board.bitmaps.pieces[c as usize] ^= 1 << m.to();
-                }
-                (Pawn(_), _) => {
-                    self.board.bitmaps.pawns |= 1 << m.to();
-                    self.board.bitmaps.pawns ^= 1 << m.frm();
-                }
-                (King(_), Pawn(c)) => {
-                    self.board.bitmaps.pawns ^= 1 << m.to();
-                    self.board.bitmaps.kings |= 1 << m.to();
-                    self.board.bitmaps.kings ^= 1 << m.frm();
-                    self.board.bitmaps.pieces[c as usize] ^= 1 << m.to();
-                }
-                (King(_), Rook(c) | Bishop(c) | Queen(c) | Knight(c)) => {
-                    self.board.bitmaps.kings |= 1 << m.to();
-                    self.board.bitmaps.kings ^= 1 << m.frm();
-                    self.board.bitmaps.pieces[c as usize] ^= 1 << m.to();
-                }
-                (King(_), _) => {
-                    self.board.bitmaps.kings |= 1 << m.to();
-                    self.board.bitmaps.kings ^= 1 << m.frm();
-                }
-                (_, Nil) => (),
-                (_, Pawn(c)) => {
-                    self.board.bitmaps.pawns ^= 1 << m.to();
-                    self.board.bitmaps.pieces[c as usize] ^= 1 << m.to()
-                }
-                (_, Rook(c) | Knight(c) | Queen(c) | Bishop(c)) => {
-                    self.board.bitmaps.pieces[c as usize] ^= 1 << m.to()
-                }
-                _ => (),
-            }
-
-            hash = self.board[m.frm()].hashkey(m.to())
-                ^ self.board[m.frm()].hashkey(m.frm())
-                ^ self.board[m.to()].hashkey(m.to());
-            self.board[m.frm()]
-        };
-        self.board[m.frm()] = Nil;
-        self.board.material += m.val;
-        self.rep_inc();
-        self.board.hash ^= hash ^ WHITE_HASH;
-        // self.bitmaps = self.board.to_bitmaps();
-        self.board.colour.flip();
-    }
-
-    pub fn backdate(&mut self, m: &Move) {
-        let bms = self.board.log_bms.pop().unwrap();
-        let capture;
-        (
-            self.board.bitmaps,
-            capture,
-            self.board.hash,
-            self.board.can_castle,
-        ) = bms;
-        self.board.colour.flip();
-        //self.hash ^= m.hash ^ WHITE_HASH;
-        self.rep_dec();
-        if m.castle() {
-            let (frm, to) = if m.to() <= 15 {
-                (m.frm() - 24, m.frm() - 8) // short
-            } else {
-                (m.frm() + 32, m.frm() + 8) // long
-            };
-            self.board[frm] = self.board[to]; // move rook
-            self.board[to] = Nil;
-        }
-        self.board[m.frm()] = if m.transform() {
-            Pawn(self.board.colour)
-        } else {
-            self.board[m.to()]
-        };
-        self.board[m.to()] = capture;
-
-        if m.en_passant() {
-            let x = match m.to() > m.frm() {
-                true => m.frm() + 8,  // west
-                false => m.frm() - 8, // east
-            };
-            self.board[x] = match self.board[m.frm()] {
-                Pawn(White) => Pawn(Black),
-                Pawn(Black) => Pawn(White),
-                _ => unreachable!(),
-            }
-        }
-
-        self.board.material -= m.val;
     }
 
     fn ttstore(&mut self, depth: u16, score: i16, alpha: i16, beta: i16, m: &Move) {
@@ -625,7 +418,7 @@ impl Game {
             }
         );
         for m in moves {
-            self.update(&m);
+            self.board.update(&m);
             if !self.in_check(colour) {
                 // legal move
                 let score = -self.quiescence_fab(-beta, -alpha, &m, true);
@@ -633,7 +426,7 @@ impl Game {
                     Some(bs) if score <= bs => (),
                     _ => {
                         if score >= beta {
-                            self.backdate(&m);
+                            self.board.backdate(&m);
                             return score;
                         }
                         bscore = Some(score);
@@ -641,7 +434,7 @@ impl Game {
                     }
                 }
             }
-            self.backdate(&m);
+            self.board.backdate(&m);
         }
         if let Some(bs) = bscore {
             bs
@@ -695,7 +488,7 @@ impl Game {
             move_to_head(&mut moves, &k);
         }
         for m in moves.iter() {
-            self.update(m);
+            self.board.update(m);
             if !self.in_check(colour) {
                 // legal move
                 if bmove.is_none() {
@@ -718,7 +511,7 @@ impl Game {
                     }
                 }
             }
-            self.backdate(m);
+            self.board.backdate(m);
             if bscore >= beta {
                 break;
             }
@@ -760,7 +553,7 @@ impl Game {
             let mut bscore = alpha;
 
             for (i, (m, _v)) in pq0.iter().enumerate() {
-                self.update(m);
+                self.board.update(m);
                 alpha = max(bscore, alpha);
                 let mut score = if i == 0 {
                     // full beam
@@ -775,7 +568,7 @@ impl Game {
                     }
                     bscore = score;
                 }
-                self.backdate(m);
+                self.board.backdate(m);
                 pq.push((*m, score));
             }
             pq.sort_by(|b, a| a.1.cmp(&b.1)); // decreasing

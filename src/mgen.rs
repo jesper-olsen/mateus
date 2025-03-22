@@ -354,6 +354,210 @@ impl Board {
         
     }
 
+    fn rep_inc(&mut self) {
+        //*self.rep.entry(self.hash).or_default() += 1;
+        self.rep
+            .entry(self.hash)
+            .and_modify(|x| *x += 1)
+            .or_insert(1);
+    }
+
+    fn rep_dec(&mut self) {
+        if let Entry::Occupied(entry) = self
+            .rep
+            .entry(self.hash)
+            .and_modify(|x| *x = x.saturating_sub(1))
+        {
+            if *entry.get() == 0 {
+                self.rep.remove(&self.hash);
+            }
+        }
+
+        // self.rep
+        //     .entry(self.hash)
+        //     .and_modify(|x| *x = x.saturating_sub(1));
+        // if let Some(0) = self.rep.get(&self.hash) {
+        //     self.rep.remove(&self.hash);
+        // }
+
+        // self.rep
+        //     .entry(self.hash)
+        //     .and_modify(|x| *x = if *x == 0 { 0 } else { *x - 1 });
+        // if let Some(count) = self.rep.get(&self.hash) {
+        //     if *count == 0 {
+        //         self.rep.remove(&self.hash);
+        //     }
+        // }
+    }
+
+    pub fn update(&mut self, m: &Move) {
+        self.log_bms.push((
+            self.bitmaps,
+            self.squares[m.to()],
+            self.hash,
+            self.can_castle,
+        ));
+        let hash;
+        self.squares[m.to()] = if m.castle() {
+            let (x, y) = if m.to() <= 15 {
+                (m.frm() - 24, m.frm() - 8) // short
+            } else {
+                (m.frm() + 32, m.frm() + 8) // long
+            };
+
+            self.bitmaps.kings |= 1 << m.to();
+            self.bitmaps.kings ^= 1 << m.frm();
+            self.bitmaps.pieces[self.colour as usize] |= 1 << m.to();
+            self.bitmaps.pieces[self.colour as usize] ^= 1 << m.frm();
+            self.bitmaps.pieces[self.colour as usize] |= 1 << y;
+            self.bitmaps.pieces[self.colour as usize] ^= 1 << x;
+
+            match self.squares[m.frm()] {
+                King(White) => self.can_castle &= !CASTLE_W_SHORT & !CASTLE_W_LONG,
+                King(Black) => self.can_castle &= !CASTLE_B_SHORT & !CASTLE_B_LONG,
+                _ => panic!("not castle..."),
+            }
+
+            hash = self.squares[m.frm()].hashkey(m.to())
+                ^ self.squares[m.frm()].hashkey(m.frm())
+                ^ self.squares[x].hashkey(y)
+                ^ self.squares[x].hashkey(x);
+            self.squares[y] = self.squares[x]; // move rook
+            self.squares[x] = Nil;
+            self.squares[m.frm()]
+        } else if m.transform() {
+            self.bitmaps.pieces[self.colour as usize] |= 1 << m.to();
+            self.bitmaps.pieces[self.colour as usize] ^= 1 << m.frm();
+            self.bitmaps.pawns ^= 1 << m.frm();
+            if let Rook(c) | Knight(c) | Bishop(c) | Queen(c) = self.squares[m.to()] {
+                self.bitmaps.pieces[c as usize] ^= 1 << m.to();
+            }
+
+            let p = m.ptransform(self.colour);
+            hash = p.hashkey(m.to())
+                ^ self.squares[m.frm()].hashkey(m.frm())
+                ^ self.squares[m.to()].hashkey(m.to());
+            p
+        } else if m.en_passant() {
+            // +9  +1 -7
+            // +8   0 -8
+            // +7  -1 -9
+            let x = match m.to() > m.frm() {
+                true => m.frm() + 8,  // west
+                false => m.frm() - 8, // east
+            };
+
+            self.bitmaps.pieces[self.colour as usize] |= 1 << m.to();
+            self.bitmaps.pieces[self.colour as usize] ^= 1 << m.frm();
+            self.bitmaps.pieces[self.colour.opposite() as usize] ^= 1 << x;
+            self.bitmaps.pawns |= 1 << m.to();
+            self.bitmaps.pawns ^= 1 << m.frm();
+            self.bitmaps.pawns ^= 1 << x;
+
+            hash = self.squares[m.frm()].hashkey(m.to())
+                ^ self.squares[m.frm()].hashkey(m.frm())
+                ^ self.squares[x].hashkey(x);
+            self.squares[x] = Nil;
+            self.squares[m.frm()]
+        } else {
+            self.bitmaps.pieces[self.colour as usize] |= 1 << m.to();
+            self.bitmaps.pieces[self.colour as usize] ^= 1 << m.frm();
+            match (self.squares[m.frm()], self.squares[m.to()]) {
+                (Pawn(_), Pawn(c)) => {
+                    self.bitmaps.pawns ^= 1 << m.frm();
+                    self.bitmaps.pieces[c as usize] ^= 1 << m.to();
+                }
+                (Pawn(_), Rook(c) | Bishop(c) | Queen(c) | Knight(c)) => {
+                    self.bitmaps.pawns |= 1 << m.to();
+                    self.bitmaps.pawns ^= 1 << m.frm();
+                    self.bitmaps.pieces[c as usize] ^= 1 << m.to();
+                }
+                (Pawn(_), _) => {
+                    self.bitmaps.pawns |= 1 << m.to();
+                    self.bitmaps.pawns ^= 1 << m.frm();
+                }
+                (King(_), Pawn(c)) => {
+                    self.bitmaps.pawns ^= 1 << m.to();
+                    self.bitmaps.kings |= 1 << m.to();
+                    self.bitmaps.kings ^= 1 << m.frm();
+                    self.bitmaps.pieces[c as usize] ^= 1 << m.to();
+                }
+                (King(_), Rook(c) | Bishop(c) | Queen(c) | Knight(c)) => {
+                    self.bitmaps.kings |= 1 << m.to();
+                    self.bitmaps.kings ^= 1 << m.frm();
+                    self.bitmaps.pieces[c as usize] ^= 1 << m.to();
+                }
+                (King(_), _) => {
+                    self.bitmaps.kings |= 1 << m.to();
+                    self.bitmaps.kings ^= 1 << m.frm();
+                }
+                (_, Nil) => (),
+                (_, Pawn(c)) => {
+                    self.bitmaps.pawns ^= 1 << m.to();
+                    self.bitmaps.pieces[c as usize] ^= 1 << m.to()
+                }
+                (_, Rook(c) | Knight(c) | Queen(c) | Bishop(c)) => {
+                    self.bitmaps.pieces[c as usize] ^= 1 << m.to()
+                }
+                _ => (),
+            }
+
+            hash = self.squares[m.frm()].hashkey(m.to())
+                ^ self.squares[m.frm()].hashkey(m.frm())
+                ^ self.squares[m.to()].hashkey(m.to());
+            self.squares[m.frm()]
+        };
+        self.squares[m.frm()] = Nil;
+        self.material += m.val;
+        self.rep_inc();
+        self.hash ^= hash ^ WHITE_HASH;
+        // self.bitmaps = self.board.to_bitmaps();
+        self.colour.flip();
+    }
+
+    pub fn backdate(&mut self, m: &Move) {
+        let bms = self.log_bms.pop().unwrap();
+        let capture;
+        (
+            self.bitmaps,
+            capture,
+            self.hash,
+            self.can_castle,
+        ) = bms;
+        self.colour.flip();
+        //self.hash ^= m.hash ^ WHITE_HASH;
+        self.rep_dec();
+        if m.castle() {
+            let (frm, to) = if m.to() <= 15 {
+                (m.frm() - 24, m.frm() - 8) // short
+            } else {
+                (m.frm() + 32, m.frm() + 8) // long
+            };
+            self.squares[frm] = self.squares[to]; // move rook
+            self.squares[to] = Nil;
+        }
+        self.squares[m.frm()] = if m.transform() {
+            Pawn(self.colour)
+        } else {
+            self.squares[m.to()]
+        };
+        self.squares[m.to()] = capture;
+
+        if m.en_passant() {
+            let x = match m.to() > m.frm() {
+                true => m.frm() + 8,  // west
+                false => m.frm() - 8, // east
+            };
+            self.squares[x] = match self.squares[m.frm()] {
+                Pawn(White) => Pawn(Black),
+                Pawn(Black) => Pawn(White),
+                _ => unreachable!(),
+            }
+        }
+
+        self.material -= m.val;
+    }
+
     pub fn eval(&self) -> i16 {
         let s = self.material + self.score_pawn_structure() + self.mobility();
         if self.colour.is_white() { s } else { -s }
