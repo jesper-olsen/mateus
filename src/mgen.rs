@@ -416,6 +416,54 @@ impl Board {
         s
     }
 
+    pub fn to_csv(&self) -> Vec<u8> {
+        const CSV_SIZE: usize = 2 * 6 * 64 + 1 + 4 + 64 + 1;
+        let mut v = Vec::with_capacity(CSV_SIZE);
+        for p in [
+            Pawn(White),
+            Rook(White),
+            Knight(White),
+            Bishop(White),
+            Queen(White),
+            King(White),
+            Pawn(Black),
+            Rook(Black),
+            Knight(Black),
+            Bishop(Black),
+            Queen(Black),
+            King(Black),
+        ] {
+            for pb in &self.squares {
+                v.push(if p == *pb { 1 } else { 0 });
+            }
+        }
+
+        //turn
+        v.push(if self.colour.is_white() { 1 } else { 0 });
+
+        // O-O O-O-O
+        v.extend(
+            [CASTLE_W_SHORT, CASTLE_W_LONG, CASTLE_B_SHORT, CASTLE_B_LONG]
+                .map(|c| (self.can_castle & c != 0) as u8),
+        );
+
+        // en passant
+        if let Some(last) = self.move_log.last() {
+            if matches!(self.squares[last.to()], Pawn(_)) && last.to().abs_diff(last.frm()) == 2 {
+                let idx = last.to() as isize + if self.colour.is_white() { 1 } else { -1 };
+                for i in 0..64 {
+                    v.push((i == idx) as u8);
+                }
+            } else {
+                v.resize(v.len() + 64, 0);
+            }
+        } else {
+            v.resize(v.len() + 64, 0);
+        };
+
+        v
+    }
+
     pub fn check_50_move_rule(&self) -> usize {
         self.half_move_clock + self.rep.iter().map(|(_, &v)| v).sum::<usize>()
     }

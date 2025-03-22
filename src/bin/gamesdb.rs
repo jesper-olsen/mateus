@@ -204,7 +204,7 @@ fn parse_moves(fg: &mut FicsG, line: String) -> (Vec<(usize, usize)>, Vec<Vec<u8
             Some(index) => {
                 game.make_move(moves[index]);
                 lmoves.push((moves[index].frm(), moves[index].to()));
-                lfens.push(game.to_csv());
+                lfens.push(game.board.to_csv());
                 last_move = moves[index];
                 last = Some(&last_move);
             }
