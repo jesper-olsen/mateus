@@ -1,13 +1,13 @@
 use crate::Piece;
 use crate::bitmaps::*;
 use crate::hashkeys_generated::WHITE_HASH;
+use crate::misc;
 use crate::val::*;
 use crate::val::{Colour::*, Piece::*};
-use crate::misc;
+use std::collections::hash_map::{Entry, HashMap};
 use std::fmt;
 use std::ops::{Index, IndexMut};
 use std::slice::Iter;
-use std::collections::hash_map::{Entry, HashMap};
 
 #[derive(Debug, Copy, Clone)]
 pub struct Bitmaps {
@@ -23,9 +23,9 @@ const EN_PASSANT_BIT: u16 = 1 << 13;
 const TRANSFORM_BIT: u16 = 1 << 14;
 const TO_SHIFT: u16 = 6;
 pub const CASTLE_W_SHORT: u8 = 0b0001;
-pub const CASTLE_W_LONG: u8  = 0b0010;
+pub const CASTLE_W_LONG: u8 = 0b0010;
 pub const CASTLE_B_SHORT: u8 = 0b0100;
-pub const CASTLE_B_LONG: u8  = 0b1000;
+pub const CASTLE_B_LONG: u8 = 0b1000;
 pub const FRM_MASK: u16 = 0b111111;
 pub const TO_MASK: u16 = FRM_MASK << TO_SHIFT;
 
@@ -143,13 +143,13 @@ impl Default for Board {
     #[rustfmt::skip]
     fn default() -> Self {
         let squares =  [
-                Rook(White),   Pawn(White), Nil, Nil, Nil, Nil, Pawn(Black), Rook(Black), 
-                Knight(White), Pawn(White), Nil, Nil, Nil, Nil, Pawn(Black), Knight(Black), 
-                Bishop(White), Pawn(White), Nil, Nil, Nil, Nil, Pawn(Black), Bishop(Black), 
-                King(White),   Pawn(White), Nil, Nil, Nil, Nil, Pawn(Black), King(Black), 
-                Queen(White),  Pawn(White), Nil, Nil, Nil, Nil, Pawn(Black), Queen(Black), 
-                Bishop(White), Pawn(White), Nil, Nil, Nil, Nil, Pawn(Black), Bishop(Black), 
-                Knight(White), Pawn(White), Nil, Nil, Nil, Nil, Pawn(Black), Knight(Black), 
+                Rook(White),   Pawn(White), Nil, Nil, Nil, Nil, Pawn(Black), Rook(Black),
+                Knight(White), Pawn(White), Nil, Nil, Nil, Nil, Pawn(Black), Knight(Black),
+                Bishop(White), Pawn(White), Nil, Nil, Nil, Nil, Pawn(Black), Bishop(Black),
+                King(White),   Pawn(White), Nil, Nil, Nil, Nil, Pawn(Black), King(Black),
+                Queen(White),  Pawn(White), Nil, Nil, Nil, Nil, Pawn(Black), Queen(Black),
+                Bishop(White), Pawn(White), Nil, Nil, Nil, Nil, Pawn(Black), Bishop(Black),
+                Knight(White), Pawn(White), Nil, Nil, Nil, Nil, Pawn(Black), Knight(Black),
                 Rook(White),   Pawn(White), Nil, Nil, Nil, Nil, Pawn(Black), Rook(Black),
             ];
         let bitmaps = to_bitmaps(&squares);
@@ -307,24 +307,23 @@ impl Board {
             }
         }
 
-        
         let half_move_clock = if parts.len() > 4 {
             // moves since last irreversible move
             if let Ok(value) = parts[4].parse::<usize>() {
                 value
             } else {
                 0
-                }
+            }
         } else {
             0
-            };
+        };
 
         let full_move_count = if parts.len() > 5 {
             // full-move count
             if let Ok(value) = parts[5].parse::<usize>() {
                 value
             } else {
-                0  // TODO - Err ?
+                0 // TODO - Err ?
             }
         } else {
             0
@@ -335,7 +334,7 @@ impl Board {
         let hash = calc_hash(&squares, colour);
         let material = material(&squares);
         let rep = HashMap::from([(hash, 1)]);
-        
+
         Board {
             squares,
             bitmaps,
@@ -348,7 +347,7 @@ impl Board {
             hash,
             half_move_clock,
             full_move_count,
-            rep
+            rep,
         }
     }
 
@@ -632,12 +631,7 @@ impl Board {
     pub fn backdate(&mut self, m: &Move) {
         let bms = self.log_bms.pop().unwrap();
         let capture;
-        (
-            self.bitmaps,
-            capture,
-            self.hash,
-            self.can_castle,
-        ) = bms;
+        (self.bitmaps, capture, self.hash, self.can_castle) = bms;
         self.colour.flip();
         //self.hash ^= m.hash ^ WHITE_HASH;
         self.rep_dec();
@@ -679,15 +673,13 @@ impl Board {
     }
 
     pub const fn is_end_game(&self) -> bool {
-         abs_material(&self.squares) < self.end_game_material
+        abs_material(&self.squares) < self.end_game_material
     }
-
 
     pub const fn to_bitmaps(&self) -> Bitmaps {
         to_bitmaps(&self.squares)
     }
 
-    
     pub fn score_pawn_structure(&self) -> i16 {
         let mut pen: i16 = 0;
         let bm: [u64; 2] = [
@@ -736,7 +728,6 @@ impl Board {
         pen
     }
 
-
     pub fn mobility(&self) -> i16 {
         self.count_moves(White) as i16 - self.count_moves(Black) as i16
     }
@@ -748,7 +739,7 @@ impl Board {
         self.squares.iter().enumerate().any(|(frm, &p)| match p {
             Knight(c) if c != colour => BM_KNIGHT_MOVES[frm] & bm_king != 0,
             King(c) if c != colour => BM_KING_MOVES[frm] & bm_king != 0,
-            Pawn(c) if c != colour => BM_PAWN_CAPTURES[colour as usize][frm] & bm_king != 0,
+            Pawn(c) if c != colour => BM_PAWN_CAPTURES[c as usize][frm] & bm_king != 0,
             Rook(c) if c != colour => ray_check(frm, BM_ROOK_MOVES[frm], bm_board, bm_king),
             Bishop(c) if c != colour => ray_check(frm, BM_BISHOP_MOVES[frm], bm_board, bm_king),
             Queen(c) if c != colour => ray_check(frm, BM_QUEEN_MOVES[frm], bm_board, bm_king),
@@ -831,15 +822,14 @@ impl Board {
         bitmaps: &OBitmaps,
         colour: Colour,
     ) {
-        let cidx = if colour.is_white() { 0 } else { 1 };
-        let cap = BM_PAWN_CAPTURES[cidx][frm] & bitmaps.bm_opp;
-        let step1: u64 = BM_PAWN_STEP1[cidx][frm] & !bitmaps.bm_board;
+        let cap = BM_PAWN_CAPTURES[colour as usize][frm] & bitmaps.bm_opp;
+        let step1: u64 = BM_PAWN_STEP1[colour as usize][frm] & !bitmaps.bm_board;
         let step2: u64 = if colour.is_white() {
             step1 << 1
         } else {
             step1 >> 1
         };
-        let step2: u64 = step2 & BM_PAWN_STEP2[cidx][frm] & !bitmaps.bm_board;
+        let step2: u64 = step2 & BM_PAWN_STEP2[colour as usize][frm] & !bitmaps.bm_board;
         let vto = bm2vec(cap | step1 | step2);
 
         v.extend(vto.iter().flat_map(|&to| {
@@ -887,7 +877,7 @@ impl Board {
             let idx = last.frm() as isize + if colour.is_white() { -1 } else { 1 };
 
             v.extend(
-                bm2vec(BM_PAWN_CAPTURES[cidx][frm] & 1 << idx)
+                bm2vec(BM_PAWN_CAPTURES[colour as usize][frm] & 1 << idx)
                     .iter()
                     .map(|&to| Move {
                         data: pack_data(false, true, Nil, frm, to),
@@ -924,14 +914,50 @@ impl Board {
         const BLONG: u64 = 1 << 55 | 1 << 47 | 1 << 39;
 
         let cc2 = [
-            (can_castle & CASTLE_W_SHORT!=0 && frm == 24 && !in_check && self.squares[0] == Rook(White) && bitmaps.bm_board & WSHORT == 0,
-             Rook(White), 8, 0, 16,),
-            (can_castle & CASTLE_W_LONG!=0 && frm == 24 && !in_check && self.squares[56] == Rook(White) && bitmaps.bm_board & WLONG == 0,
-             Rook(White), 40, 56, 32,),
-            (can_castle & CASTLE_B_SHORT!=0 && frm == 31 && !in_check && self.squares[7] == Rook(Black) && bitmaps.bm_board & BSHORT == 0,
-             Rook(Black), 15, 7, 23,),
-            (can_castle & CASTLE_B_LONG!=0 && frm == 31 && !in_check && self.squares[63] == Rook(Black) && bitmaps.bm_board & BLONG == 0,
-             Rook(Black), 47, 63, 39,),
+            (
+                can_castle & CASTLE_W_SHORT != 0
+                    && frm == 24
+                    && !in_check
+                    && self.squares[0] == Rook(White)
+                    && bitmaps.bm_board & WSHORT == 0,
+                Rook(White),
+                8,
+                0,
+                16,
+            ),
+            (
+                can_castle & CASTLE_W_LONG != 0
+                    && frm == 24
+                    && !in_check
+                    && self.squares[56] == Rook(White)
+                    && bitmaps.bm_board & WLONG == 0,
+                Rook(White),
+                40,
+                56,
+                32,
+            ),
+            (
+                can_castle & CASTLE_B_SHORT != 0
+                    && frm == 31
+                    && !in_check
+                    && self.squares[7] == Rook(Black)
+                    && bitmaps.bm_board & BSHORT == 0,
+                Rook(Black),
+                15,
+                7,
+                23,
+            ),
+            (
+                can_castle & CASTLE_B_LONG != 0
+                    && frm == 31
+                    && !in_check
+                    && self.squares[63] == Rook(Black)
+                    && bitmaps.bm_board & BLONG == 0,
+                Rook(Black),
+                47,
+                63,
+                39,
+            ),
         ];
 
         v.extend(
@@ -989,15 +1015,14 @@ impl Board {
 
 fn count_pawn_moves(frm: usize, bm_opp: u64, bm_board: u64, colour: Colour) -> u32 {
     // TODO  - calc all at the same time;
-    let cidx = if colour.is_white() { 0 } else { 1 };
-    let cap = BM_PAWN_CAPTURES[cidx][frm] & bm_opp;
-    let step1 = BM_PAWN_STEP1[cidx][frm] & !bm_board;
+    let cap = BM_PAWN_CAPTURES[colour as usize][frm] & bm_opp;
+    let step1 = BM_PAWN_STEP1[colour as usize][frm] & !bm_board;
     let step2 = if colour.is_white() {
         step1 << 1
     } else {
         step1 >> 1
     };
-    let step2 = step2 & BM_PAWN_STEP2[cidx][frm] & !bm_board;
+    let step2 = step2 & BM_PAWN_STEP2[colour as usize][frm] & !bm_board;
     (cap | step1 | step2).count_ones()
 }
 
@@ -1021,14 +1046,14 @@ struct OBitmaps {
     bm_opp: u64,
 }
 
-const fn to_bitmaps(squares: &[Piece;64]) -> Bitmaps {
+const fn to_bitmaps(squares: &[Piece]) -> Bitmaps {
     let mut bm = Bitmaps {
         pieces: [0, 0],
         pawns: 0,
         kings: 0,
     };
     let mut i = 0;
-    while i < 64 {
+    while i < squares.len() {
         match squares[i] {
             Rook(c) | Knight(c) | Bishop(c) | Queen(c) => bm.pieces[c as usize] |= 1 << i,
             Pawn(c) => {
@@ -1046,7 +1071,7 @@ const fn to_bitmaps(squares: &[Piece;64]) -> Bitmaps {
     bm
 }
 
-pub const fn material(squares: &[Piece;64]) -> i16 {
+pub const fn material(squares: &[Piece]) -> i16 {
     let mut i = 0;
     let mut val: i16 = 0;
     while i < squares.len() {
@@ -1056,7 +1081,7 @@ pub const fn material(squares: &[Piece;64]) -> i16 {
     val
 }
 
-pub const fn abs_material(squares: &[Piece;64]) -> i16 {
+pub const fn abs_material(squares: &[Piece]) -> i16 {
     let mut i = 0;
     let mut val: i16 = 0;
     while i < squares.len() {
@@ -1066,19 +1091,19 @@ pub const fn abs_material(squares: &[Piece;64]) -> i16 {
     val
 }
 
-    pub const fn calc_hash(squares: &[Piece;64], colour: Colour) -> u64 {
-        let mut key = match colour {
-            Colour::White => WHITE_HASH,
-            Colour::Black => 0,
-        };
+pub const fn calc_hash(squares: &[Piece], colour: Colour) -> u64 {
+    let mut key = match colour {
+        Colour::White => WHITE_HASH,
+        Colour::Black => 0,
+    };
 
-        let mut i = 0;
-        while i < 64 {
-            match squares[i] {
-                Piece::Nil => (),
-                _ => key ^= squares[i].hashkey(i),
-            };
-            i += 1;
-        }
-        key
+    let mut i = 0;
+    while i < squares.len() {
+        match squares[i] {
+            Piece::Nil => (),
+            _ => key ^= squares[i].hashkey(i),
+        };
+        i += 1;
     }
+    key
+}

@@ -1,6 +1,6 @@
 use crate::hashkeys_generated::*;
-use std::fmt;
 use Piece::*;
+use std::fmt;
 
 #[derive(Debug, PartialEq, Eq, Hash, Copy, Clone)]
 pub enum Colour {
