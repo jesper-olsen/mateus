@@ -407,7 +407,7 @@ impl Board {
         s.push_str(
             format!(
                 " {} {}",
-                self.check_50_move_rule() - 1,
+                self.half_moves() - 1,
                 self.full_move_count + self.move_log.len() / 2 + 1
             )
             .as_str(),
@@ -415,32 +415,21 @@ impl Board {
         s
     }
 
+    #[rustfmt::skip]
     pub fn to_csv(&self) -> Vec<u8> {
         const CSV_SIZE: usize = 2 * 6 * 64 + 1 + 4 + 64 + 1;
         let mut v = Vec::with_capacity(CSV_SIZE);
         for p in [
-            Pawn(White),
-            Rook(White),
-            Knight(White),
-            Bishop(White),
-            Queen(White),
-            King(White),
-            Pawn(Black),
-            Rook(Black),
-            Knight(Black),
-            Bishop(Black),
-            Queen(Black),
-            King(Black),
+            Pawn(White), Rook(White), Knight(White), Bishop(White), Queen(White), King(White),
+            Pawn(Black), Rook(Black), Knight(Black), Bishop(Black), Queen(Black), King(Black),
         ] {
             for pb in &self.squares {
-                v.push(if p == *pb { 1 } else { 0 });
+                v.push((p == *pb) as u8);
             }
         }
 
-        //turn
-        v.push(if self.colour.is_white() { 1 } else { 0 });
-
-        // O-O O-O-O
+        // turn & castling rights
+        v.push(self.colour.is_white() as u8);
         v.extend(
             [CASTLE_W_SHORT, CASTLE_W_LONG, CASTLE_B_SHORT, CASTLE_B_LONG]
                 .map(|c| (self.can_castle & c != 0) as u8),
@@ -463,7 +452,7 @@ impl Board {
         v
     }
 
-    pub fn check_50_move_rule(&self) -> usize {
+    pub fn half_moves(&self) -> usize {
         self.half_move_clock + self.rep.iter().map(|(_, &v)| v).sum::<usize>()
     }
 
@@ -754,39 +743,27 @@ impl Board {
         can_castle: u8,
         last: Option<&Move>,
     ) -> Vec<Move> {
-        let colour = self.colour;
-        let bitmaps = OBitmaps {
-            bm_board: self.bitmaps.pieces[White as usize] | self.bitmaps.pieces[Black as usize],
-            bm_own: self.bitmaps.pieces[colour as usize],
-            bm_opp: self.bitmaps.pieces[colour.opposite() as usize],
-        };
-
         let last = if let Some(m) = last { m } else { &NULL_MOVE };
 
         let mut v = Vec::with_capacity(50);
         self.squares
             .iter()
             .enumerate()
+            .filter(|(frm, _)| 1 << frm & self.bitmaps.pieces[self.colour as usize] != 0)
             .for_each(|(frm, &p)| match p {
-                Knight(c) if c == colour => self.knight_moves(&mut v, frm, &bitmaps),
-                King(c) if c == colour => {
-                    self.king_moves(&mut v, frm, &bitmaps, end_game, can_castle, in_check)
-                }
-                Pawn(c) if c == colour => self.pawn_moves(&mut v, frm, last, &bitmaps, colour),
-                Rook(c) if c == colour => self.ray_moves(&mut v, frm, BM_ROOK_MOVES[frm], &bitmaps),
-                Bishop(c) if c == colour => {
-                    self.ray_moves(&mut v, frm, BM_BISHOP_MOVES[frm], &bitmaps)
-                }
-                Queen(c) if c == colour => {
-                    self.ray_moves(&mut v, frm, BM_QUEEN_MOVES[frm], &bitmaps)
-                }
+                Knight(_) => self.knight_moves(&mut v, frm),
+                King(_) => self.king_moves(&mut v, frm, end_game, can_castle, in_check),
+                Pawn(_) => self.pawn_moves(&mut v, frm, last),
+                Rook(_) => self.ray_moves(&mut v, frm, BM_ROOK_MOVES[frm]),
+                Bishop(_) => self.ray_moves(&mut v, frm, BM_BISHOP_MOVES[frm]),
+                Queen(_) => self.ray_moves(&mut v, frm, BM_QUEEN_MOVES[frm]),
                 _ => (),
             });
         v
     }
 
-    fn knight_moves(&self, v: &mut Vec<Move>, frm: usize, bitmaps: &OBitmaps) {
-        let (bl, n) = bm2arr(BM_KNIGHT_MOVES[frm] & !bitmaps.bm_own);
+    fn knight_moves(&self, v: &mut Vec<Move>, frm: usize) {
+        let (bl, n) = bm2arr(BM_KNIGHT_MOVES[frm] & !self.bitmaps.pieces[self.colour as usize]);
         v.extend(bl[0..n].iter().map(|&to| Move {
             data: pack_data(false, false, Nil, frm, to as usize),
             val: self.squares[frm].val(to as usize)
@@ -795,13 +772,14 @@ impl Board {
         }));
     }
 
-    fn ray_moves(&self, v: &mut Vec<Move>, frm: usize, moves: u64, bitmaps: &OBitmaps) {
-        let (bl, n) = bm2arr(moves & bitmaps.bm_board);
+    fn ray_moves(&self, v: &mut Vec<Move>, frm: usize, moves: u64) {
+        let bm_board = self.bitmaps.pieces[White as usize] | self.bitmaps.pieces[Black as usize];
+        let (bl, n) = bm2arr(moves & bm_board);
         let bl = bl[0..n]
             .into_iter()
             .fold(0, |a, i| a | BM_BLOCKED[frm][*i as usize]);
 
-        let (ml, n) = bm2arr(moves & !bl & !bitmaps.bm_own);
+        let (ml, n) = bm2arr(moves & !bl & !self.bitmaps.pieces[self.colour as usize]);
 
         v.extend(ml[0..n].iter().map(|&to| Move {
             data: pack_data(false, false, Nil, frm, to as usize),
@@ -811,48 +789,44 @@ impl Board {
         }));
     }
 
-    fn pawn_moves(
-        &self,
-        v: &mut Vec<Move>,
-        frm: usize,
-        last: &Move,
-        bitmaps: &OBitmaps,
-        colour: Colour,
-    ) {
-        let cap = BM_PAWN_CAPTURES[colour as usize][frm] & bitmaps.bm_opp;
-        let step1: u64 = BM_PAWN_STEP1[colour as usize][frm] & !bitmaps.bm_board;
-        let step2: u64 = if colour.is_white() {
+    fn pawn_moves(&self, v: &mut Vec<Move>, frm: usize, last: &Move) {
+        let bm_board = self.bitmaps.pieces[White as usize] | self.bitmaps.pieces[Black as usize];
+        //let cap = BM_PAWN_CAPTURES[colour as usize][frm] & bitmaps.bm_opp;
+        let cap = BM_PAWN_CAPTURES[self.colour as usize][frm]
+            & self.bitmaps.pieces[self.colour.opposite() as usize];
+        let step1: u64 = BM_PAWN_STEP1[self.colour as usize][frm] & !bm_board;
+        let step2: u64 = if self.colour.is_white() {
             step1 << 1
         } else {
             step1 >> 1
         };
-        let step2: u64 = step2 & BM_PAWN_STEP2[colour as usize][frm] & !bitmaps.bm_board;
+        let step2: u64 = step2 & BM_PAWN_STEP2[self.colour as usize][frm] & !bm_board;
         let (vto, n) = bm2arr(cap | step1 | step2);
 
         v.extend(vto[0..n].iter().flat_map(|&to| {
             match to % 8 {
                 0 | 7 => vec![
                     Move {
-                        data: pack_data(false, false, Queen(colour), frm, to as usize),
-                        val: Piece::Queen(colour).val(to as usize)
+                        data: pack_data(false, false, Queen(self.colour), frm, to as usize),
+                        val: Piece::Queen(self.colour).val(to as usize)
                             - self.squares[frm].val(frm)
                             - self.squares[to as usize].val(to as usize),
                     },
                     Move {
-                        data: pack_data(false, false, Rook(colour), frm, to as usize),
-                        val: Piece::Rook(colour).val(to as usize)
+                        data: pack_data(false, false, Rook(self.colour), frm, to as usize),
+                        val: Piece::Rook(self.colour).val(to as usize)
                             - self.squares[frm].val(frm)
                             - self.squares[to as usize].val(to as usize),
                     },
                     Move {
-                        data: pack_data(false, false, Knight(colour), frm, to as usize),
-                        val: Piece::Knight(colour).val(to as usize)
+                        data: pack_data(false, false, Knight(self.colour), frm, to as usize),
+                        val: Piece::Knight(self.colour).val(to as usize)
                             - self.squares[frm].val(frm)
                             - self.squares[to as usize].val(to as usize),
                     },
                     Move {
-                        data: pack_data(false, false, Bishop(colour), frm, to as usize),
-                        val: Piece::Bishop(colour).val(to as usize)
+                        data: pack_data(false, false, Bishop(self.colour), frm, to as usize),
+                        val: Piece::Bishop(self.colour).val(to as usize)
                             - self.squares[frm].val(frm)
                             - self.squares[to as usize].val(to as usize),
                     },
@@ -871,9 +845,9 @@ impl Board {
         // en passant
         if matches!(self.squares[last.to()], Pawn(_)) && last.to().abs_diff(last.frm()) == 2 {
             // square attacked if last move was a step-2 pawn move
-            let idx = last.frm() as isize + if colour.is_white() { -1 } else { 1 };
+            let idx = last.frm() as isize + if self.colour.is_white() { -1 } else { 1 };
 
-            let (tol, n) = bm2arr(BM_PAWN_CAPTURES[colour as usize][frm] & 1 << idx);
+            let (tol, n) = bm2arr(BM_PAWN_CAPTURES[self.colour as usize][frm] & 1 << idx);
 
             v.extend(tol[0..n].iter().map(|&to| Move {
                 data: pack_data(false, true, Nil, frm, to as usize),
@@ -888,11 +862,11 @@ impl Board {
         &self,
         v: &mut Vec<Move>,
         frm: usize,
-        bitmaps: &OBitmaps,
         end_game: bool,
         can_castle: u8,
         in_check: bool,
     ) {
+        let bm_board = self.bitmaps.pieces[White as usize] | self.bitmaps.pieces[Black as usize];
         // change king valuation in end_game
         let p = match (self.squares[frm], end_game) {
             (King(White), true) => King(Black),
@@ -914,7 +888,7 @@ impl Board {
                     && frm == 24
                     && !in_check
                     && self.squares[0] == Rook(White)
-                    && bitmaps.bm_board & WSHORT == 0,
+                    && bm_board & WSHORT == 0,
                 Rook(White),
                 8,
                 0,
@@ -925,7 +899,7 @@ impl Board {
                     && frm == 24
                     && !in_check
                     && self.squares[56] == Rook(White)
-                    && bitmaps.bm_board & WLONG == 0,
+                    && bm_board & WLONG == 0,
                 Rook(White),
                 40,
                 56,
@@ -936,7 +910,7 @@ impl Board {
                     && frm == 31
                     && !in_check
                     && self.squares[7] == Rook(Black)
-                    && bitmaps.bm_board & BSHORT == 0,
+                    && bm_board & BSHORT == 0,
                 Rook(Black),
                 15,
                 7,
@@ -947,7 +921,7 @@ impl Board {
                     && frm == 31
                     && !in_check
                     && self.squares[63] == Rook(Black)
-                    && bitmaps.bm_board & BLONG == 0,
+                    && bm_board & BLONG == 0,
                 Rook(Black),
                 47,
                 63,
@@ -955,7 +929,7 @@ impl Board {
             ),
         ];
 
-        let (tol, n) = bm2arr(BM_KING_MOVES[frm] & !bitmaps.bm_own);
+        let (tol, n) = bm2arr(BM_KING_MOVES[frm] & !self.bitmaps.pieces[self.colour as usize]);
         v.extend(
             tol[0..n]
                 .iter()
@@ -985,19 +959,14 @@ impl Board {
         self.squares
             .iter()
             .enumerate()
+            .filter(|(frm, _)| 1 << frm & self.bitmaps.pieces[colour as usize] != 0)
             .map(|(frm, &p)| match p {
-                Knight(c) if c == colour => (BM_KNIGHT_MOVES[frm] & !bm_own).count_ones(),
-                King(c) if c == colour => (BM_KING_MOVES[frm] & !bm_own).count_ones(),
-                Pawn(c) if c == colour => count_pawn_moves(frm, bm_opp, bm_board, colour),
-                Rook(c) if c == colour => {
-                    count_ray_moves(frm, BM_ROOK_MOVES[frm], bm_board, bm_own)
-                }
-                Bishop(c) if c == colour => {
-                    count_ray_moves(frm, BM_BISHOP_MOVES[frm], bm_board, bm_own)
-                }
-                Queen(c) if c == colour => {
-                    count_ray_moves(frm, BM_QUEEN_MOVES[frm], bm_board, bm_own)
-                }
+                Knight(_) => (BM_KNIGHT_MOVES[frm] & !bm_own).count_ones(),
+                King(_) => (BM_KING_MOVES[frm] & !bm_own).count_ones(),
+                Pawn(_) => count_pawn_moves(frm, bm_opp, bm_board, colour),
+                Rook(_) => count_ray_moves(frm, BM_ROOK_MOVES[frm], bm_board, bm_own),
+                Bishop(_) => count_ray_moves(frm, BM_BISHOP_MOVES[frm], bm_board, bm_own),
+                Queen(_) => count_ray_moves(frm, BM_QUEEN_MOVES[frm], bm_board, bm_own),
                 _ => 0,
             })
             .sum()
@@ -1054,12 +1023,6 @@ pub const fn bm2arr(bm: u64) -> ([u8; 64], usize) {
     }
 
     (out, n)
-}
-
-struct OBitmaps {
-    bm_board: u64,
-    bm_own: u64,
-    bm_opp: u64,
 }
 
 const fn to_bitmaps(squares: &[Piece]) -> Bitmaps {
