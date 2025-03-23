@@ -786,32 +786,29 @@ impl Board {
     }
 
     fn knight_moves(&self, v: &mut Vec<Move>, frm: usize, bitmaps: &OBitmaps) {
-        v.extend(
-            bm2vec(BM_KNIGHT_MOVES[frm] & !bitmaps.bm_own)
-                .iter()
-                .map(|&to| Move {
-                    data: pack_data(false, false, Nil, frm, to),
-                    val: self.squares[frm].val(to)
-                        - self.squares[frm].val(frm)
-                        - self.squares[to].val(to),
-                }),
-        );
+        let (bl, n) = bm2arr(BM_KNIGHT_MOVES[frm] & !bitmaps.bm_own);
+        v.extend(bl[0..n].iter().map(|&to| Move {
+            data: pack_data(false, false, Nil, frm, to as usize),
+            val: self.squares[frm].val(to as usize)
+                - self.squares[frm].val(frm)
+                - self.squares[to as usize].val(to as usize),
+        }));
     }
 
     fn ray_moves(&self, v: &mut Vec<Move>, frm: usize, moves: u64, bitmaps: &OBitmaps) {
-        let bl: u64 = bm2vec(moves & bitmaps.bm_board)
-            .iter()
-            .fold(0, |a, i| a | BM_BLOCKED[frm][*i]);
-        v.extend(
-            bm2vec(moves & !bl & !bitmaps.bm_own)
-                .iter()
-                .map(|&to| Move {
-                    data: pack_data(false, false, Nil, frm, to),
-                    val: self.squares[frm].val(to)
-                        - self.squares[frm].val(frm)
-                        - self.squares[to].val(to),
-                }),
-        );
+        let (bl, n) = bm2arr(moves & bitmaps.bm_board);
+        let bl = bl[0..n]
+            .into_iter()
+            .fold(0, |a, i| a | BM_BLOCKED[frm][*i as usize]);
+
+        let (ml, n) = bm2arr(moves & !bl & !bitmaps.bm_own);
+
+        v.extend(ml[0..n].iter().map(|&to| Move {
+            data: pack_data(false, false, Nil, frm, to as usize),
+            val: self.squares[frm].val(to as usize)
+                - self.squares[frm].val(frm)
+                - self.squares[to as usize].val(to as usize),
+        }));
     }
 
     fn pawn_moves(
@@ -830,42 +827,42 @@ impl Board {
             step1 >> 1
         };
         let step2: u64 = step2 & BM_PAWN_STEP2[colour as usize][frm] & !bitmaps.bm_board;
-        let vto = bm2vec(cap | step1 | step2);
+        let (vto, n) = bm2arr(cap | step1 | step2);
 
-        v.extend(vto.iter().flat_map(|&to| {
+        v.extend(vto[0..n].iter().flat_map(|&to| {
             match to % 8 {
                 0 | 7 => vec![
                     Move {
-                        data: pack_data(false, false, Queen(colour), frm, to),
-                        val: Piece::Queen(colour).val(to)
+                        data: pack_data(false, false, Queen(colour), frm, to as usize),
+                        val: Piece::Queen(colour).val(to as usize)
                             - self.squares[frm].val(frm)
-                            - self.squares[to].val(to),
+                            - self.squares[to as usize].val(to as usize),
                     },
                     Move {
-                        data: pack_data(false, false, Rook(colour), frm, to),
-                        val: Piece::Rook(colour).val(to)
+                        data: pack_data(false, false, Rook(colour), frm, to as usize),
+                        val: Piece::Rook(colour).val(to as usize)
                             - self.squares[frm].val(frm)
-                            - self.squares[to].val(to),
+                            - self.squares[to as usize].val(to as usize),
                     },
                     Move {
-                        data: pack_data(false, false, Knight(colour), frm, to),
-                        val: Piece::Knight(colour).val(to)
+                        data: pack_data(false, false, Knight(colour), frm, to as usize),
+                        val: Piece::Knight(colour).val(to as usize)
                             - self.squares[frm].val(frm)
-                            - self.squares[to].val(to),
+                            - self.squares[to as usize].val(to as usize),
                     },
                     Move {
-                        data: pack_data(false, false, Bishop(colour), frm, to),
-                        val: Piece::Bishop(colour).val(to)
+                        data: pack_data(false, false, Bishop(colour), frm, to as usize),
+                        val: Piece::Bishop(colour).val(to as usize)
                             - self.squares[frm].val(frm)
-                            - self.squares[to].val(to),
+                            - self.squares[to as usize].val(to as usize),
                     },
                 ]
                 .into_iter(),
                 _ => vec![Move {
-                    data: pack_data(false, false, Nil, frm, to),
-                    val: self.squares[frm].val(to)
+                    data: pack_data(false, false, Nil, frm, to as usize),
+                    val: self.squares[frm].val(to as usize)
                         - self.squares[frm].val(frm)
-                        - self.squares[to].val(to),
+                        - self.squares[to as usize].val(to as usize),
                 }]
                 .into_iter(),
             }
@@ -876,16 +873,14 @@ impl Board {
             // square attacked if last move was a step-2 pawn move
             let idx = last.frm() as isize + if colour.is_white() { -1 } else { 1 };
 
-            v.extend(
-                bm2vec(BM_PAWN_CAPTURES[colour as usize][frm] & 1 << idx)
-                    .iter()
-                    .map(|&to| Move {
-                        data: pack_data(false, true, Nil, frm, to),
-                        val: self.squares[frm].val(to)
-                            - self.squares[frm].val(frm)
-                            - self.squares[last.to()].val(last.to()),
-                    }),
-            );
+            let (tol, n) = bm2arr(BM_PAWN_CAPTURES[colour as usize][frm] & 1 << idx);
+
+            v.extend(tol[0..n].iter().map(|&to| Move {
+                data: pack_data(false, true, Nil, frm, to as usize),
+                val: self.squares[frm].val(to as usize)
+                    - self.squares[frm].val(frm)
+                    - self.squares[last.to()].val(last.to()),
+            }));
         }
     }
 
@@ -960,15 +955,15 @@ impl Board {
             ),
         ];
 
+        let (tol, n) = bm2arr(BM_KING_MOVES[frm] & !bitmaps.bm_own);
         v.extend(
-            bm2vec(BM_KING_MOVES[frm] & !bitmaps.bm_own)
+            tol[0..n]
                 .iter()
                 .map(|&to| Move {
-                    data: pack_data(false, false, Nil, frm, to),
-                    //castle: false,
-                    //en_passant: false,
-                    //transform: false,
-                    val: p.val(to) - p.val(frm) - self.squares[to].val(to),
+                    data: pack_data(false, false, Nil, frm, to as usize),
+                    val: p.val(to as usize)
+                        - p.val(frm)
+                        - self.squares[to as usize].val(to as usize),
                 })
                 .chain(
                     cc2.iter()
@@ -1027,17 +1022,38 @@ fn count_pawn_moves(frm: usize, bm_opp: u64, bm_board: u64, colour: Colour) -> u
 }
 
 fn count_ray_moves(frm: usize, moves: u64, bm_board: u64, bm_own: u64) -> u32 {
-    let bl: u64 = bm2vec(moves & bm_board)
-        .iter()
-        .fold(0, |a, i| a | BM_BLOCKED[frm][*i]);
-    (moves & !bl & !bm_own).count_ones()
+    let (bl, n) = bm2arr(moves & bm_board);
+    (moves
+        & !bm_own
+        & !bl[0..n]
+            .into_iter()
+            .fold(0, |a, i| a | BM_BLOCKED[frm][*i as usize]))
+    .count_ones()
 }
 
 fn ray_check(frm: usize, moves: u64, bm_board: u64, bm_king: u64) -> bool {
-    let bl: u64 = bm2vec(moves & bm_board)
-        .iter()
-        .fold(0, |a, i| a | BM_BLOCKED[frm][*i]);
-    (moves & !bl & bm_king) != 0
+    let (bl, n) = bm2arr(moves & bm_board);
+    moves
+        & bm_king
+        & !bl[0..n]
+            .into_iter()
+            .fold(0, |a, i| a | BM_BLOCKED[frm][*i as usize])
+        != 0
+}
+
+pub const fn bm2arr(bm: u64) -> ([u8; 64], usize) {
+    let mut b = bm;
+    let mut out = [0u8; 64];
+    let mut n = 0;
+
+    while b != 0 {
+        let i = b.trailing_zeros();
+        b &= !(1 << i);
+        out[n] = i as u8;
+        n += 1;
+    }
+
+    (out, n)
 }
 
 struct OBitmaps {

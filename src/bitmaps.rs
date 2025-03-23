@@ -329,51 +329,6 @@ const fn bm_set_squares(rmoves: &[(isize, isize)]) -> [u64; 64] {
     bm
 }
 
-pub fn bm2vec(bm: u64) -> Vec<usize> {
-    // 29.7 sec
-    // let b=BM_KNIGHT_MOVES[i];
-    // let mut l=Vec::<usize>::new();
-    // for i in 0..64 {
-    //     if b & 1<<i != 0 {
-    //         l.push(i as usize);
-    //     }
-    // }
-
-    // 23.1 sec
-    // let b=BM_KNIGHT_MOVES[i];
-    // let mut l=Vec::<usize>::new();
-    // for i in b.trailing_zeros()..64-b.leading_zeros() {
-    //     if b & 1<<i != 0 {
-    //         l.push(i as usize);
-    //     }
-    // }
-
-    //let mut b: u64 =BM_KNIGHT_MOVES[i];
-    let mut b = bm;
-    let mut l = Vec::<usize>::new();
-    while b != 0 {
-        let i = b.trailing_zeros(); // 20.5 sec
-        b &= !(1 << i);
-        l.push(i as usize);
-    }
-    l
-
-    // let mut b: u64 =BM_KNIGHT_MOVES[i];
-    // let mut l=Vec::<usize>::new();
-    // while b!=0 {
-    //     let i = 63-b.leading_zeros();  // 20.8 sec
-    //    b &= !(1<<i);
-    //     l.push(i as usize);
-    // }
-    //l
-
-    //  let b=BM_KNIGHT_MOVES[i];           // 23.3 sec
-    //  (b.trailing_zeros()..64-b.leading_zeros() )
-    //      .filter(|i| b & 1<<i!=0)
-    //      .map(|x| x as usize)
-    // .collect::<Vec<usize>>()
-}
-
 pub const fn bm2arr(bm: u64) -> ([u8; 64], usize) {
     let mut b = bm;
     let mut out = [0u8; 64];
