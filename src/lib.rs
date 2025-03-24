@@ -245,9 +245,7 @@ impl Game {
     }
 
     fn moves(&mut self, colour: Colour, last: Option<&Move>, in_check: bool) -> Vec<Move> {
-        let mut l = self
-            .board
-            .moves(in_check, self.end_game, self.board.can_castle, last);
+        let mut l = self.board.moves(in_check, self.end_game, last);
         if colour.is_white() {
             //l.sort_by(|b, a| a.val.cmp(&b.val)); // decreasing
             l.sort_unstable_by(|b, a| a.val.cmp(&b.val)); // decreasing

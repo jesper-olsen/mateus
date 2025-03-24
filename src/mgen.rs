@@ -725,24 +725,23 @@ impl Board {
     pub fn in_check(&self, colour: Colour) -> bool {
         let bm_king = self.bitmaps.kings & self.bitmaps.pieces[colour as usize];
         let bm_board = self.bitmaps.pieces[Black as usize] | self.bitmaps.pieces[White as usize];
-        self.squares.iter().enumerate().any(|(frm, &p)| match p {
-            Knight(c) if c != colour => BM_KNIGHT_MOVES[frm] & bm_king != 0,
-            King(c) if c != colour => BM_KING_MOVES[frm] & bm_king != 0,
-            Pawn(c) if c != colour => BM_PAWN_CAPTURES[c as usize][frm] & bm_king != 0,
-            Rook(c) if c != colour => ray_check(frm, BM_ROOK_MOVES[frm], bm_board, bm_king),
-            Bishop(c) if c != colour => ray_check(frm, BM_BISHOP_MOVES[frm], bm_board, bm_king),
-            Queen(c) if c != colour => ray_check(frm, BM_QUEEN_MOVES[frm], bm_board, bm_king),
-            _ => false,
-        })
+        let opp = colour.opposite() as usize;
+        self.squares
+            .iter()
+            .enumerate()
+            .filter(|(frm, _)| 1 << frm & self.bitmaps.pieces[opp] != 0)
+            .any(|(frm, &p)| match p {
+                Knight(_) => BM_KNIGHT_MOVES[frm] & bm_king != 0,
+                King(_) => BM_KING_MOVES[frm] & bm_king != 0,
+                Pawn(_) => BM_PAWN_CAPTURES[opp][frm] & bm_king != 0,
+                Rook(_) => ray_check(frm, BM_ROOK_MOVES[frm], bm_board, bm_king),
+                Bishop(_) => ray_check(frm, BM_BISHOP_MOVES[frm], bm_board, bm_king),
+                Queen(_) => ray_check(frm, BM_QUEEN_MOVES[frm], bm_board, bm_king),
+                _ => false,
+            })
     }
 
-    pub fn moves(
-        &self,
-        in_check: bool,
-        end_game: bool,
-        can_castle: u8,
-        last: Option<&Move>,
-    ) -> Vec<Move> {
+    pub fn moves(&self, in_check: bool, end_game: bool, last: Option<&Move>) -> Vec<Move> {
         let last = if let Some(m) = last { m } else { &NULL_MOVE };
 
         let mut v = Vec::with_capacity(50);
@@ -752,7 +751,7 @@ impl Board {
             .filter(|(frm, _)| 1 << frm & self.bitmaps.pieces[self.colour as usize] != 0)
             .for_each(|(frm, &p)| match p {
                 Knight(_) => self.knight_moves(&mut v, frm),
-                King(_) => self.king_moves(&mut v, frm, end_game, can_castle, in_check),
+                King(_) => self.king_moves(&mut v, frm, end_game, in_check),
                 Pawn(_) => self.pawn_moves(&mut v, frm, last),
                 Rook(_) => self.ray_moves(&mut v, frm, BM_ROOK_MOVES[frm]),
                 Bishop(_) => self.ray_moves(&mut v, frm, BM_BISHOP_MOVES[frm]),
@@ -763,25 +762,51 @@ impl Board {
     }
 
     fn knight_moves(&self, v: &mut Vec<Move>, frm: usize) {
-        let (bl, n) = bm2arr(BM_KNIGHT_MOVES[frm] & !self.bitmaps.pieces[self.colour as usize]);
-        v.extend(bl[0..n].iter().map(|&to| Move {
-            data: pack_data(false, false, Nil, frm, to as usize),
-            val: self.squares[frm].val(to as usize)
-                - self.squares[frm].val(frm)
-                - self.squares[to as usize].val(to as usize),
-        }));
+        // let (bl, n) = bm2arr(BM_KNIGHT_MOVES[frm] & !self.bitmaps.pieces[self.colour as usize]);
+        // v.extend(bl[0..n].iter().map(|&to| Move {
+        //     data: pack_data(false, false, Nil, frm, to as usize),
+        //     val: self.squares[frm].val(to as usize)
+        //         - self.squares[frm].val(frm)
+        //         - self.squares[to as usize].val(to as usize),
+        // }));
+
+        let mut b = BM_KNIGHT_MOVES[frm] & !self.bitmaps.pieces[self.colour as usize];
+        while b != 0 {
+            let to = b.trailing_zeros();
+            b &= !(1 << to);
+
+            v.push(Move {
+                data: pack_data(false, false, Nil, frm, to as usize),
+                val: self.squares[frm].val(to as usize)
+                    - self.squares[frm].val(frm)
+                    - self.squares[to as usize].val(to as usize),
+            })
+        }
     }
 
     fn ray_moves(&self, v: &mut Vec<Move>, frm: usize, moves: u64) {
         let bm_board = self.bitmaps.pieces[White as usize] | self.bitmaps.pieces[Black as usize];
         let bl = bm_blockers(frm, moves & bm_board);
-        let (ml, n) = bm2arr(moves & !bl & !self.bitmaps.pieces[self.colour as usize]);
-        v.extend(ml[0..n].iter().map(|&to| Move {
-            data: pack_data(false, false, Nil, frm, to as usize),
-            val: self.squares[frm].val(to as usize)
-                - self.squares[frm].val(frm)
-                - self.squares[to as usize].val(to as usize),
-        }));
+
+        let mut b = moves & !bl & !self.bitmaps.pieces[self.colour as usize];
+        while b != 0 {
+            let to = b.trailing_zeros();
+            b &= !(1 << to);
+            v.push(Move {
+                data: pack_data(false, false, Nil, frm, to as usize),
+                val: self.squares[frm].val(to as usize)
+                    - self.squares[frm].val(frm)
+                    - self.squares[to as usize].val(to as usize),
+            })
+        }
+
+        // let (ml, n) = bm2arr(moves & !bl & !self.bitmaps.pieces[self.colour as usize]);
+        // v.extend(ml[0..n].iter().map(|&to| Move {
+        //     data: pack_data(false, false, Nil, frm, to as usize),
+        //     val: self.squares[frm].val(to as usize)
+        //         - self.squares[frm].val(frm)
+        //         - self.squares[to as usize].val(to as usize),
+        // }));
     }
 
     fn pawn_moves(&self, v: &mut Vec<Move>, frm: usize, last: &Move) {
@@ -852,14 +877,7 @@ impl Board {
         }
     }
 
-    fn king_moves(
-        &self,
-        v: &mut Vec<Move>,
-        frm: usize,
-        end_game: bool,
-        can_castle: u8,
-        in_check: bool,
-    ) {
+    fn king_moves(&self, v: &mut Vec<Move>, frm: usize, end_game: bool, in_check: bool) {
         let bm_board = self.bitmaps.pieces[White as usize] | self.bitmaps.pieces[Black as usize];
         // change king valuation in end_game
         let p = match (self.squares[frm], end_game) {
@@ -878,7 +896,7 @@ impl Board {
 
         let cc2 = [
             (
-                can_castle & CASTLE_W_SHORT != 0
+                self.can_castle & CASTLE_W_SHORT != 0
                     && frm == 24
                     && !in_check
                     && self.squares[0] == Rook(White)
@@ -889,7 +907,7 @@ impl Board {
                 16,
             ),
             (
-                can_castle & CASTLE_W_LONG != 0
+                self.can_castle & CASTLE_W_LONG != 0
                     && frm == 24
                     && !in_check
                     && self.squares[56] == Rook(White)
@@ -900,7 +918,7 @@ impl Board {
                 32,
             ),
             (
-                can_castle & CASTLE_B_SHORT != 0
+                self.can_castle & CASTLE_B_SHORT != 0
                     && frm == 31
                     && !in_check
                     && self.squares[7] == Rook(Black)
@@ -911,7 +929,7 @@ impl Board {
                 23,
             ),
             (
-                can_castle & CASTLE_B_LONG != 0
+                self.can_castle & CASTLE_B_LONG != 0
                     && frm == 31
                     && !in_check
                     && self.squares[63] == Rook(Black)
