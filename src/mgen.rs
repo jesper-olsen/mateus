@@ -774,13 +774,8 @@ impl Board {
 
     fn ray_moves(&self, v: &mut Vec<Move>, frm: usize, moves: u64) {
         let bm_board = self.bitmaps.pieces[White as usize] | self.bitmaps.pieces[Black as usize];
-        let (bl, n) = bm2arr(moves & bm_board);
-        let bl = bl[0..n]
-            .into_iter()
-            .fold(0, |a, i| a | BM_BLOCKED[frm][*i as usize]);
-
+        let bl = bm_blockers(frm, moves & bm_board);
         let (ml, n) = bm2arr(moves & !bl & !self.bitmaps.pieces[self.colour as usize]);
-
         v.extend(ml[0..n].iter().map(|&to| Move {
             data: pack_data(false, false, Nil, frm, to as usize),
             val: self.squares[frm].val(to as usize)
@@ -791,7 +786,6 @@ impl Board {
 
     fn pawn_moves(&self, v: &mut Vec<Move>, frm: usize, last: &Move) {
         let bm_board = self.bitmaps.pieces[White as usize] | self.bitmaps.pieces[Black as usize];
-        //let cap = BM_PAWN_CAPTURES[colour as usize][frm] & bitmaps.bm_opp;
         let cap = BM_PAWN_CAPTURES[self.colour as usize][frm]
             & self.bitmaps.pieces[self.colour.opposite() as usize];
         let step1: u64 = BM_PAWN_STEP1[self.colour as usize][frm] & !bm_board;
@@ -991,38 +985,11 @@ fn count_pawn_moves(frm: usize, bm_opp: u64, bm_board: u64, colour: Colour) -> u
 }
 
 fn count_ray_moves(frm: usize, moves: u64, bm_board: u64, bm_own: u64) -> u32 {
-    let (bl, n) = bm2arr(moves & bm_board);
-    (moves
-        & !bm_own
-        & !bl[0..n]
-            .into_iter()
-            .fold(0, |a, i| a | BM_BLOCKED[frm][*i as usize]))
-    .count_ones()
+    (moves & !bm_own & !bm_blockers(frm, moves & bm_board)).count_ones()
 }
 
 fn ray_check(frm: usize, moves: u64, bm_board: u64, bm_king: u64) -> bool {
-    let (bl, n) = bm2arr(moves & bm_board);
-    moves
-        & bm_king
-        & !bl[0..n]
-            .into_iter()
-            .fold(0, |a, i| a | BM_BLOCKED[frm][*i as usize])
-        != 0
-}
-
-pub const fn bm2arr(bm: u64) -> ([u8; 64], usize) {
-    let mut b = bm;
-    let mut out = [0u8; 64];
-    let mut n = 0;
-
-    while b != 0 {
-        let i = b.trailing_zeros();
-        b &= !(1 << i);
-        out[n] = i as u8;
-        n += 1;
-    }
-
-    (out, n)
+    return moves & bm_king & !bm_blockers(frm, moves & bm_board) != 0;
 }
 
 const fn to_bitmaps(squares: &[Piece]) -> Bitmaps {

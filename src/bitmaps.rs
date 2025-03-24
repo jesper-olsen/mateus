@@ -10,6 +10,7 @@ pub static BM_PAWN_CAPTURES: [[u64; 64]; 2] = bm_pawn_captures();
 pub static BM_PAWN_STEP1: [[u64; 64]; 2] = bm_pawn_step1();
 pub static BM_PAWN_STEP2: [[u64; 64]; 2] = bm_pawn_step2();
 
+///valid moves from a given square assuming one square is blocked..
 const fn bm_queen_blockers() -> [[u64; 64]; 64] {
     let mut bm = [[0; 64]; 64];
 
@@ -105,6 +106,8 @@ const fn bm_bishop_moves_from(frm: usize) -> u64 {
 
     b
 }
+
+///queen moves that are valid assuming assuming blocked square
 const fn bm_queen_moves_bb(frm: usize, blocked: usize) -> u64 {
     let mut b = 0;
 
@@ -342,4 +345,14 @@ pub const fn bm2arr(bm: u64) -> ([u8; 64], usize) {
     }
 
     (out, n)
+}
+
+pub const fn bm_blockers(frm: usize, mut b: u64) -> u64 {
+    let mut bl = 0;
+    while b != 0 {
+        let i = b.trailing_zeros();
+        bl |= BM_BLOCKED[frm][i as usize];
+        b &= !(1 << i);
+    }
+    bl
 }
