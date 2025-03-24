@@ -762,14 +762,6 @@ impl Board {
     }
 
     fn knight_moves(&self, v: &mut Vec<Move>, frm: usize) {
-        // let (bl, n) = bm2arr(BM_KNIGHT_MOVES[frm] & !self.bitmaps.pieces[self.colour as usize]);
-        // v.extend(bl[0..n].iter().map(|&to| Move {
-        //     data: pack_data(false, false, Nil, frm, to as usize),
-        //     val: self.squares[frm].val(to as usize)
-        //         - self.squares[frm].val(frm)
-        //         - self.squares[to as usize].val(to as usize),
-        // }));
-
         let mut b = BM_KNIGHT_MOVES[frm] & !self.bitmaps.pieces[self.colour as usize];
         while b != 0 {
             let to = b.trailing_zeros();
@@ -799,14 +791,6 @@ impl Board {
                     - self.squares[to as usize].val(to as usize),
             })
         }
-
-        // let (ml, n) = bm2arr(moves & !bl & !self.bitmaps.pieces[self.colour as usize]);
-        // v.extend(ml[0..n].iter().map(|&to| Move {
-        //     data: pack_data(false, false, Nil, frm, to as usize),
-        //     val: self.squares[frm].val(to as usize)
-        //         - self.squares[frm].val(frm)
-        //         - self.squares[to as usize].val(to as usize),
-        // }));
     }
 
     fn pawn_moves(&self, v: &mut Vec<Move>, frm: usize, last: &Move) {
@@ -822,9 +806,13 @@ impl Board {
         let step2: u64 = step2 & BM_PAWN_STEP2[self.colour as usize][frm] & !bm_board;
         let (vto, n) = bm2arr(cap | step1 | step2);
 
-        v.extend(vto[0..n].iter().flat_map(|&to| {
+        let mut b = cap | step1 | step2;
+        while b != 0 {
+            let to = b.trailing_zeros();
+            b &= !(1 << to);
+
             match to % 8 {
-                0 | 7 => vec![
+                0 | 7 => v.extend([
                     Move {
                         data: pack_data(false, false, Queen(self.colour), frm, to as usize),
                         val: Piece::Queen(self.colour).val(to as usize)
@@ -849,31 +837,36 @@ impl Board {
                             - self.squares[frm].val(frm)
                             - self.squares[to as usize].val(to as usize),
                     },
-                ]
-                .into_iter(),
-                _ => vec![Move {
+                ]),
+                _ => v.push(Move {
                     data: pack_data(false, false, Nil, frm, to as usize),
                     val: self.squares[frm].val(to as usize)
                         - self.squares[frm].val(frm)
                         - self.squares[to as usize].val(to as usize),
-                }]
-                .into_iter(),
+                }),
             }
-        }));
+        }
 
         // en passant
         if matches!(self.squares[last.to()], Pawn(_)) && last.to().abs_diff(last.frm()) == 2 {
             // square attacked if last move was a step-2 pawn move
-            let idx = last.frm() as isize + if self.colour.is_white() { -1 } else { 1 };
+            //let idx = last.frm() as isize + if self.colour.is_white() { -1 } else { 1 };
+            let idx = last.frm() as isize - 2 * self.colour as isize + 1;
 
-            let (tol, n) = bm2arr(BM_PAWN_CAPTURES[self.colour as usize][frm] & 1 << idx);
+            //let (tol, n) = bm2arr(BM_PAWN_CAPTURES[self.colour as usize][frm] & 1 << idx);
 
-            v.extend(tol[0..n].iter().map(|&to| Move {
-                data: pack_data(false, true, Nil, frm, to as usize),
-                val: self.squares[frm].val(to as usize)
-                    - self.squares[frm].val(frm)
-                    - self.squares[last.to()].val(last.to()),
-            }));
+            let mut b = BM_PAWN_CAPTURES[self.colour as usize][frm] & 1 << idx;
+            while b != 0 {
+                let to = b.trailing_zeros();
+                b &= !(1 << to);
+
+                v.push(Move {
+                    data: pack_data(false, true, Nil, frm, to as usize),
+                    val: self.squares[frm].val(to as usize)
+                        - self.squares[frm].val(frm)
+                        - self.squares[last.to()].val(last.to()),
+                });
+            }
         }
     }
 
