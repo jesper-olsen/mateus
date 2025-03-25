@@ -437,8 +437,7 @@ impl Game {
                 self.board.update(m);
                 alpha = max(bscore, alpha);
                 let mut score = if i == 0 {
-                    // full beam
-                    -self.pvs(depth - 1, 1, -beta, -alpha, m)
+                    -self.pvs(depth - 1, 1, -beta, -alpha, m) // full beam
                 } else {
                     -self.pvs(depth - 1, 1, -alpha - 1, -alpha, m)
                 };
