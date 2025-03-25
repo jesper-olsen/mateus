@@ -476,7 +476,7 @@ mod tests {
     fn test_fen() {
         let game = Game::new(Board::default());
         assert_eq!(
-            game.to_fen().as_str(),
+            game.board.to_fen().as_str(),
             "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
         )
     }

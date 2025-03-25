@@ -309,11 +309,7 @@ impl Board {
 
         let half_move_clock = if parts.len() > 4 {
             // moves since last irreversible move
-            if let Ok(value) = parts[4].parse::<usize>() {
-                value
-            } else {
-                0
-            }
+            parts[4].parse::<usize>().unwrap_or(0)
         } else {
             0
         };
@@ -804,7 +800,6 @@ impl Board {
             step1 >> 1
         };
         let step2: u64 = step2 & BM_PAWN_STEP2[self.colour as usize][frm] & !bm_board;
-        let (vto, n) = bm2arr(cap | step1 | step2);
 
         let mut b = cap | step1 | step2;
         while b != 0 {
@@ -850,10 +845,7 @@ impl Board {
         // en passant
         if matches!(self.squares[last.to()], Pawn(_)) && last.to().abs_diff(last.frm()) == 2 {
             // square attacked if last move was a step-2 pawn move
-            //let idx = last.frm() as isize + if self.colour.is_white() { -1 } else { 1 };
             let idx = last.frm() as isize - 2 * self.colour as isize + 1;
-
-            //let (tol, n) = bm2arr(BM_PAWN_CAPTURES[self.colour as usize][frm] & 1 << idx);
 
             let mut b = BM_PAWN_CAPTURES[self.colour as usize][frm] & 1 << idx;
             while b != 0 {
@@ -887,7 +879,18 @@ impl Board {
         const BSHORT: u64 = 1 << 15 | 1 << 23;
         const BLONG: u64 = 1 << 55 | 1 << 47 | 1 << 39;
 
-        let cc2 = [
+        let mut b = BM_KING_MOVES[frm] & !self.bitmaps.pieces[self.colour as usize];
+        while b != 0 {
+            let to = b.trailing_zeros();
+            b &= !(1 << to);
+
+            v.push(Move {
+                data: pack_data(false, false, Nil, frm, to as usize),
+                val: p.val(to as usize) - p.val(frm) - self.squares[to as usize].val(to as usize),
+            })
+        }
+
+        [
             (
                 self.can_castle & CASTLE_W_SHORT != 0
                     && frm == 24
@@ -932,27 +935,15 @@ impl Board {
                 63,
                 39,
             ),
-        ];
-
-        let (tol, n) = bm2arr(BM_KING_MOVES[frm] & !self.bitmaps.pieces[self.colour as usize]);
-        v.extend(
-            tol[0..n]
-                .iter()
-                .map(|&to| Move {
-                    data: pack_data(false, false, Nil, frm, to as usize),
-                    val: p.val(to as usize)
-                        - p.val(frm)
-                        - self.squares[to as usize].val(to as usize),
-                })
-                .chain(
-                    cc2.iter()
-                        .filter(|(c, _, _, _, _)| *c)
-                        .map(|(_, r, to, rfrm, rto)| Move {
-                            data: pack_data(true, false, Nil, frm, *to as usize),
-                            val: p.val(*to as usize) - p.val(frm) + r.val(*rto) - r.val(*rfrm),
-                        }),
-                ),
-        );
+        ]
+        .iter()
+        .filter(|(c, _, _, _, _)| *c)
+        .for_each(|(_, r, to, rfrm, rto)| {
+            v.push(Move {
+                data: pack_data(true, false, Nil, frm, *to as usize),
+                val: p.val(*to as usize) - p.val(frm) + r.val(*rto) - r.val(*rfrm),
+            })
+        })
     }
 
     // count pseudo legal moves - ignoring en passant & castling
