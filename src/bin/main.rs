@@ -314,13 +314,14 @@ fn main() {
             3 => benchmark(args.v, args.n, args.d, "Lasker", &benchmark::LASKER),
             4 => benchmark(args.v, args.n, args.d, "Nolot", &benchmark::NOLOT),
             5 => benchmark(args.v, args.n, args.d, "CCR One Hour", &benchmark::CCR),
-            _ => benchmark(
+            6 => benchmark(
                 args.v,
                 args.n,
                 args.d,
                 "Eigenmann Rapid Engine Test",
                 &benchmark::ERET,
             ),
+            _ => benchmark(args.v, args.n, args.d, "BT-2450", &benchmark::BT2450),
         }
     } else {
         let players = HashMap::from([(Colour::White, args.w), (Colour::Black, args.b)]);
