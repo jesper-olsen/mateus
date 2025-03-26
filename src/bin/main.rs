@@ -37,7 +37,7 @@ struct Args {
     ///no opening library
     l: bool,
     #[arg(short, long, default_value_t = 0)]
-    ///benchmark test sets - Bratko-Kopec (1) / Kaufman (2) / Lasker (3) / Nolot (4) / CCR (5)
+    ///benchmark test sets - Bratko-Kopec (1) / Kaufman (2) / Lasker (3) / Nolot (4) / CCR (5) / ERET (6)
     k: usize,
     #[arg(short, long, default_value_t = false)]
     ///verbose output
@@ -313,7 +313,14 @@ fn main() {
             2 => benchmark(args.v, args.n, args.d, "Kaufman", &benchmark::KAUFMAN),
             3 => benchmark(args.v, args.n, args.d, "Lasker", &benchmark::LASKER),
             4 => benchmark(args.v, args.n, args.d, "Nolot", &benchmark::NOLOT),
-            _ => benchmark(args.v, args.n, args.d, "CCR One Hour", &benchmark::CCR),
+            5 => benchmark(args.v, args.n, args.d, "CCR One Hour", &benchmark::CCR),
+            _ => benchmark(
+                args.v,
+                args.n,
+                args.d,
+                "Eigenmann Rapid Engine Test",
+                &benchmark::ERET,
+            ),
         }
     } else {
         let players = HashMap::from([(Colour::White, args.w), (Colour::Black, args.b)]);
