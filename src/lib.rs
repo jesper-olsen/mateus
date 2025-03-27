@@ -12,7 +12,7 @@ use std::collections::hash_map::HashMap;
 use std::fmt;
 use val::*;
 
-const INFINITE: i16 = 10000;
+const INFINITE: i16 = 32000;
 const EXACT_BIT: u16 = 1 << 12;
 const LOWER_BIT: u16 = 1 << 13;
 const UPPER_BIT: u16 = 1 << 14;
@@ -412,7 +412,6 @@ impl Game {
         &mut self,
         moves: &[Move],
         max_searched: usize,
-        max_depth: u16,
         verbose: bool,
     ) -> Vec<(Move, i16)> {
         // top level pvs - does iterative deepening, sorts moves
@@ -424,10 +423,7 @@ impl Game {
 
         self.n_searched = 0;
         let mut pq0: Vec<(Move, i16)> = moves.iter().map(|m| (*m, 0)).collect();
-        for depth in (2..=max_depth).step_by(1) {
-            if depth > 1 && self.n_searched > max_searched {
-                break;
-            }
+        for depth in (2..).step_by(1) {
             let mut pq: Vec<(Move, i16)> = Vec::new();
             let mut alpha = -INFINITE;
             let beta = INFINITE;
@@ -459,7 +455,7 @@ impl Game {
                     depth, self.n_searched, pq0[0].0, bscore
                 );
             }
-            if !pq0.is_empty() && pq0[0].1.abs() >= INFINITE - depth as i16 {
+            if self.n_searched > max_searched || pq0[0].1.abs() >= INFINITE - 1000 as i16 {
                 break;
             }
         }

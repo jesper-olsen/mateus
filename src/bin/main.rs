@@ -21,9 +21,6 @@ struct Args {
     #[arg(short, long, default_value_t = 1000000)]
     ///break off search threshold - positions generated
     n: usize,
-    #[arg(short, long, default_value_t = 30)]
-    ///max depth of regular search  
-    d: u16,
     #[arg(short, long, default_value_t = -1)]
     ///number of (half) moves before stopping
     m: isize,
@@ -37,7 +34,7 @@ struct Args {
     ///no opening library
     l: bool,
     #[arg(short, long, default_value_t = 0)]
-    ///benchmark test sets - Bratko-Kopec (1) / Kaufman (2) / Lasker (3) / Nolot (4) / CCR (5) / ERET (6)
+    ///benchmark test sets - Bratko-Kopec (1) / Kaufman (2) / Lasker (3) / Nolot (4) / CCR (5) / ERET (6) / BT-2450 (7) / BT-2630 (8)
     k: usize,
     #[arg(short, long, default_value_t = false)]
     ///verbose output
@@ -116,17 +113,8 @@ fn check_game_over(game: &Game, moves: &[Move], half_moves: isize) -> String {
     }
 }
 
-fn benchmark(
-    verbose: bool,
-    search_threshold: usize,
-    max_depth: u16,
-    tname: &str,
-    tpos: &[(&str, &str)],
-) {
-    println!(
-        "{} Test - search threshold: {search_threshold}, max depth: {max_depth}",
-        tname
-    );
+fn benchmark(verbose: bool, search_threshold: usize, tname: &str, tpos: &[(&str, &str)]) {
+    println!("{} Test - search threshold: {search_threshold}", tname);
     let mut correct: Vec<usize> = vec![];
     let mut points: f64 = 0.0;
     let mut n_searched: usize = 0;
@@ -136,7 +124,7 @@ fn benchmark(
         let moves = game.legal_moves(None);
         game.n_searched = 0;
 
-        let l = game.score_moves(&moves, search_threshold, max_depth, verbose);
+        let l = game.score_moves(&moves, search_threshold, verbose);
         let (best, score) = l[0];
         n_searched += game.n_searched;
         let clabel = game.move2label(&best, &moves);
@@ -149,7 +137,7 @@ fn benchmark(
 
         for (i, (m, score)) in l.iter().enumerate() {
             if verbose {
-                println!("{i}/{}: dpt {max_depth} {m} {}/{score}", l.len(), m.val);
+                println!("{i}/{}: {m} {}/{score}", l.len(), m.val);
             }
             let clabel = game.move2label(m, &moves);
             if i < 4 && (*label).contains(clabel.as_str()) {
@@ -194,7 +182,6 @@ fn play(
     players: HashMap<Colour, bool>,
     verbose: bool,
     search_threshold: usize,
-    max_depth: u16,
     half_moves: isize,
     library_bypass: bool,
     fen: &str,
@@ -232,7 +219,7 @@ fn play(
                     panic!("Not a valid library move")
                 }
             } else {
-                game.score_moves(&moves, search_threshold, max_depth, verbose)
+                game.score_moves(&moves, search_threshold, verbose)
             }
         };
 
@@ -303,36 +290,22 @@ fn main() {
 
     if args.k > 0 {
         match args.k {
-            1 => benchmark(
-                args.v,
-                args.n,
-                args.d,
-                "Bratko-Kopec",
-                &benchmark::BRATKO_KOPEC,
-            ),
-            2 => benchmark(args.v, args.n, args.d, "Kaufman", &benchmark::KAUFMAN),
-            3 => benchmark(args.v, args.n, args.d, "Lasker", &benchmark::LASKER),
-            4 => benchmark(args.v, args.n, args.d, "Nolot", &benchmark::NOLOT),
-            5 => benchmark(args.v, args.n, args.d, "CCR One Hour", &benchmark::CCR),
+            1 => benchmark(args.v, args.n, "Bratko-Kopec", &benchmark::BRATKO_KOPEC),
+            2 => benchmark(args.v, args.n, "Kaufman", &benchmark::KAUFMAN),
+            3 => benchmark(args.v, args.n, "Lasker", &benchmark::LASKER),
+            4 => benchmark(args.v, args.n, "Nolot", &benchmark::NOLOT),
+            5 => benchmark(args.v, args.n, "CCR One Hour", &benchmark::CCR),
             6 => benchmark(
                 args.v,
                 args.n,
-                args.d,
                 "Eigenmann Rapid Engine Test",
                 &benchmark::ERET,
             ),
-            _ => benchmark(args.v, args.n, args.d, "BT-2450", &benchmark::BT2450),
+            7 => benchmark(args.v, args.n, "BT-2450", &benchmark::BT2450),
+            _ => benchmark(args.v, args.n, "BT-2630", &benchmark::BT2630),
         }
     } else {
         let players = HashMap::from([(Colour::White, args.w), (Colour::Black, args.b)]);
-        play(
-            players,
-            args.v,
-            args.n,
-            args.d,
-            args.m,
-            args.l,
-            args.f.as_str(),
-        );
+        play(players, args.v, args.n, args.m, args.l, args.f.as_str());
     }
 }
