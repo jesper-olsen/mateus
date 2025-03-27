@@ -11,16 +11,10 @@
 // https://www.wbec-ridderkerk.nl/html/UCIProtocol.html
 //
 
-use puccinia_s_checkmate::Game;
-use puccinia_s_checkmate::mgen::Move;
-use puccinia_s_checkmate::misc::str2move;
-use puccinia_s_checkmate::openings::library_moves;
-use puccinia_s_checkmate::val::*;
-
-use std::io::{self, BufRead, Write};
+use std::io::{self, BufRead};
 use std::sync::mpsc::{self, Sender};
 use std::sync::{
-    Arc, Mutex,
+    Arc,
     atomic::{AtomicBool, Ordering},
 };
 use std::thread;
