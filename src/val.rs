@@ -134,7 +134,7 @@ pub const I2SQ: [&str;64] = ["h1", "h2", "h3", "h4","h5","h6","h7","h8",
                              "b1", "b2", "b3", "b4","b5","b6","b7","b8",
                              "a1", "a2", "a3", "a4","a5","a6","a7","a8"];
 
-pub const ROOT_FEN: &str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR";
+pub const ROOT_FEN: &str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
 impl fmt::Display for Piece {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

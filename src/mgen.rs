@@ -140,38 +140,8 @@ pub struct Board {
 }
 
 impl Default for Board {
-    #[rustfmt::skip]
     fn default() -> Self {
-        let squares =  [
-                Rook(White),   Pawn(White), Nil, Nil, Nil, Nil, Pawn(Black), Rook(Black),
-                Knight(White), Pawn(White), Nil, Nil, Nil, Nil, Pawn(Black), Knight(Black),
-                Bishop(White), Pawn(White), Nil, Nil, Nil, Nil, Pawn(Black), Bishop(Black),
-                King(White),   Pawn(White), Nil, Nil, Nil, Nil, Pawn(Black), King(Black),
-                Queen(White),  Pawn(White), Nil, Nil, Nil, Nil, Pawn(Black), Queen(Black),
-                Bishop(White), Pawn(White), Nil, Nil, Nil, Nil, Pawn(Black), Bishop(Black),
-                Knight(White), Pawn(White), Nil, Nil, Nil, Nil, Pawn(Black), Knight(Black),
-                Rook(White),   Pawn(White), Nil, Nil, Nil, Nil, Pawn(Black), Rook(Black),
-            ];
-        let bitmaps = to_bitmaps(&squares);
-        let end_game_material = abs_material(&squares) / 3;
-        let material = material(&squares);
-        let colour = White;
-        let hash = calc_hash(&squares, colour);
-        let rep = HashMap::from([(hash, 1)]);
-        Board {
-            squares,
-            bitmaps,
-            colour,
-            can_castle: CASTLE_W_SHORT | CASTLE_W_LONG | CASTLE_B_SHORT | CASTLE_B_LONG,
-            end_game_material,
-            log_bms: vec![],
-            move_log: Vec::new(),
-            material,
-            hash,
-            half_move_clock: 0,
-            full_move_count: 0,
-            rep,
-        }
+        Board::from_fen(ROOT_FEN)
     }
 }
 
@@ -264,22 +234,8 @@ impl Board {
     }
 
     pub fn from_fen(s: &str) -> Self {
-        let mut squares = [Nil; 64];
-        let mut offset = 0i16;
         let parts = s.split(' ').collect::<Vec<&str>>();
-        for (i, c) in parts[0].chars().enumerate() {
-            if let Some(d) = c.to_digit(10) {
-                offset += d as i16 - 1;
-            } else if c == '/' {
-                offset -= 1;
-            } else {
-                let k: usize = (i as i16 + offset).try_into().unwrap();
-                let x = 7 - k % 8;
-                let y = 7 - k / 8;
-                let q = x * 8 + y;
-                squares[q] = Piece::from_ascii(c);
-            }
-        }
+        let squares = from_fen(parts[0]);
 
         let colour = if parts.len() > 1 {
             if parts[1].to_lowercase().starts_with('w') {
@@ -327,17 +283,19 @@ impl Board {
 
         let full_move_count = if parts.len() > 5 {
             // full-move count
-            if let Ok(value) = parts[5].parse::<usize>() {
-                value
-            } else {
-                0 // TODO - Err ?
-            }
+            parts[5].parse::<usize>().unwrap_or(1)
+            // if let Ok(value) = parts[5].parse::<usize>() {
+            //     value
+            // } else {
+            //     0 // TODO - Err ?
+            // }
         } else {
-            0
+            1
         };
 
         let bitmaps = to_bitmaps(&squares);
-        let end_game_material = abs_material(&Board::default().squares); // TODO
+
+        let end_game_material = abs_material(&from_fen(ROOT_FEN)) / 3;
         let hash = calc_hash(&squares, colour);
         let material = material(&squares);
         let rep = HashMap::from([(hash, 1)]);
@@ -415,7 +373,7 @@ impl Board {
             format!(
                 " {} {}",
                 self.half_moves() - 1,
-                self.full_move_count + self.move_log.len() / 2 + 1
+                self.full_move_count + self.move_log.len() / 2
             )
             .as_str(),
         );
@@ -1059,4 +1017,24 @@ pub const fn calc_hash(squares: &[Piece], colour: Colour) -> u64 {
         i += 1;
     }
     key
+}
+
+fn from_fen(s: &str) -> [Piece; 64] {
+    let mut squares = [Nil; 64];
+    let mut offset = 0i16;
+    let parts = s.split(' ').collect::<Vec<&str>>();
+    for (i, c) in parts[0].chars().enumerate() {
+        if let Some(d) = c.to_digit(10) {
+            offset += d as i16 - 1;
+        } else if c == '/' {
+            offset -= 1;
+        } else {
+            let k: usize = (i as i16 + offset).try_into().unwrap();
+            let x = 7 - k % 8;
+            let y = 7 - k / 8;
+            let q = x * 8 + y;
+            squares[q] = Piece::from_ascii(c);
+        }
+    }
+    squares
 }
