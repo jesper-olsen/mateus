@@ -455,7 +455,7 @@ impl Game {
                     depth, self.n_searched, pq0[0].0, bscore
                 );
             }
-            if self.n_searched > max_searched || pq0[0].1.abs() >= INFINITE - 1000 as i16 {
+            if self.n_searched > max_searched || pq0[0].1.abs() >= INFINITE - 1000 {
                 break;
             }
         }

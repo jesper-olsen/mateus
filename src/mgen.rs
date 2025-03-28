@@ -125,7 +125,7 @@ impl fmt::Display for Move {
 }
 
 pub struct Board {
-    pub squares: [Piece; 64],
+    squares: [Piece; 64],
     pub colour: Colour,
     pub can_castle: u8, // white short, long, black short, long
     pub move_log: Vec<Move>,
@@ -177,12 +177,14 @@ impl Default for Board {
 
 impl Index<usize> for Board {
     type Output = Piece;
+    #[inline(always)]
     fn index(&self, idx: usize) -> &Self::Output {
         &self.squares[idx]
     }
 }
 
 impl IndexMut<usize> for Board {
+    #[inline(always)]
     fn index_mut(&mut self, idx: usize) -> &mut Self::Output {
         &mut self.squares[idx]
     }
@@ -191,7 +193,7 @@ impl IndexMut<usize> for Board {
 impl<'a> IntoIterator for &'a Board {
     type Item = &'a Piece;
     type IntoIter = Iter<'a, Piece>;
-
+    #[inline(always)]
     fn into_iter(self) -> Self::IntoIter {
         self.squares.iter()
     }
@@ -353,14 +355,14 @@ impl Board {
             let mut n = 0;
             for x in (0..=7).rev() {
                 let idx = x * 8 + y;
-                if self.squares[idx] == Nil {
+                if self[idx] == Nil {
                     n += 1;
                 } else {
                     if n > 0 {
                         s.push_str(format!("{}", n).as_str());
                         n = 0;
                     }
-                    s.push(self.squares[idx].to_ascii())
+                    s.push(self[idx].to_ascii())
                 }
             }
             if n > 0 {
@@ -389,7 +391,7 @@ impl Board {
         // en passant sq
         s.push(' ');
         if let Some(last) = self.move_log.last() {
-            if matches!(self.squares[last.to()], Pawn(_)) && last.to().abs_diff(last.frm()) == 2 {
+            if matches!(self[last.to()], Pawn(_)) && last.to().abs_diff(last.frm()) == 2 {
                 let idx = last.to() as isize + if self.colour.is_white() { 1 } else { -1 };
                 s.push_str(I2SQ[idx as usize])
             } else {
@@ -433,7 +435,7 @@ impl Board {
 
         // en passant
         if let Some(last) = self.move_log.last() {
-            if matches!(self.squares[last.to()], Pawn(_)) && last.to().abs_diff(last.frm()) == 2 {
+            if matches!(self[last.to()], Pawn(_)) && last.to().abs_diff(last.frm()) == 2 {
                 let idx = last.to() as isize + if self.colour.is_white() { 1 } else { -1 };
                 for i in 0..64 {
                     v.push((i == idx) as u8);
@@ -489,14 +491,10 @@ impl Board {
     }
 
     pub fn update(&mut self, m: &Move) {
-        self.log_bms.push((
-            self.bitmaps,
-            self.squares[m.to()],
-            self.hash,
-            self.can_castle,
-        ));
+        self.log_bms
+            .push((self.bitmaps, self[m.to()], self.hash, self.can_castle));
         let hash;
-        self.squares[m.to()] = if m.castle() {
+        self[m.to()] = if m.castle() {
             let (x, y) = if m.to() <= 15 {
                 (m.frm() - 24, m.frm() - 8) // short
             } else {
@@ -510,31 +508,30 @@ impl Board {
             self.bitmaps.pieces[self.colour as usize] |= 1 << y;
             self.bitmaps.pieces[self.colour as usize] ^= 1 << x;
 
-            match self.squares[m.frm()] {
+            match self[m.frm()] {
                 King(White) => self.can_castle &= !CASTLE_W_SHORT & !CASTLE_W_LONG,
                 King(Black) => self.can_castle &= !CASTLE_B_SHORT & !CASTLE_B_LONG,
                 _ => panic!("not castle..."),
             }
 
-            hash = self.squares[m.frm()].hashkey(m.to())
-                ^ self.squares[m.frm()].hashkey(m.frm())
-                ^ self.squares[x].hashkey(y)
-                ^ self.squares[x].hashkey(x);
-            self.squares[y] = self.squares[x]; // move rook
-            self.squares[x] = Nil;
-            self.squares[m.frm()]
+            hash = self[m.frm()].hashkey(m.to())
+                ^ self[m.frm()].hashkey(m.frm())
+                ^ self[x].hashkey(y)
+                ^ self[x].hashkey(x);
+            self[y] = self.squares[x]; // move rook
+            self[x] = Nil;
+            self[m.frm()]
         } else if m.transform() {
             self.bitmaps.pieces[self.colour as usize] |= 1 << m.to();
             self.bitmaps.pieces[self.colour as usize] ^= 1 << m.frm();
             self.bitmaps.pawns ^= 1 << m.frm();
-            if let Rook(c) | Knight(c) | Bishop(c) | Queen(c) = self.squares[m.to()] {
+            if let Rook(c) | Knight(c) | Bishop(c) | Queen(c) = self[m.to()] {
                 self.bitmaps.pieces[c as usize] ^= 1 << m.to();
             }
 
             let p = m.ptransform(self.colour);
-            hash = p.hashkey(m.to())
-                ^ self.squares[m.frm()].hashkey(m.frm())
-                ^ self.squares[m.to()].hashkey(m.to());
+            hash =
+                p.hashkey(m.to()) ^ self[m.frm()].hashkey(m.frm()) ^ self[m.to()].hashkey(m.to());
             p
         } else if m.en_passant() {
             // +9  +1 -7
@@ -552,15 +549,14 @@ impl Board {
             self.bitmaps.pawns ^= 1 << m.frm();
             self.bitmaps.pawns ^= 1 << x;
 
-            hash = self.squares[m.frm()].hashkey(m.to())
-                ^ self.squares[m.frm()].hashkey(m.frm())
-                ^ self.squares[x].hashkey(x);
-            self.squares[x] = Nil;
-            self.squares[m.frm()]
+            hash =
+                self[m.frm()].hashkey(m.to()) ^ self[m.frm()].hashkey(m.frm()) ^ self[x].hashkey(x);
+            self[x] = Nil;
+            self[m.frm()]
         } else {
             self.bitmaps.pieces[self.colour as usize] |= 1 << m.to();
             self.bitmaps.pieces[self.colour as usize] ^= 1 << m.frm();
-            match (self.squares[m.frm()], self.squares[m.to()]) {
+            match (self[m.frm()], self[m.to()]) {
                 (Pawn(_), Pawn(c)) => {
                     self.bitmaps.pawns ^= 1 << m.frm();
                     self.bitmaps.pieces[c as usize] ^= 1 << m.to();
@@ -600,12 +596,12 @@ impl Board {
                 _ => (),
             }
 
-            hash = self.squares[m.frm()].hashkey(m.to())
-                ^ self.squares[m.frm()].hashkey(m.frm())
-                ^ self.squares[m.to()].hashkey(m.to());
-            self.squares[m.frm()]
+            hash = self[m.frm()].hashkey(m.to())
+                ^ self[m.frm()].hashkey(m.frm())
+                ^ self[m.to()].hashkey(m.to());
+            self[m.frm()]
         };
-        self.squares[m.frm()] = Nil;
+        self[m.frm()] = Nil;
         self.material += m.val;
         self.rep_inc();
         self.hash ^= hash ^ WHITE_HASH;
@@ -626,22 +622,22 @@ impl Board {
             } else {
                 (m.frm() + 32, m.frm() + 8) // long
             };
-            self.squares[frm] = self.squares[to]; // move rook
-            self.squares[to] = Nil;
+            self[frm] = self.squares[to]; // move rook
+            self[to] = Nil;
         }
-        self.squares[m.frm()] = if m.transform() {
+        self[m.frm()] = if m.transform() {
             Pawn(self.colour)
         } else {
-            self.squares[m.to()]
+            self[m.to()]
         };
-        self.squares[m.to()] = capture;
+        self[m.to()] = capture;
 
         if m.en_passant() {
             let x = match m.to() > m.frm() {
                 true => m.frm() + 8,  // west
                 false => m.frm() - 8, // east
             };
-            self.squares[x] = match self.squares[m.frm()] {
+            self[x] = match self.squares[m.frm()] {
                 Pawn(White) => Pawn(Black),
                 Pawn(Black) => Pawn(White),
                 _ => unreachable!(),
@@ -765,9 +761,9 @@ impl Board {
 
             v.push(Move {
                 data: pack_data(false, false, Nil, frm, to as usize),
-                val: self.squares[frm].val(to as usize)
-                    - self.squares[frm].val(frm)
-                    - self.squares[to as usize].val(to as usize),
+                val: self[frm].val(to as usize)
+                    - self[frm].val(frm)
+                    - self[to as usize].val(to as usize),
             })
         }
     }
@@ -782,9 +778,9 @@ impl Board {
             b &= !(1 << to);
             v.push(Move {
                 data: pack_data(false, false, Nil, frm, to as usize),
-                val: self.squares[frm].val(to as usize)
-                    - self.squares[frm].val(frm)
-                    - self.squares[to as usize].val(to as usize),
+                val: self[frm].val(to as usize)
+                    - self[frm].val(frm)
+                    - self[to as usize].val(to as usize),
             })
         }
     }
@@ -811,39 +807,39 @@ impl Board {
                     Move {
                         data: pack_data(false, false, Queen(self.colour), frm, to as usize),
                         val: Piece::Queen(self.colour).val(to as usize)
-                            - self.squares[frm].val(frm)
-                            - self.squares[to as usize].val(to as usize),
+                            - self[frm].val(frm)
+                            - self[to as usize].val(to as usize),
                     },
                     Move {
                         data: pack_data(false, false, Rook(self.colour), frm, to as usize),
                         val: Piece::Rook(self.colour).val(to as usize)
-                            - self.squares[frm].val(frm)
-                            - self.squares[to as usize].val(to as usize),
+                            - self[frm].val(frm)
+                            - self[to as usize].val(to as usize),
                     },
                     Move {
                         data: pack_data(false, false, Knight(self.colour), frm, to as usize),
                         val: Piece::Knight(self.colour).val(to as usize)
-                            - self.squares[frm].val(frm)
-                            - self.squares[to as usize].val(to as usize),
+                            - self[frm].val(frm)
+                            - self[to as usize].val(to as usize),
                     },
                     Move {
                         data: pack_data(false, false, Bishop(self.colour), frm, to as usize),
                         val: Piece::Bishop(self.colour).val(to as usize)
-                            - self.squares[frm].val(frm)
-                            - self.squares[to as usize].val(to as usize),
+                            - self[frm].val(frm)
+                            - self[to as usize].val(to as usize),
                     },
                 ]),
                 _ => v.push(Move {
                     data: pack_data(false, false, Nil, frm, to as usize),
-                    val: self.squares[frm].val(to as usize)
-                        - self.squares[frm].val(frm)
-                        - self.squares[to as usize].val(to as usize),
+                    val: self[frm].val(to as usize)
+                        - self[frm].val(frm)
+                        - self[to as usize].val(to as usize),
                 }),
             }
         }
 
         // en passant
-        if matches!(self.squares[last.to()], Pawn(_)) && last.to().abs_diff(last.frm()) == 2 {
+        if matches!(self[last.to()], Pawn(_)) && last.to().abs_diff(last.frm()) == 2 {
             // square attacked if last move was a step-2 pawn move
             let idx = last.frm() as isize - 2 * self.colour as isize + 1;
 
@@ -854,9 +850,9 @@ impl Board {
 
                 v.push(Move {
                     data: pack_data(false, true, Nil, frm, to as usize),
-                    val: self.squares[frm].val(to as usize)
-                        - self.squares[frm].val(frm)
-                        - self.squares[last.to()].val(last.to()),
+                    val: self[frm].val(to as usize)
+                        - self[frm].val(frm)
+                        - self[last.to()].val(last.to()),
                 });
             }
         }
@@ -865,10 +861,10 @@ impl Board {
     fn king_moves(&self, v: &mut Vec<Move>, frm: usize, end_game: bool, in_check: bool) {
         let bm_board = self.bitmaps.pieces[White as usize] | self.bitmaps.pieces[Black as usize];
         // change king valuation in end_game
-        let p = match (self.squares[frm], end_game) {
+        let p = match (self[frm], end_game) {
             (King(White), true) => King(Black),
             (King(Black), true) => King(White),
-            (_, false) => self.squares[frm],
+            (_, false) => self[frm],
             _ => panic!(),
         };
 
@@ -886,7 +882,7 @@ impl Board {
 
             v.push(Move {
                 data: pack_data(false, false, Nil, frm, to as usize),
-                val: p.val(to as usize) - p.val(frm) - self.squares[to as usize].val(to as usize),
+                val: p.val(to as usize) - p.val(frm) - self[to as usize].val(to as usize),
             })
         }
 
@@ -895,7 +891,7 @@ impl Board {
                 self.can_castle & CASTLE_W_SHORT != 0
                     && frm == 24
                     && !in_check
-                    && self.squares[0] == Rook(White)
+                    && self[0] == Rook(White)
                     && bm_board & WSHORT == 0,
                 Rook(White),
                 8,
@@ -906,7 +902,7 @@ impl Board {
                 self.can_castle & CASTLE_W_LONG != 0
                     && frm == 24
                     && !in_check
-                    && self.squares[56] == Rook(White)
+                    && self[56] == Rook(White)
                     && bm_board & WLONG == 0,
                 Rook(White),
                 40,
@@ -917,7 +913,7 @@ impl Board {
                 self.can_castle & CASTLE_B_SHORT != 0
                     && frm == 31
                     && !in_check
-                    && self.squares[7] == Rook(Black)
+                    && self[7] == Rook(Black)
                     && bm_board & BSHORT == 0,
                 Rook(Black),
                 15,
@@ -928,7 +924,7 @@ impl Board {
                 self.can_castle & CASTLE_B_LONG != 0
                     && frm == 31
                     && !in_check
-                    && self.squares[63] == Rook(Black)
+                    && self[63] == Rook(Black)
                     && bm_board & BLONG == 0,
                 Rook(Black),
                 47,
@@ -991,7 +987,7 @@ fn count_ray_moves(frm: usize, moves: u64, bm_board: u64, bm_own: u64) -> u32 {
 }
 
 fn ray_check(frm: usize, moves: u64, bm_board: u64, bm_king: u64) -> bool {
-    return moves & bm_king & !bm_blockers(frm, moves & bm_board) != 0;
+    moves & bm_king & !bm_blockers(frm, moves & bm_board) != 0
 }
 
 const fn to_bitmaps(squares: &[Piece]) -> Bitmaps {
