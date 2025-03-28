@@ -159,10 +159,6 @@ impl Game {
         label
     }
 
-    pub fn rep_len(&self) -> usize {
-        self.board.rep.len()
-    }
-
     pub fn ttable_len(&self) -> usize {
         self.ttable.len()
     }
@@ -187,21 +183,9 @@ impl Game {
         }
     }
 
-    fn rep_clear(&mut self) {
-        self.board.rep.clear();
-    }
-
-    pub fn rep_count(&self) -> usize {
-        if let Some(count) = self.board.rep.get(&self.board.hash) {
-            *count
-        } else {
-            0
-        }
-    }
-
     pub fn make_move(&mut self, m: Move) {
         if m.en_passant() || self.board[m.to()] != Nil || matches!(self.board[m.frm()], Pawn(_)) {
-            self.rep_clear(); // ireversible move
+            self.board.rep.clear(); // ireversible move
             self.board.half_move_clock = 0;
         }
         self.ttable_clear();
@@ -225,7 +209,6 @@ impl Game {
 
     pub fn in_check(&self, colour: Colour) -> bool {
         // true if other side can capture king
-
         self.board.in_check(colour)
     }
 
@@ -239,14 +222,14 @@ impl Game {
 
     pub fn legal_moves(&mut self, last: Option<&Move>) -> Vec<Move> {
         let in_check = self.in_check(self.board.colour);
-        let mut moves = self.moves(self.board.colour, last, in_check);
+        let mut moves = self.moves(last, in_check);
         moves.retain(|m| self.legal_move(m));
         moves
     }
 
-    fn moves(&mut self, colour: Colour, last: Option<&Move>, in_check: bool) -> Vec<Move> {
+    fn moves(&mut self, last: Option<&Move>, in_check: bool) -> Vec<Move> {
         let mut l = self.board.moves(in_check, self.end_game, last);
-        if colour.is_white() {
+        if self.board.colour.is_white() {
             //l.sort_by(|b, a| a.val.cmp(&b.val)); // decreasing
             l.sort_unstable_by(|b, a| a.val.cmp(&b.val)); // decreasing
         } else {
@@ -289,7 +272,7 @@ impl Game {
         let mut bscore = None;
         let mut alpha = alp;
         let in_check = false; // TODO - calculate?
-        let mut moves = self.moves(colour, Some(last), in_check);
+        let mut moves = self.moves(Some(last), in_check);
         moves.retain(|m|
             //let ic = self.in_check(colour);
             if rfab {
@@ -325,8 +308,10 @@ impl Game {
     } // fn quiescence fab
 
     pub fn pvs(&mut self, depth: u16, ply: usize, alpha: i16, beta: i16, last: &Move) -> i16 {
-        if self.rep_count() >= 2 {
-            return 0;
+        if let Some(count) = self.board.rep.get(&self.board.hash) {
+            if *count >= 2 {
+                return 0;
+            }
         }
 
         let mut alpha = alpha;
@@ -364,7 +349,7 @@ impl Game {
             (_, false) => depth,
         };
 
-        let mut moves = self.moves(colour, Some(last), in_check);
+        let mut moves = self.moves(Some(last), in_check);
         if let Some(k) = kmove {
             move_to_head(&mut moves, &k);
         }

@@ -254,6 +254,15 @@ impl fmt::Display for Board {
 }
 
 impl Board {
+    pub fn rep_count(&self) -> usize {
+        if let Some(count) = self.rep.get(&self.hash) {
+            if *count >= 2 {
+                return 0;
+            }
+        }
+        0
+    }
+
     pub fn from_fen(s: &str) -> Self {
         let mut squares = [Nil; 64];
         let mut offset = 0i16;

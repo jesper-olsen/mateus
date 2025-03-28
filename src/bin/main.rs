@@ -95,7 +95,7 @@ fn pick_move(game: &mut Game, moves: &[Move]) -> Vec<(Move, i16)> {
 }
 
 fn check_game_over(game: &Game, moves: &[Move], half_moves: isize) -> String {
-    if game.rep_count() >= 3 {
+    if game.board.rep_count() >= 3 {
         "1/2-1/2 Draw by repetition".to_string()
     } else if game.board.half_moves() >= 100 {
         "1/2-1/2 Draw by the 50-move rule".to_string()
@@ -238,7 +238,11 @@ fn play(
                 (Instant::now() - start).as_millis() as usize,
                 speed
             );
-            println!("hash size r {} t {} ", game.rep_len(), game.ttable_len(),);
+            println!(
+                "hash size r {} t {} ",
+                game.board.rep.len(),
+                game.ttable_len(),
+            );
             for (i, (m, score)) in l.iter().enumerate() {
                 println!("{}/{}: {} {}/{}", i, moves.len(), m, m.val, score);
             }
@@ -252,8 +256,8 @@ fn play(
         println!("{}. {label}", game.board.move_log.len() / 2 + 1);
 
         if verbose {
-            if game.rep_count() > 1 {
-                println!("REP: {}", game.rep_count());
+            if game.board.rep_count() > 1 {
+                println!("REP: {}", game.board.rep_count());
             }
             println!(
                 "score: {}, material: {}, is_end_game: {}, pawns: {}, mobility: {}",
