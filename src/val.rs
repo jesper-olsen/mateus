@@ -43,6 +43,14 @@ pub enum Piece {
     Nil,
 }
 impl Piece {
+    pub const fn is_officer(&self) -> bool {
+        if let Rook(_) | Knight(_) | Bishop(_) | Queen(_) = self {
+            true
+        } else {
+            false
+        }
+    }
+
     pub const fn hashkey(&self, pos: usize) -> u64 {
         match self {
             Piece::Rook(c) => R_HASH[*c as usize][pos],

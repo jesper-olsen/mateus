@@ -84,6 +84,23 @@ impl Move {
     pub fn transform(&self) -> bool {
         self.data & TRANSFORM_BIT != 0
     }
+
+    pub fn transform_to_rook(&self) -> bool {
+        self.transform() && self.data & 1 << 15 == 0b10000000_00000000
+    }
+
+    pub fn transform_to_bishop(&self) -> bool {
+        self.transform() && self.data & 1 << 13 == 0b00100000_00000000
+    }
+
+    pub fn transform_to_knight(&self) -> bool {
+        self.transform() && self.data & 1 << 12 == 0b00010000_00000000
+    }
+
+    pub fn transform_to_queen(&self) -> bool {
+        self.transform() && self.data & (1 << 15 | 1 << 13 | 1 << 12) == 0
+    }
+
     #[inline]
     pub fn frm(&self) -> usize {
         (self.data & FRM_MASK) as usize
@@ -766,36 +783,27 @@ impl Board {
 
         let mut b = cap | step1 | step2;
         while b != 0 {
-            let to = b.trailing_zeros();
+            let to = b.trailing_zeros() as usize;
             b &= !(1 << to);
 
             match to % 8 {
-                0 | 7 => v.extend([
-                    Move {
-                        data: pack_data(false, false, Queen(self.colour), frm, to as usize),
-                        val: Piece::Queen(self.colour).val(to as usize)
-                            - self[frm].val(frm)
-                            - self[to as usize].val(to as usize),
-                    },
-                    Move {
-                        data: pack_data(false, false, Rook(self.colour), frm, to as usize),
-                        val: Piece::Rook(self.colour).val(to as usize)
-                            - self[frm].val(frm)
-                            - self[to as usize].val(to as usize),
-                    },
-                    Move {
-                        data: pack_data(false, false, Knight(self.colour), frm, to as usize),
-                        val: Piece::Knight(self.colour).val(to as usize)
-                            - self[frm].val(frm)
-                            - self[to as usize].val(to as usize),
-                    },
-                    Move {
-                        data: pack_data(false, false, Bishop(self.colour), frm, to as usize),
-                        val: Piece::Bishop(self.colour).val(to as usize)
-                            - self[frm].val(frm)
-                            - self[to as usize].val(to as usize),
-                    },
-                ]),
+                0 | 7 => {
+                    // promotion
+                    let frm_val = self[frm].val(frm);
+                    let to_val = self[to].val(to);
+                    let officers = [
+                        Queen(self.colour),
+                        Rook(self.colour),
+                        Knight(self.colour),
+                        Bishop(self.colour),
+                    ];
+                    for p in officers {
+                        v.push(Move {
+                            data: pack_data(false, false, p, frm, to),
+                            val: p.val(to as usize) - frm_val - to_val,
+                        })
+                    }
+                }
                 _ => v.push(Move {
                     data: pack_data(false, false, Nil, frm, to as usize),
                     val: self[frm].val(to as usize)

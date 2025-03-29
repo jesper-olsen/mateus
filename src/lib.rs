@@ -106,23 +106,18 @@ impl Game {
             let mut n = 0;
             let (x0, y0) = i2xy(m.frm());
             for m2 in moves {
-                match (self.board[m.frm()], self.board[m2.frm()]) {
-                    (Rook(_), Rook(_))
-                    | (Knight(_), Knight(_))
-                    | (Bishop(_), Bishop(_))
-                    | (Queen(_), Queen(_))
-                        if m2.to() == m.to() =>
-                    {
-                        n += 1;
-                        let (x, y) = i2xy(m2.frm());
-                        if x == x0 {
-                            nx += 1;
-                        }
-                        if y == y0 {
-                            ny += 1;
-                        }
+                if self.board[m.frm()].is_officer()
+                    && self.board[m2.frm()].is_officer()
+                    && m2.to() == m.to()
+                {
+                    n += 1;
+                    let (x, y) = i2xy(m2.frm());
+                    if x == x0 {
+                        nx += 1;
                     }
-                    _ => (),
+                    if y == y0 {
+                        ny += 1;
+                    }
                 }
             }
             if n > 1 {
