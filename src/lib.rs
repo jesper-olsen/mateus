@@ -106,9 +106,9 @@ impl Game {
             let mut n = 0;
             let (x0, y0) = i2xy(m.frm());
             for m2 in moves {
-                if self.board[m.frm()].is_officer()
-                    && self.board[m2.frm()].is_officer()
-                    && m2.to() == m.to()
+                if m2.to() == m.to()
+                    && self.board[m.frm()].is_officer()
+                    && self.board[m.frm()] == self.board[m2.frm()]
                 {
                     n += 1;
                     let (x, y) = i2xy(m2.frm());

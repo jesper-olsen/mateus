@@ -10,6 +10,17 @@ pub enum Colour {
 use Colour::*;
 
 impl Colour {
+    #[inline(always)]
+    pub const fn as_usize(&self) -> usize {
+        *self as usize
+    }
+
+    #[inline(always)]
+    pub const fn as_isize(&self) -> isize {
+        *self as isize
+    }
+
+    #[inline(always)]
     pub const fn opposite(&self) -> Colour {
         match *self {
             White => Black,
@@ -17,6 +28,7 @@ impl Colour {
         }
     }
 
+    #[inline(always)]
     pub const fn flip(&mut self) {
         *self = match *self {
             White => Black,
@@ -24,6 +36,7 @@ impl Colour {
         }
     }
 
+    #[inline(always)]
     pub const fn is_white(&self) -> bool {
         match *self {
             White => true,
@@ -53,24 +66,24 @@ impl Piece {
 
     pub const fn hashkey(&self, pos: usize) -> u64 {
         match self {
-            Piece::Rook(c) => R_HASH[*c as usize][pos],
-            Piece::Knight(c) => N_HASH[*c as usize][pos],
-            Piece::Bishop(c) => B_HASH[*c as usize][pos],
-            Piece::King(c) => K_HASH[*c as usize][pos],
-            Piece::Queen(c) => Q_HASH[*c as usize][pos],
-            Piece::Pawn(c) => P_HASH[*c as usize][pos],
+            Piece::Rook(c) => R_HASH[c.as_usize()][pos],
+            Piece::Knight(c) => N_HASH[c.as_usize()][pos],
+            Piece::Bishop(c) => B_HASH[c.as_usize()][pos],
+            Piece::King(c) => K_HASH[c.as_usize()][pos],
+            Piece::Queen(c) => Q_HASH[c.as_usize()][pos],
+            Piece::Pawn(c) => P_HASH[c.as_usize()][pos],
             Piece::Nil => NIL_HASH[pos],
         }
     }
 
     pub const fn val(&self, pos: usize) -> i16 {
         match self {
-            Rook(c) => ROOKVAL[*c as usize][pos],
-            Knight(c) => KNIGHTVAL[*c as usize][pos],
-            Bishop(c) => BISHOPVAL[*c as usize][pos],
-            King(c) => KINGVAL[*c as usize][pos],
-            Queen(c) => QUEENVAL[*c as usize][pos],
-            Pawn(c) => PAWNVAL[*c as usize][pos],
+            Rook(c) => ROOKVAL[c.as_usize()][pos],
+            Knight(c) => KNIGHTVAL[c.as_usize()][pos],
+            Bishop(c) => BISHOPVAL[c.as_usize()][pos],
+            King(c) => KINGVAL[c.as_usize()][pos],
+            Queen(c) => QUEENVAL[c.as_usize()][pos],
+            Pawn(c) => PAWNVAL[c.as_usize()][pos],
             Nil => 0,
         }
     }
