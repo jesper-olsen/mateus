@@ -80,6 +80,20 @@ impl Move {
             _ => Queen(colour),
         }
     }
+
+    pub fn promote_label(&self) -> &str {
+        if self.transform() {
+            match self.data & 0b10110000_00000000 {
+                0b10000000_00000000 => "=R",
+                0b00100000_00000000 => "=B",
+                0b00010000_00000000 => "=N",
+                _ => "=Q",
+            }
+        } else {
+            ""
+        }
+    }
+
     #[inline]
     pub fn transform(&self) -> bool {
         self.data & TRANSFORM_BIT != 0
@@ -127,17 +141,7 @@ pub const NULL_MOVE: Move = Move {
 impl fmt::Display for Move {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let (frm, to) = (self.frm(), self.to());
-        let t = if self.transform() {
-            match self.ptransform(White) {
-                Rook(_) => "=R",
-                Knight(_) => "=N",
-                Bishop(_) => "=B",
-                _ => "=Q",
-            }
-        } else {
-            ""
-        };
-        write!(f, "{}{}{t}", I2SQ[frm], I2SQ[to])
+        write!(f, "{}{}{}", I2SQ[frm], I2SQ[to], self.promote_label())
     }
 }
 

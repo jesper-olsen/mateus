@@ -134,12 +134,7 @@ impl Game {
             }
             label.push_str(I2SQ[m.to()]);
             if m.transform() {
-                match m.ptransform(self.board.colour) {
-                    Rook(_) => label.push_str("=R"),
-                    Knight(_) => label.push_str("=N"),
-                    Bishop(_) => label.push_str("=B"),
-                    _ => label.push_str("=Q"),
-                }
+                label.push_str(m.promote_label())
             }
         }
 
