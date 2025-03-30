@@ -49,6 +49,18 @@ impl Colour {
     }
 }
 
+const VAL: [[[i16; 64]; 2]; 8] = [
+    [ROOKVAL_B, ROOKVAL_W],
+    [KNIGHTVAL_B, KNIGHTVAL_W],
+    [BISHOPVAL_B, BISHOPVAL_W],
+    [QUEENVAL_B, QUEENVAL_W],
+    [KINGVAL_B, KINGVAL_W],
+    [PAWNVAL_B, PAWNVAL_W],
+    [[0; 64], [0; 64]],
+    [[0; 64], [0; 64]],
+];
+
+// TODO W 1 -> 4, index -3 => VAL only needs 6 levels...
 const W: u8 = 0b00000001;
 pub const ROOK: u8 = 0b00000010;
 pub const KNIGHT: u8 = 0b00000100;
@@ -59,13 +71,13 @@ pub const PAWN: u8 = 0b01000000;
 pub const WROOK: Piece = Piece(ROOK | W);
 pub const WKNIGHT: Piece = Piece(KNIGHT | W);
 pub const WBISHOP: Piece = Piece(BISHOP | W);
-pub const WQUEEN: Piece = Piece(BISHOP | W);
+pub const WQUEEN: Piece = Piece(QUEEN | W);
 pub const WKING: Piece = Piece(KING | W);
 pub const WPAWN: Piece = Piece(PAWN | W);
 pub const BROOK: Piece = Piece(ROOK);
 pub const BKNIGHT: Piece = Piece(KNIGHT);
 pub const BBISHOP: Piece = Piece(BISHOP);
-pub const BQUEEN: Piece = Piece(BISHOP);
+pub const BQUEEN: Piece = Piece(QUEEN);
 pub const BKING: Piece = Piece(KING);
 pub const BPAWN: Piece = Piece(PAWN);
 pub const EMPTY: Piece = Piece(0);
@@ -76,7 +88,7 @@ pub struct Piece(u8);
 impl Piece {
     #[inline(always)]
     pub const fn is_officer(&self) -> bool {
-        self.0 & ROOK | KNIGHT | BISHOP | QUEEN != 0
+        self.0 & (ROOK | KNIGHT | BISHOP | QUEEN) != 0
     }
 
     #[inline(always)]
@@ -87,6 +99,10 @@ impl Piece {
     #[inline(always)]
     pub const fn kind(&self) -> u8 {
         self.0 & 0b01111110
+    }
+
+    pub const fn index(&self) -> usize {
+        (self.kind().trailing_zeros() - 1) as usize
     }
 
     #[inline(always)]
@@ -105,16 +121,7 @@ impl Piece {
 
     #[inline(always)]
     pub const fn val(&self, pos: usize) -> i16 {
-        let c = self.colour();
-        match self.kind() {
-            ROOK => ROOKVAL[c.as_usize()][pos],
-            KNIGHT => KNIGHTVAL[c.as_usize()][pos],
-            BISHOP => BISHOPVAL[c.as_usize()][pos],
-            KING => KINGVAL[c.as_usize()][pos],
-            QUEEN => QUEENVAL[c.as_usize()][pos],
-            PAWN => PAWNVAL[c.as_usize()][pos],
-            _ => 0,
-        }
+        VAL[self.index()][self.colour().as_usize()][pos]
     }
 
     #[inline(always)]
@@ -206,7 +213,6 @@ const KINGVAL_W : [i16;64] = [
    24,  12,  6,   0,  0,  6,   12,  24, 
    24,  24,  12,  6,  6,  12,  24,  24];
 const KINGVAL_B: [i16; 64] = array_mul(-1, KINGVAL_W);
-const KINGVAL: [[i16; 64]; 2] = [KINGVAL_B, KINGVAL_W];
 
 #[rustfmt::skip]
 const PAWNVAL_W : [i16;64] = [
@@ -219,7 +225,6 @@ const PAWNVAL_W : [i16;64] = [
   100, 100, 102, 104, 106, 108, 112, 900, 
   100, 100, 101, 102, 104, 106, 108, 900];
 const PAWNVAL_B: [i16; 64] = array_reverse(array_mul(-1, PAWNVAL_W));
-const PAWNVAL: [[i16; 64]; 2] = [PAWNVAL_B, PAWNVAL_W];
 
 #[rustfmt::skip]
 const ROOKVAL_W : [i16;64] = [
@@ -232,7 +237,6 @@ const ROOKVAL_W : [i16;64] = [
   500, 500, 500, 500, 500, 500, 522, 500, 
   500, 500, 500, 500, 500, 500, 522, 500];
 const ROOKVAL_B: [i16; 64] = array_reverse(array_mul(-1, ROOKVAL_W));
-const ROOKVAL: [[i16; 64]; 2] = [ROOKVAL_B, ROOKVAL_W];
 
 #[rustfmt::skip]
 const KNIGHTVAL_W : [i16;64] = [
@@ -245,7 +249,6 @@ const KNIGHTVAL_W : [i16;64] = [
   315, 320, 320, 320, 320, 320, 320, 315, 
   315, 315, 315, 315, 315, 315, 315, 315];
 const KNIGHTVAL_B: [i16; 64] = array_reverse(array_mul(-1, KNIGHTVAL_W));
-const KNIGHTVAL: [[i16; 64]; 2] = [KNIGHTVAL_B, KNIGHTVAL_W];
 
 #[rustfmt::skip]
 const BISHOPVAL_W: [i16;64] = [
@@ -258,11 +261,9 @@ const BISHOPVAL_W: [i16;64] = [
    339, 350, 350, 350, 350, 350, 350, 350,
    339, 350, 350, 350, 350, 350, 350, 350];
 const BISHOPVAL_B: [i16; 64] = array_mul(-1, array_reverse(BISHOPVAL_W));
-const BISHOPVAL: [[i16; 64]; 2] = [BISHOPVAL_B, BISHOPVAL_W];
 
 const QUEENVAL_W: [i16; 64] = [900; 64];
 const QUEENVAL_B: [i16; 64] = [-900; 64];
-const QUEENVAL: [[i16; 64]; 2] = [QUEENVAL_B, QUEENVAL_W];
 
 const fn array_mul<const N: usize>(factor: i16, mut a: [i16; N]) -> [i16; N] {
     let mut i = 0;
@@ -281,4 +282,21 @@ const fn array_reverse<T: Copy, const N: usize>(mut a: [T; N]) -> [T; N] {
         i += 1;
     }
     a
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::*;
+
+    #[test]
+    fn test_index() {
+        let mut i = 0;
+        for k in [ROOK, KNIGHT, BISHOP, QUEEN, KING, PAWN] {
+            for c in [WHITE, BLACK] {
+                let p = Piece::new(k, c);
+                assert_eq!(p.index(), i)
+            }
+            i += 1
+        }
+    }
 }
