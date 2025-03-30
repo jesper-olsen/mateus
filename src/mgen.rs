@@ -577,7 +577,6 @@ impl Board {
                     self.bitmaps.kings |= 1 << m.to();
                     self.bitmaps.kings ^= 1 << m.frm();
                 }
-                (_, NIL) => (),
                 (_, PAWN) => {
                     self.bitmaps.pawns ^= 1 << m.to();
                     self.bitmaps.pieces[c.as_usize()] ^= 1 << m.to()

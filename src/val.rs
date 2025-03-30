@@ -1,65 +1,11 @@
 use crate::hashkeys_generated::*;
 use std::fmt;
 
-#[derive(Debug, PartialEq, Eq, Hash, Copy, Clone)]
-// pub enum Colour {
-//     Black,
-//     White,
-// }
-
-// pub const WHITE: Colour = Colour::white();
-// pub const BLACK: Colour = Colour::black();
-
-// impl Colour {
-//     #[inline(always)]
-//     pub const fn white() -> Colour {
-//         Colour::White
-//     }
-
-//     #[inline(always)]
-//     pub const fn black() -> Colour {
-//         Colour::Black
-//     }
-
-//     #[inline(always)]
-//     pub const fn as_usize(&self) -> usize {
-//         *self as usize
-//     }
-
-//     #[inline(always)]
-//     pub const fn as_isize(&self) -> isize {
-//         *self as isize
-//     }
-
-//     #[inline(always)]
-//     pub const fn opposite(&self) -> Colour {
-//         match *self {
-//             Colour::White => Colour::Black,
-//             Colour::Black => Colour::White,
-//         }
-//     }
-
-//     #[inline(always)]
-//     pub const fn flip(&mut self) {
-//         *self = match *self {
-//             Colour::White => Colour::Black,
-//             Colour::Black => Colour::White,
-//         }
-//     }
-
-//     #[inline(always)]
-//     pub const fn is_white(&self) -> bool {
-//         match *self {
-//             Colour::White => true,
-//             Colour::Black => false,
-//         }
-//     }
-// }
-
-pub struct Colour(u8);
-
 pub const WHITE: Colour = Colour::white();
 pub const BLACK: Colour = Colour::black();
+
+#[derive(Debug, PartialEq, Eq, Hash, Copy, Clone)]
+pub struct Colour(u8);
 
 impl Colour {
     #[inline(always)]
@@ -110,7 +56,6 @@ pub const BISHOP: u8 = 0b00001000;
 pub const QUEEN: u8 = 0b00010000;
 pub const KING: u8 = 0b00100000;
 pub const PAWN: u8 = 0b01000000;
-pub const NIL: u8 = 0b00000000;
 pub const WROOK: Piece = Piece(ROOK | W);
 pub const WKNIGHT: Piece = Piece(KNIGHT | W);
 pub const WBISHOP: Piece = Piece(BISHOP | W);
@@ -123,7 +68,7 @@ pub const BBISHOP: Piece = Piece(BISHOP);
 pub const BQUEEN: Piece = Piece(BISHOP);
 pub const BKING: Piece = Piece(KING);
 pub const BPAWN: Piece = Piece(PAWN);
-pub const EMPTY: Piece = Piece(NIL);
+pub const EMPTY: Piece = Piece(0);
 
 #[derive(Debug, PartialEq, Eq, Hash, Copy, Clone)]
 pub struct Piece(u8);
@@ -186,7 +131,7 @@ impl Piece {
             'q' => Piece::new(QUEEN, colour),
             'k' => Piece::new(KING, colour),
             'p' => Piece::new(PAWN, colour),
-            ' ' => Piece::new(NIL, colour),
+            ' ' => EMPTY,
             _ => panic!("can not convert to Piece"),
         }
     }
