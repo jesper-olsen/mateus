@@ -1,5 +1,4 @@
 use crate::hashkeys_generated::*;
-use Piece::*;
 use std::fmt;
 
 #[derive(Debug, PartialEq, Eq, Hash, Copy, Clone)]
@@ -79,6 +78,11 @@ impl Colour {
     }
 
     #[inline(always)]
+    pub const fn as_u8(&self) -> u8 {
+        self.0 as u8
+    }
+
+    #[inline(always)]
     pub const fn as_isize(&self) -> isize {
         self.0 as isize
     }
@@ -99,72 +103,103 @@ impl Colour {
     }
 }
 
+const W: u8 = 0b00000001;
+pub const ROOK: u8 = 0b00000010;
+pub const KNIGHT: u8 = 0b00000100;
+pub const BISHOP: u8 = 0b00001000;
+pub const QUEEN: u8 = 0b00010000;
+pub const KING: u8 = 0b00100000;
+pub const PAWN: u8 = 0b01000000;
+pub const NIL: u8 = 0b00000000;
+pub const WROOK: Piece = Piece(ROOK | W);
+pub const WKNIGHT: Piece = Piece(KNIGHT | W);
+pub const WBISHOP: Piece = Piece(BISHOP | W);
+pub const WQUEEN: Piece = Piece(BISHOP | W);
+pub const WKING: Piece = Piece(KING | W);
+pub const WPAWN: Piece = Piece(PAWN | W);
+pub const BROOK: Piece = Piece(ROOK);
+pub const BKNIGHT: Piece = Piece(KNIGHT);
+pub const BBISHOP: Piece = Piece(BISHOP);
+pub const BQUEEN: Piece = Piece(BISHOP);
+pub const BKING: Piece = Piece(KING);
+pub const BPAWN: Piece = Piece(PAWN);
+pub const EMPTY: Piece = Piece(NIL);
+
 #[derive(Debug, PartialEq, Eq, Hash, Copy, Clone)]
-pub enum Piece {
-    Rook(Colour),
-    Knight(Colour),
-    Bishop(Colour),
-    Queen(Colour),
-    King(Colour),
-    Pawn(Colour),
-    Nil,
-}
+pub struct Piece(u8);
+
 impl Piece {
+    #[inline(always)]
     pub const fn is_officer(&self) -> bool {
-        if let Rook(_) | Knight(_) | Bishop(_) | Queen(_) = self {
-            true
-        } else {
-            false
-        }
+        self.0 & ROOK | KNIGHT | BISHOP | QUEEN != 0
     }
 
+    #[inline(always)]
+    pub const fn colour(&self) -> Colour {
+        Colour((self.0 & 1) as u8)
+    }
+
+    #[inline(always)]
+    pub const fn kind(&self) -> u8 {
+        self.0 & 0b01111110
+    }
+
+    #[inline(always)]
     pub const fn hashkey(&self, pos: usize) -> u64 {
-        match self {
-            Piece::Rook(c) => R_HASH[c.as_usize()][pos],
-            Piece::Knight(c) => N_HASH[c.as_usize()][pos],
-            Piece::Bishop(c) => B_HASH[c.as_usize()][pos],
-            Piece::King(c) => K_HASH[c.as_usize()][pos],
-            Piece::Queen(c) => Q_HASH[c.as_usize()][pos],
-            Piece::Pawn(c) => P_HASH[c.as_usize()][pos],
-            Piece::Nil => NIL_HASH[pos],
+        let c = self.colour();
+        match self.kind() {
+            ROOK => R_HASH[c.as_usize()][pos],
+            KNIGHT => N_HASH[c.as_usize()][pos],
+            BISHOP => B_HASH[c.as_usize()][pos],
+            KING => K_HASH[c.as_usize()][pos],
+            QUEEN => Q_HASH[c.as_usize()][pos],
+            PAWN => P_HASH[c.as_usize()][pos],
+            _ => NIL_HASH[pos],
         }
     }
 
+    #[inline(always)]
     pub const fn val(&self, pos: usize) -> i16 {
-        match self {
-            Rook(c) => ROOKVAL[c.as_usize()][pos],
-            Knight(c) => KNIGHTVAL[c.as_usize()][pos],
-            Bishop(c) => BISHOPVAL[c.as_usize()][pos],
-            King(c) => KINGVAL[c.as_usize()][pos],
-            Queen(c) => QUEENVAL[c.as_usize()][pos],
-            Pawn(c) => PAWNVAL[c.as_usize()][pos],
-            Nil => 0,
+        let c = self.colour();
+        match self.kind() {
+            ROOK => ROOKVAL[c.as_usize()][pos],
+            KNIGHT => KNIGHTVAL[c.as_usize()][pos],
+            BISHOP => BISHOPVAL[c.as_usize()][pos],
+            KING => KINGVAL[c.as_usize()][pos],
+            QUEEN => QUEENVAL[c.as_usize()][pos],
+            PAWN => PAWNVAL[c.as_usize()][pos],
+            _ => 0,
         }
+    }
+
+    #[inline(always)]
+    pub const fn new(kind: u8, colour: Colour) -> Self {
+        Piece(kind | colour.as_u8())
     }
 
     pub const fn from_ascii(c: char) -> Piece {
         let colour = if c.is_ascii_uppercase() { WHITE } else { BLACK };
         match c.to_ascii_lowercase() {
-            'r' => Rook(colour),
-            'n' => Knight(colour),
-            'b' => Bishop(colour),
-            'q' => Queen(colour),
-            'k' => King(colour),
-            'p' => Pawn(colour),
-            ' ' => Nil,
+            'r' => Piece::new(ROOK, colour),
+            'n' => Piece::new(KNIGHT, colour),
+            'b' => Piece::new(BISHOP, colour),
+            'q' => Piece::new(QUEEN, colour),
+            'k' => Piece::new(KING, colour),
+            'p' => Piece::new(PAWN, colour),
+            ' ' => Piece::new(NIL, colour),
             _ => panic!("can not convert to Piece"),
         }
     }
 
     pub const fn to_ascii(&self) -> char {
-        let p = match self {
-            Rook(_) => 'r',
-            Knight(_) => 'n',
-            Bishop(_) => 'b',
-            Queen(_) => 'q',
-            King(_) => 'k',
-            Pawn(_) => 'p',
-            Nil => '.',
+        let p = match self.kind() {
+            ROOK => 'r',
+            KNIGHT => 'n',
+            BISHOP => 'b',
+            QUEEN => 'q',
+            KING => 'k',
+            PAWN => 'p',
+            _ => '.',
         };
         if self.is_white() {
             p.to_ascii_uppercase()
@@ -174,28 +209,26 @@ impl Piece {
     }
 
     pub const fn to_unicode(&self) -> char {
-        match self {
-            Rook(WHITE) => '\u{2656}',
-            Knight(WHITE) => '\u{2658}',
-            Bishop(WHITE) => '\u{2657}',
-            Queen(WHITE) => '\u{2655}',
-            King(WHITE) => '\u{2654}',
-            Pawn(WHITE) => '\u{2659}',
-            Rook(BLACK) => '\u{265C}',
-            Knight(BLACK) => '\u{265E}',
-            Bishop(BLACK) => '\u{265D}',
-            Queen(BLACK) => '\u{265B}',
-            King(BLACK) => '\u{265A}',
-            Pawn(BLACK) => '\u{265F}',
+        match (self.kind(), self.colour()) {
+            (ROOK, WHITE) => '\u{2656}',
+            (KNIGHT, WHITE) => '\u{2658}',
+            (BISHOP, WHITE) => '\u{2657}',
+            (QUEEN, WHITE) => '\u{2655}',
+            (KING, WHITE) => '\u{2654}',
+            (PAWN, WHITE) => '\u{2659}',
+            (ROOK, BLACK) => '\u{265C}',
+            (KNIGHT, BLACK) => '\u{265E}',
+            (BISHOP, BLACK) => '\u{265D}',
+            (QUEEN, BLACK) => '\u{265B}',
+            (KING, BLACK) => '\u{265A}',
+            (PAWN, BLACK) => '\u{265F}',
             _ => ' ',
         }
     }
 
+    #[inline(always)]
     pub const fn is_white(&self) -> bool {
-        matches!(
-            self,
-            Rook(WHITE) | Knight(WHITE) | Bishop(WHITE) | Queen(WHITE) | King(WHITE) | Pawn(WHITE)
-        )
+        self.0 & W == W
     }
 }
 

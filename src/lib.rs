@@ -5,12 +5,13 @@ pub mod mgen;
 pub mod misc;
 pub mod openings;
 pub mod val;
-use crate::{Colour, Piece::*};
+use crate::Colour;
 use core::cmp::{max, min};
 use mgen::*;
 use std::collections::hash_map::HashMap;
 use std::fmt;
 use val::*;
+use val::{BPAWN, WPAWN};
 
 const INFINITE: i16 = 32000;
 const EXACT_BIT: u16 = 1 << 12;
@@ -91,8 +92,8 @@ impl Game {
                 label.push_str("O-O-O");
             }
         } else {
-            if matches!(self.board[m.frm()], Pawn(_)) {
-                if self.board[m.to()] != Nil || m.en_passant() {
+            if self.board[m.frm()].kind() == PAWN {
+                if self.board[m.to()] != EMPTY || m.en_passant() {
                     label.push_str(&I2SQ[m.frm()][0..1])
                 }
             } else {
@@ -129,7 +130,7 @@ impl Game {
                     label.push_str(&I2SQ[m.frm()][1..2])
                 }
             }
-            if m.en_passant() || self.board[m.to()] != Nil {
+            if m.en_passant() || self.board[m.to()] != EMPTY {
                 label.push('x');
             }
             label.push_str(I2SQ[m.to()]);
@@ -157,8 +158,8 @@ impl Game {
         // quiescent unless last move was pawn near promotion
         // !self.in_check(self.colour) &&
         match self.board[last.to()] {
-            Pawn(WHITE) => last.to() % 8 != 6,
-            Pawn(BLACK) => last.to() % 8 != 1,
+            WPAWN => last.to() % 8 != 6,
+            BPAWN => last.to() % 8 != 1,
             _ => true,
         }
     }
@@ -174,7 +175,7 @@ impl Game {
     }
 
     pub fn make_move(&mut self, m: Move) {
-        if m.en_passant() || self.board[m.to()] != Nil || matches!(self.board[m.frm()], Pawn(_)) {
+        if m.en_passant() || self.board[m.to()] != EMPTY || self.board[m.frm()].kind() == PAWN {
             self.board.rep.clear(); // ireversible move
             self.board.half_move_clock = 0;
         }
@@ -187,12 +188,12 @@ impl Game {
 
         //update castling permissions
         match (self.board[m.to()], m.frm()) {
-            (King(WHITE), 24) => self.board.can_castle &= !CASTLE_W_SHORT & !CASTLE_W_LONG,
-            (King(BLACK), 31) => self.board.can_castle &= !CASTLE_B_SHORT & !CASTLE_B_LONG,
-            (Rook(WHITE), 0) => self.board.can_castle &= !CASTLE_W_SHORT,
-            (Rook(WHITE), 56) => self.board.can_castle &= !CASTLE_W_LONG,
-            (Rook(BLACK), 7) => self.board.can_castle &= !CASTLE_B_SHORT,
-            (Rook(BLACK), 63) => self.board.can_castle &= !CASTLE_B_LONG,
+            (WKING, 24) => self.board.can_castle &= !CASTLE_W_SHORT & !CASTLE_W_LONG,
+            (BKING, 31) => self.board.can_castle &= !CASTLE_B_SHORT & !CASTLE_B_LONG,
+            (WROOK, 0) => self.board.can_castle &= !CASTLE_W_SHORT,
+            (WROOK, 56) => self.board.can_castle &= !CASTLE_W_LONG,
+            (BROOK, 7) => self.board.can_castle &= !CASTLE_B_SHORT,
+            (BROOK, 63) => self.board.can_castle &= !CASTLE_B_LONG,
             _ => (),
         }
     }
@@ -268,7 +269,7 @@ impl Game {
             if rfab {
                 m.to() == last.to()
             } else {
-                m.en_passant() || self.board[m.to()] != Nil
+                m.en_passant() || self.board[m.to()] != EMPTY
             }
         );
         for m in moves {
