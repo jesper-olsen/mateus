@@ -25,7 +25,7 @@ impl Colour {
 
     #[inline(always)]
     pub const fn as_u8(&self) -> u8 {
-        self.0 as u8
+        self.0
     }
 
     #[inline(always)]
@@ -60,7 +60,6 @@ const VAL: [[[i16; 64]; 2]; 8] = [
     [[0; 64], [0; 64]],
 ];
 
-// TODO W 1 -> 4, index -3 => VAL only needs 6 levels...
 const W: u8 = 0b00000001;
 pub const ROOK: u8 = 0b00000010;
 pub const KNIGHT: u8 = 0b00000100;
@@ -107,16 +106,17 @@ impl Piece {
 
     #[inline(always)]
     pub const fn hashkey(&self, pos: usize) -> u64 {
-        let c = self.colour();
-        match self.kind() {
-            ROOK => R_HASH[c.as_usize()][pos],
-            KNIGHT => N_HASH[c.as_usize()][pos],
-            BISHOP => B_HASH[c.as_usize()][pos],
-            KING => K_HASH[c.as_usize()][pos],
-            QUEEN => Q_HASH[c.as_usize()][pos],
-            PAWN => P_HASH[c.as_usize()][pos],
-            _ => NIL_HASH[pos],
-        }
+        HASH[self.index()][self.colour().as_usize()][pos]
+        // let c = self.colour();
+        // match self.kind() {
+        //     ROOK => R_HASH[c.as_usize()][pos],
+        //     KNIGHT => N_HASH[c.as_usize()][pos],
+        //     BISHOP => B_HASH[c.as_usize()][pos],
+        //     KING => K_HASH[c.as_usize()][pos],
+        //     QUEEN => Q_HASH[c.as_usize()][pos],
+        //     PAWN => P_HASH[c.as_usize()][pos],
+        //     _ => NIL_HASH[pos],
+        // }
     }
 
     #[inline(always)]
@@ -290,13 +290,14 @@ mod tests {
 
     #[test]
     fn test_index() {
-        let mut i = 0;
-        for k in [ROOK, KNIGHT, BISHOP, QUEEN, KING, PAWN] {
+        for (i, k) in [ROOK, KNIGHT, BISHOP, QUEEN, KING, PAWN]
+            .into_iter()
+            .enumerate()
+        {
             for c in [WHITE, BLACK] {
                 let p = Piece::new(k, c);
                 assert_eq!(p.index(), i)
             }
-            i += 1
         }
     }
 }
