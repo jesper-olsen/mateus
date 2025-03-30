@@ -309,7 +309,7 @@ fn main() {
             _ => benchmark(args.v, args.n, "BT-2630", &benchmark::BT2630),
         }
     } else {
-        let players = HashMap::from([(Colour::White, args.w), (Colour::Black, args.b)]);
+        let players = HashMap::from([(Colour::white(), args.w), (Colour::black(), args.b)]);
         play(players, args.v, args.n, args.m, args.l, args.f.as_str());
     }
 }

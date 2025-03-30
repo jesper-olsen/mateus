@@ -1,4 +1,4 @@
-use crate::val::Colour::{Black, White};
+use crate::val::Colour;
 
 pub static BM_BLOCKED: [[u64; 64]; 64] = bm_queen_blockers();
 pub static BM_QUEEN_MOVES: [u64; 64] = bm_queen_moves();
@@ -190,8 +190,8 @@ const fn bm_pawn_step2() -> [[u64; 64]; 2] {
     let mut bm = [[0u64; 64]; 2];
     let mut i = 0;
     while i < 64 {
-        bm[White as usize][i] = if i % 8 == 1 { 1 << (i + 2) } else { 0 };
-        bm[Black as usize][i] = if i % 8 == 6 { 1 << (i - 2) } else { 0 };
+        bm[Colour::white().as_usize()][i] = if i % 8 == 1 { 1 << (i + 2) } else { 0 };
+        bm[Colour::black().as_usize()][i] = if i % 8 == 6 { 1 << (i - 2) } else { 0 };
         i += 1;
     }
     bm
@@ -201,8 +201,8 @@ const fn bm_pawn_step1() -> [[u64; 64]; 2] {
     let mut bm = [[0u64; 64]; 2];
     let mut i = 0;
     while i < 64 {
-        bm[White as usize][i] = if i % 8 != 7 { 1 << (i + 1) } else { 0 };
-        bm[Black as usize][i] = if i % 8 != 0 { 1 << (i - 1) } else { 0 };
+        bm[Colour::white().as_usize()][i] = if i % 8 != 7 { 1 << (i + 1) } else { 0 };
+        bm[Colour::black().as_usize()][i] = if i % 8 != 0 { 1 << (i - 1) } else { 0 };
         i += 1;
     }
     bm
@@ -212,8 +212,8 @@ const fn bm_pawn_captures() -> [[u64; 64]; 2] {
     let mut bm = [[0u64; 64]; 2];
     let mut i = 0;
     while i < 64 {
-        bm[White as usize][i] = bm_white_pawn_captures_from(i);
-        bm[Black as usize][i] = bm_black_pawn_captures_from(i);
+        bm[Colour::white().as_usize()][i] = bm_white_pawn_captures_from(i);
+        bm[Colour::black().as_usize()][i] = bm_black_pawn_captures_from(i);
         i += 1;
     }
     bm

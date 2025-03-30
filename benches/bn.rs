@@ -15,7 +15,7 @@ fn bench_in_check(c: &mut Criterion) {
     let fen = BRATKO_KOPEC[0].0;
     let board = Board::from_fen(fen);
     c.bench_function("in_check BK1", |b| {
-        b.iter(|| black_box(board.in_check(Colour::White)))
+        b.iter(|| black_box(board.in_check(Colour::white())))
     });
 }
 

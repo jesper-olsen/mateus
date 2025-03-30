@@ -5,7 +5,7 @@ pub mod mgen;
 pub mod misc;
 pub mod openings;
 pub mod val;
-use crate::{Colour::*, Piece::*};
+use crate::{Colour, Piece::*};
 use core::cmp::{max, min};
 use mgen::*;
 use std::collections::hash_map::HashMap;
@@ -157,8 +157,8 @@ impl Game {
         // quiescent unless last move was pawn near promotion
         // !self.in_check(self.colour) &&
         match self.board[last.to()] {
-            Pawn(White) => last.to() % 8 != 6,
-            Pawn(Black) => last.to() % 8 != 1,
+            Pawn(WHITE) => last.to() % 8 != 6,
+            Pawn(BLACK) => last.to() % 8 != 1,
             _ => true,
         }
     }
@@ -187,12 +187,12 @@ impl Game {
 
         //update castling permissions
         match (self.board[m.to()], m.frm()) {
-            (King(White), 24) => self.board.can_castle &= !CASTLE_W_SHORT & !CASTLE_W_LONG,
-            (King(Black), 31) => self.board.can_castle &= !CASTLE_B_SHORT & !CASTLE_B_LONG,
-            (Rook(White), 0) => self.board.can_castle &= !CASTLE_W_SHORT,
-            (Rook(White), 56) => self.board.can_castle &= !CASTLE_W_LONG,
-            (Rook(Black), 7) => self.board.can_castle &= !CASTLE_B_SHORT,
-            (Rook(Black), 63) => self.board.can_castle &= !CASTLE_B_LONG,
+            (King(WHITE), 24) => self.board.can_castle &= !CASTLE_W_SHORT & !CASTLE_W_LONG,
+            (King(BLACK), 31) => self.board.can_castle &= !CASTLE_B_SHORT & !CASTLE_B_LONG,
+            (Rook(WHITE), 0) => self.board.can_castle &= !CASTLE_W_SHORT,
+            (Rook(WHITE), 56) => self.board.can_castle &= !CASTLE_W_LONG,
+            (Rook(BLACK), 7) => self.board.can_castle &= !CASTLE_B_SHORT,
+            (Rook(BLACK), 63) => self.board.can_castle &= !CASTLE_B_LONG,
             _ => (),
         }
     }

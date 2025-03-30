@@ -3,7 +3,7 @@ use crate::bitmaps::*;
 use crate::hashkeys_generated::WHITE_HASH;
 use crate::misc;
 use crate::val::*;
-use crate::val::{Colour::*, Piece::*};
+use crate::val::{BLACK, Colour, Piece::*, WHITE};
 use std::collections::hash_map::{Entry, HashMap};
 use std::fmt;
 use std::ops::{Index, IndexMut};
@@ -260,12 +260,12 @@ impl Board {
 
         let colour = if parts.len() > 1 {
             if parts[1].to_lowercase().starts_with('w') {
-                Colour::White
+                Colour::white()
             } else {
-                Colour::Black
+                Colour::black()
             }
         } else {
-            Colour::White
+            Colour::white()
         };
 
         let mut can_castle = 0;
@@ -406,8 +406,8 @@ impl Board {
         const CSV_SIZE: usize = 2 * 6 * 64 + 1 + 4 + 64 + 1;
         let mut v = Vec::with_capacity(CSV_SIZE);
         for p in [
-            Pawn(White), Rook(White), Knight(White), Bishop(White), Queen(White), King(White),
-            Pawn(Black), Rook(Black), Knight(Black), Bishop(Black), Queen(Black), King(Black),
+            Pawn(WHITE), Rook(WHITE), Knight(WHITE), Bishop(WHITE), Queen(WHITE), King(WHITE),
+            Pawn(BLACK), Rook(BLACK), Knight(BLACK), Bishop(BLACK), Queen(BLACK), King(BLACK),
         ] {
             for pb in &self.squares {
                 v.push((p == *pb) as u8);
@@ -497,8 +497,8 @@ impl Board {
             self.bitmaps.pieces[self.colour.as_usize()] ^= 1 << x;
 
             match self[m.frm()] {
-                King(White) => self.can_castle &= !CASTLE_W_SHORT & !CASTLE_W_LONG,
-                King(Black) => self.can_castle &= !CASTLE_B_SHORT & !CASTLE_B_LONG,
+                King(WHITE) => self.can_castle &= !CASTLE_W_SHORT & !CASTLE_W_LONG,
+                King(BLACK) => self.can_castle &= !CASTLE_B_SHORT & !CASTLE_B_LONG,
                 _ => panic!("not castle..."),
             }
 
@@ -626,8 +626,8 @@ impl Board {
                 false => m.frm() - 8, // east
             };
             self[x] = match self.squares[m.frm()] {
-                Pawn(White) => Pawn(Black),
-                Pawn(Black) => Pawn(White),
+                Pawn(WHITE) => Pawn(BLACK),
+                Pawn(BLACK) => Pawn(WHITE),
                 _ => unreachable!(),
             }
         }
@@ -652,10 +652,10 @@ impl Board {
     pub fn score_pawn_structure(&self) -> i16 {
         let mut pen: i16 = 0;
         let bm: [u64; 2] = [
-            self.bitmaps.pawns & self.bitmaps.pieces[White.as_usize()],
-            self.bitmaps.pawns & self.bitmaps.pieces[Black.as_usize()],
+            self.bitmaps.pawns & self.bitmaps.pieces[WHITE.as_usize()],
+            self.bitmaps.pawns & self.bitmaps.pieces[BLACK.as_usize()],
         ];
-        for (i, &p) in [Pawn(White), Pawn(Black)].iter().enumerate() {
+        for (i, &p) in [Pawn(WHITE), Pawn(BLACK)].iter().enumerate() {
             let nfiles = (0..8)
                 .filter(|&q| 0b11111111 << (q * 8) & bm[i] > 0)
                 .count() as i16;
@@ -674,7 +674,7 @@ impl Board {
                 .count() as i16;
 
             let x = 20 * double_pawns + 4 * isolated_pawns;
-            pen += if p == Pawn(White) { -x } else { x };
+            pen += if p == Pawn(WHITE) { -x } else { x };
         }
 
         // passed pawn bonus
@@ -698,14 +698,14 @@ impl Board {
     }
 
     pub fn mobility(&self) -> i16 {
-        self.count_moves(White) as i16 - self.count_moves(Black) as i16
+        self.count_moves(WHITE) as i16 - self.count_moves(BLACK) as i16
     }
 
     // true if !colour side can capture colour king
     pub fn in_check(&self, colour: Colour) -> bool {
         let bm_king = self.bitmaps.kings & self.bitmaps.pieces[colour.as_usize()];
         let bm_board =
-            self.bitmaps.pieces[Black.as_usize()] | self.bitmaps.pieces[White.as_usize()];
+            self.bitmaps.pieces[BLACK.as_usize()] | self.bitmaps.pieces[WHITE.as_usize()];
         let opp = colour.opposite().as_usize();
         self.squares
             .iter()
@@ -757,7 +757,7 @@ impl Board {
 
     fn ray_moves(&self, v: &mut Vec<Move>, frm: usize, moves: u64) {
         let bm_board =
-            self.bitmaps.pieces[White.as_usize()] | self.bitmaps.pieces[Black.as_usize()];
+            self.bitmaps.pieces[WHITE.as_usize()] | self.bitmaps.pieces[BLACK.as_usize()];
         let bl = bm_blockers(frm, moves & bm_board);
 
         let mut b = moves & !bl & !self.bitmaps.pieces[self.colour.as_usize()];
@@ -773,7 +773,7 @@ impl Board {
 
     fn pawn_moves(&self, v: &mut Vec<Move>, frm: usize, last: &Move) {
         let bm_board =
-            self.bitmaps.pieces[White.as_usize()] | self.bitmaps.pieces[Black.as_usize()];
+            self.bitmaps.pieces[WHITE.as_usize()] | self.bitmaps.pieces[BLACK.as_usize()];
         let cap = BM_PAWN_CAPTURES[self.colour.as_usize()][frm]
             & self.bitmaps.pieces[self.colour.opposite().as_usize()];
         let step1: u64 = BM_PAWN_STEP1[self.colour.as_usize()][frm] & !bm_board;
@@ -834,11 +834,11 @@ impl Board {
 
     fn king_moves(&self, v: &mut Vec<Move>, frm: usize, end_game: bool, in_check: bool) {
         let bm_board =
-            self.bitmaps.pieces[White.as_usize()] | self.bitmaps.pieces[Black.as_usize()];
+            self.bitmaps.pieces[WHITE.as_usize()] | self.bitmaps.pieces[BLACK.as_usize()];
         // change king valuation in end_game
         let p = match (self[frm], end_game) {
-            (King(White), true) => King(Black),
-            (King(Black), true) => King(White),
+            (King(WHITE), true) => King(BLACK),
+            (King(BLACK), true) => King(WHITE),
             (_, false) => self[frm],
             _ => panic!(),
         };
@@ -866,9 +866,9 @@ impl Board {
                 self.can_castle & CASTLE_W_SHORT != 0
                     && frm == 24
                     && !in_check
-                    && self[0] == Rook(White)
+                    && self[0] == Rook(WHITE)
                     && bm_board & WSHORT == 0,
-                Rook(White),
+                Rook(WHITE),
                 8,
                 0,
                 16,
@@ -877,9 +877,9 @@ impl Board {
                 self.can_castle & CASTLE_W_LONG != 0
                     && frm == 24
                     && !in_check
-                    && self[56] == Rook(White)
+                    && self[56] == Rook(WHITE)
                     && bm_board & WLONG == 0,
-                Rook(White),
+                Rook(WHITE),
                 40,
                 56,
                 32,
@@ -888,9 +888,9 @@ impl Board {
                 self.can_castle & CASTLE_B_SHORT != 0
                     && frm == 31
                     && !in_check
-                    && self[7] == Rook(Black)
+                    && self[7] == Rook(BLACK)
                     && bm_board & BSHORT == 0,
-                Rook(Black),
+                Rook(BLACK),
                 15,
                 7,
                 23,
@@ -899,9 +899,9 @@ impl Board {
                 self.can_castle & CASTLE_B_LONG != 0
                     && frm == 31
                     && !in_check
-                    && self[63] == Rook(Black)
+                    && self[63] == Rook(BLACK)
                     && bm_board & BLONG == 0,
-                Rook(Black),
+                Rook(BLACK),
                 47,
                 63,
                 39,
@@ -920,7 +920,7 @@ impl Board {
     // count pseudo legal moves - ignoring en passant & castling
     fn count_moves(&self, colour: Colour) -> u32 {
         let bm_board =
-            self.bitmaps.pieces[White.as_usize()] | self.bitmaps.pieces[Black.as_usize()];
+            self.bitmaps.pieces[WHITE.as_usize()] | self.bitmaps.pieces[BLACK.as_usize()];
         let bm_own = self.bitmaps.pieces[colour.as_usize()];
         let bm_opp = self.bitmaps.pieces[colour.opposite().as_usize()];
 
@@ -1013,8 +1013,8 @@ pub const fn abs_material(squares: &[Piece]) -> i16 {
 
 pub const fn calc_hash(squares: &[Piece], colour: Colour) -> u64 {
     let mut key = match colour {
-        Colour::White => WHITE_HASH,
-        Colour::Black => 0,
+        WHITE => WHITE_HASH,
+        _ => 0,
     };
 
     let mut i = 0;

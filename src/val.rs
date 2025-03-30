@@ -3,45 +3,99 @@ use Piece::*;
 use std::fmt;
 
 #[derive(Debug, PartialEq, Eq, Hash, Copy, Clone)]
-pub enum Colour {
-    Black,
-    White,
-}
-use Colour::*;
+// pub enum Colour {
+//     Black,
+//     White,
+// }
+
+// pub const WHITE: Colour = Colour::white();
+// pub const BLACK: Colour = Colour::black();
+
+// impl Colour {
+//     #[inline(always)]
+//     pub const fn white() -> Colour {
+//         Colour::White
+//     }
+
+//     #[inline(always)]
+//     pub const fn black() -> Colour {
+//         Colour::Black
+//     }
+
+//     #[inline(always)]
+//     pub const fn as_usize(&self) -> usize {
+//         *self as usize
+//     }
+
+//     #[inline(always)]
+//     pub const fn as_isize(&self) -> isize {
+//         *self as isize
+//     }
+
+//     #[inline(always)]
+//     pub const fn opposite(&self) -> Colour {
+//         match *self {
+//             Colour::White => Colour::Black,
+//             Colour::Black => Colour::White,
+//         }
+//     }
+
+//     #[inline(always)]
+//     pub const fn flip(&mut self) {
+//         *self = match *self {
+//             Colour::White => Colour::Black,
+//             Colour::Black => Colour::White,
+//         }
+//     }
+
+//     #[inline(always)]
+//     pub const fn is_white(&self) -> bool {
+//         match *self {
+//             Colour::White => true,
+//             Colour::Black => false,
+//         }
+//     }
+// }
+
+pub struct Colour(u8);
+
+pub const WHITE: Colour = Colour::white();
+pub const BLACK: Colour = Colour::black();
 
 impl Colour {
     #[inline(always)]
+    pub const fn white() -> Colour {
+        Colour(1)
+    }
+
+    #[inline(always)]
+    pub const fn black() -> Colour {
+        Colour(0)
+    }
+
+    #[inline(always)]
     pub const fn as_usize(&self) -> usize {
-        *self as usize
+        self.0 as usize
     }
 
     #[inline(always)]
     pub const fn as_isize(&self) -> isize {
-        *self as isize
+        self.0 as isize
     }
 
     #[inline(always)]
     pub const fn opposite(&self) -> Colour {
-        match *self {
-            White => Black,
-            Black => White,
-        }
+        Colour(self.0 ^ 1)
     }
 
     #[inline(always)]
     pub const fn flip(&mut self) {
-        *self = match *self {
-            White => Black,
-            Black => White,
-        }
+        self.0 ^= 1
     }
 
     #[inline(always)]
     pub const fn is_white(&self) -> bool {
-        match *self {
-            White => true,
-            Black => false,
-        }
+        self.0 == 1
     }
 }
 
@@ -89,7 +143,7 @@ impl Piece {
     }
 
     pub const fn from_ascii(c: char) -> Piece {
-        let colour = if c.is_ascii_uppercase() { White } else { Black };
+        let colour = if c.is_ascii_uppercase() { WHITE } else { BLACK };
         match c.to_ascii_lowercase() {
             'r' => Rook(colour),
             'n' => Knight(colour),
@@ -121,26 +175,26 @@ impl Piece {
 
     pub const fn to_unicode(&self) -> char {
         match self {
-            Rook(White) => '\u{2656}',
-            Knight(White) => '\u{2658}',
-            Bishop(White) => '\u{2657}',
-            Queen(White) => '\u{2655}',
-            King(White) => '\u{2654}',
-            Pawn(White) => '\u{2659}',
-            Rook(Black) => '\u{265C}',
-            Knight(Black) => '\u{265E}',
-            Bishop(Black) => '\u{265D}',
-            Queen(Black) => '\u{265B}',
-            King(Black) => '\u{265A}',
-            Pawn(Black) => '\u{265F}',
-            Nil => ' ',
+            Rook(WHITE) => '\u{2656}',
+            Knight(WHITE) => '\u{2658}',
+            Bishop(WHITE) => '\u{2657}',
+            Queen(WHITE) => '\u{2655}',
+            King(WHITE) => '\u{2654}',
+            Pawn(WHITE) => '\u{2659}',
+            Rook(BLACK) => '\u{265C}',
+            Knight(BLACK) => '\u{265E}',
+            Bishop(BLACK) => '\u{265D}',
+            Queen(BLACK) => '\u{265B}',
+            King(BLACK) => '\u{265A}',
+            Pawn(BLACK) => '\u{265F}',
+            _ => ' ',
         }
     }
 
     pub const fn is_white(&self) -> bool {
         matches!(
             self,
-            Rook(White) | Knight(White) | Bishop(White) | Queen(White) | King(White) | Pawn(White)
+            Rook(WHITE) | Knight(WHITE) | Bishop(WHITE) | Queen(WHITE) | King(WHITE) | Pawn(WHITE)
         )
     }
 }
