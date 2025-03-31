@@ -155,7 +155,7 @@ pub struct Board {
     pub hash: u64,
     pub half_move_clock: usize, // since last irreversible move
     pub full_move_count: usize,
-    pub rep: HashMap<u64, usize>,
+    pub rep: HashMap<u64, u8>,
     bitmaps: Bitmaps,
     end_game_material: i16,
     log_bms: Vec<(Bitmaps, Piece, u64, u8)>,
@@ -246,13 +246,48 @@ impl fmt::Display for Board {
 }
 
 impl Board {
-    pub fn rep_count(&self) -> usize {
+    pub fn rep_count(&self) -> u8 {
         if let Some(count) = self.rep.get(&self.hash) {
-            if *count >= 2 {
-                return 0;
+            *count
+        } else {
+            0
+        }
+    }
+
+    fn rep_inc(&mut self) {
+        //*self.rep.entry(self.hash).or_default() += 1;
+        self.rep
+            .entry(self.hash)
+            .and_modify(|x| *x += 1)
+            .or_insert(1);
+    }
+
+    fn rep_dec(&mut self) {
+        if let Entry::Occupied(entry) = self
+            .rep
+            .entry(self.hash)
+            .and_modify(|x| *x = x.saturating_sub(1))
+        {
+            if *entry.get() == 0 {
+                self.rep.remove(&self.hash);
             }
         }
-        0
+
+        // self.rep
+        //     .entry(self.hash)
+        //     .and_modify(|x| *x = x.saturating_sub(1));
+        // if let Some(0) = self.rep.get(&self.hash) {
+        //     self.rep.remove(&self.hash);
+        // }
+
+        // self.rep
+        //     .entry(self.hash)
+        //     .and_modify(|x| *x = if *x == 0 { 0 } else { *x - 1 });
+        // if let Some(count) = self.rep.get(&self.hash) {
+        //     if *count == 0 {
+        //         self.rep.remove(&self.hash);
+        //     }
+        // }
     }
 
     pub fn from_fen(s: &str) -> Self {
@@ -440,43 +475,7 @@ impl Board {
     }
 
     pub fn half_moves(&self) -> usize {
-        self.half_move_clock + self.rep.iter().map(|(_, &v)| v).sum::<usize>()
-    }
-
-    fn rep_inc(&mut self) {
-        //*self.rep.entry(self.hash).or_default() += 1;
-        self.rep
-            .entry(self.hash)
-            .and_modify(|x| *x += 1)
-            .or_insert(1);
-    }
-
-    fn rep_dec(&mut self) {
-        if let Entry::Occupied(entry) = self
-            .rep
-            .entry(self.hash)
-            .and_modify(|x| *x = x.saturating_sub(1))
-        {
-            if *entry.get() == 0 {
-                self.rep.remove(&self.hash);
-            }
-        }
-
-        // self.rep
-        //     .entry(self.hash)
-        //     .and_modify(|x| *x = x.saturating_sub(1));
-        // if let Some(0) = self.rep.get(&self.hash) {
-        //     self.rep.remove(&self.hash);
-        // }
-
-        // self.rep
-        //     .entry(self.hash)
-        //     .and_modify(|x| *x = if *x == 0 { 0 } else { *x - 1 });
-        // if let Some(count) = self.rep.get(&self.hash) {
-        //     if *count == 0 {
-        //         self.rep.remove(&self.hash);
-        //     }
-        // }
+        self.half_move_clock + self.rep.iter().map(|(_, &v)| v).sum::<u8>() as usize
     }
 
     pub fn update(&mut self, m: &Move) {

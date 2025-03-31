@@ -49,6 +49,17 @@ impl Colour {
     }
 }
 
+pub const HASH: [[[u64; 64]; 2]; 8] = [
+    [R1_HASH, R2_HASH],
+    [N1_HASH, N2_HASH],
+    [B1_HASH, B2_HASH],
+    [Q1_HASH, Q2_HASH],
+    [K1_HASH, K2_HASH],
+    [P1_HASH, P2_HASH],
+    [NIL_HASH, NIL_HASH],
+    [NIL_HASH, NIL_HASH],
+];
+
 const VAL: [[[i16; 64]; 2]; 8] = [
     [ROOKVAL_B, ROOKVAL_W],
     [KNIGHTVAL_B, KNIGHTVAL_W],
@@ -92,14 +103,22 @@ impl Piece {
 
     #[inline(always)]
     pub const fn colour(&self) -> Colour {
+        // black: 0, white: 1
         Colour((self.0 & 1) as u8)
     }
 
     #[inline(always)]
+    pub const fn is_white(&self) -> bool {
+        self.0 & W == W
+    }
+
+    #[inline(always)]
     pub const fn kind(&self) -> u8 {
+        // kind mask:  bits 1-6
         self.0 & 0b01111110
     }
 
+    #[inline(always)]
     pub const fn index(&self) -> usize {
         (self.kind().trailing_zeros() - 1) as usize
     }
@@ -107,16 +126,6 @@ impl Piece {
     #[inline(always)]
     pub const fn hashkey(&self, pos: usize) -> u64 {
         HASH[self.index()][self.colour().as_usize()][pos]
-        // let c = self.colour();
-        // match self.kind() {
-        //     ROOK => R_HASH[c.as_usize()][pos],
-        //     KNIGHT => N_HASH[c.as_usize()][pos],
-        //     BISHOP => B_HASH[c.as_usize()][pos],
-        //     KING => K_HASH[c.as_usize()][pos],
-        //     QUEEN => Q_HASH[c.as_usize()][pos],
-        //     PAWN => P_HASH[c.as_usize()][pos],
-        //     _ => NIL_HASH[pos],
-        // }
     }
 
     #[inline(always)]
@@ -176,11 +185,6 @@ impl Piece {
             (PAWN, BLACK) => '\u{265F}',
             _ => ' ',
         }
-    }
-
-    #[inline(always)]
-    pub const fn is_white(&self) -> bool {
-        self.0 & W == W
     }
 }
 
@@ -299,5 +303,21 @@ mod tests {
                 assert_eq!(p.index(), i)
             }
         }
+    }
+
+    #[test]
+    fn test_kind() {
+        assert_eq!(WROOK.is_officer(), true);
+        assert_eq!(WKNIGHT.is_officer(), true);
+        assert_eq!(WBISHOP.is_officer(), true);
+        assert_eq!(WQUEEN.is_officer(), true);
+        assert_eq!(WKING.is_officer(), false);
+        assert_eq!(WPAWN.is_officer(), false);
+        assert_eq!(BROOK.is_officer(), true);
+        assert_eq!(BKNIGHT.is_officer(), true);
+        assert_eq!(BBISHOP.is_officer(), true);
+        assert_eq!(BQUEEN.is_officer(), true);
+        assert_eq!(BKING.is_officer(), false);
+        assert_eq!(BPAWN.is_officer(), false);
     }
 }
