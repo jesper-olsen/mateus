@@ -19,7 +19,7 @@ const LOWER_BIT: u16 = 1 << 13;
 const UPPER_BIT: u16 = 1 << 14;
 
 #[derive(Debug, Copy, Clone)]
-pub struct TTable {
+struct TTable {
     depth: u16,
     score: i16,
     data: u16, // frm, to, bound: 2x6 bits + 3 bits
