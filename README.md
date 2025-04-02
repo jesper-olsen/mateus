@@ -1,6 +1,7 @@
 <p align="center">
     <img src="Images/Mateus128x128.png" alt="Mateus Logo">
 </p>
+
 # Mateus
 
 A rusty chess library:
