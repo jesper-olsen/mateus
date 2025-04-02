@@ -1,5 +1,6 @@
-![Mateus Logo](Images/Mateus128x128.png) **Mateus**
-
+<p align="center">
+    <img src="Images/Mateus128x128.png" alt="Mateus Logo">
+</p>
 # Mateus
 
 A rusty chess library:
@@ -8,11 +9,6 @@ A rusty chess library:
 * Evaluation based on material, pawn structure & mobility
 * Checks draw by 3x repetition and 50 move rule
 * Opening library
-
-<p>
-  <img src="Images/Mateus128x128.png" alt="Mateus Logo" width="64" style="vertical-align: middle; margin-right: 10px;">
-  <strong>Mateus</strong>
-</p>
 
 ## References:
 
