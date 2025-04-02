@@ -1,4 +1,4 @@
-![Mateus Logo](Mateus128x128.png) **Mateus**
+![Mateus Logo](Images/Mateus128x128.png) **Mateus**
 
 # Mateus
 
@@ -10,7 +10,7 @@ A rusty chess library:
 * Opening library
 
 <p>
-  <img src="Mateus128x128.png" alt="Mateus Logo" width="64" style="vertical-align: middle; margin-right: 10px;">
+  <img src="Images/Mateus128x128.png" alt="Mateus Logo" width="64" style="vertical-align: middle; margin-right: 10px;">
   <strong>Mateus</strong>
 </p>
 
