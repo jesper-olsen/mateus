@@ -14,21 +14,75 @@ use val::*;
 use val::{BPAWN, WPAWN};
 
 const INFINITE: i16 = 32000;
-const EXACT_BIT: u16 = 1 << 12;
-const LOWER_BIT: u16 = 1 << 13;
-const UPPER_BIT: u16 = 1 << 14;
 
 #[derive(Debug, Copy, Clone)]
-struct TTable {
+struct TEntry {
     depth: u16,
     score: i16,
     data: u16, // frm, to, bound: 2x6 bits + 3 bits
 }
 
+impl TEntry {
+    // Score is either exact, a lower bound or an upper bound
+    const EXACT_BIT: u16 = 1 << 12;
+    const LOWER_BIT: u16 = 1 << 13;
+    #[inline(always)]
+    fn exact_bound(&self) -> bool {
+        self.data & TEntry::EXACT_BIT != 0
+    }
+    #[inline(always)]
+    fn lower_bound(&self) -> bool {
+        self.data & TEntry::LOWER_BIT != 0
+    }
+}
+
+pub struct Transpositions(HashMap<u64, TEntry>);
+
+impl Default for Transpositions {
+    fn default() -> Transpositions {
+        Transpositions(HashMap::new())
+    }
+}
+
+impl Transpositions {
+    fn store(&mut self, key: u64, depth: u16, score: i16, alpha: i16, beta: i16, m: &Move) {
+        // TODO - implement more efficient hashing function
+        let bound = if score <= alpha {
+            0 // Upper bound
+        } else if score >= beta {
+            TEntry::LOWER_BIT
+        } else {
+            TEntry::EXACT_BIT
+        };
+        let data = (m.data & (mgen::FRM_MASK | mgen::TO_MASK)) | bound;
+        let e = TEntry { depth, score, data };
+        self.0
+            .entry(key)
+            .and_modify(|x| {
+                if x.depth < e.depth {
+                    *x = e;
+                }
+            })
+            .or_insert(e);
+    }
+
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    pub fn clear(&mut self) {
+        self.0.clear();
+    }
+
+    fn probe(&self, key: &u64) -> Option<&TEntry> {
+        self.0.get(key)
+    }
+}
+
 pub struct Game {
     pub board: Board,
     pub n_searched: usize,
-    pub ttable: HashMap<u64, TTable>,
+    pub ttable: Transpositions,
     end_game: bool,
 }
 
@@ -67,11 +121,11 @@ fn move_to_head(moves: &mut Vec<Move>, frmto: &(u8, u8)) {
 
 impl Game {
     pub fn new(board: Board) -> Self {
-        //println!("size of TTable {}", std::mem::size_of::<TTable>());
+        //println!("size of TEntry {}", std::mem::size_of::<TEntry>());
         Game {
             board,
             n_searched: 0,
-            ttable: HashMap::new(),
+            ttable: Transpositions::default(),
             end_game: false,
         }
     }
@@ -150,10 +204,6 @@ impl Game {
         label
     }
 
-    pub fn ttable_len(&self) -> usize {
-        self.ttable.len()
-    }
-
     fn is_quiescent(&self, last: &Move) -> bool {
         // quiescent unless last move was pawn near promotion
         // !self.in_check(self.colour) &&
@@ -164,22 +214,12 @@ impl Game {
         }
     }
 
-    fn ttable_clear(&mut self) {
-        let key = self.board.hash;
-        if self.ttable.contains_key(&key) {
-            self.ttable = HashMap::from([(key, self.ttable[&key])]);
-        } else {
-            //self.ttable = HashMap::new();
-            self.ttable.clear();
-        }
-    }
-
     pub fn make_move(&mut self, m: Move) {
         if m.en_passant() || self.board[m.to()] != EMPTY || self.board[m.frm()].kind() == PAWN {
             self.board.rep.clear(); // ireversible move
             self.board.half_move_clock = 0;
         }
-        self.ttable_clear();
+        self.ttable.clear();
         self.board.update(&m);
 
         //adjust king value in end game
@@ -233,28 +273,6 @@ impl Game {
 
     pub fn turn(&self) -> Colour {
         self.board.colour
-    }
-
-    fn ttstore(&mut self, depth: u16, score: i16, alpha: i16, beta: i16, m: &Move) {
-        // TODO - implement more efficient hashing function
-        let key = self.board.hash;
-        let bound = if score <= alpha {
-            UPPER_BIT
-        } else if score >= beta {
-            LOWER_BIT
-        } else {
-            EXACT_BIT
-        };
-        let data = (m.data & (mgen::FRM_MASK | mgen::TO_MASK)) | bound;
-        let e = TTable { depth, score, data };
-        self.ttable
-            .entry(key)
-            .and_modify(|x| {
-                if x.depth < e.depth {
-                    *x = e;
-                }
-            })
-            .or_insert(e);
     }
 
     fn quiescence_fab(&mut self, alp: i16, beta: i16, last: &Move, rfab: bool) -> i16 {
@@ -311,13 +329,14 @@ impl Game {
         let mut bmove = None;
         let colour = self.board.colour;
 
-        let kmove = if let Some(e) = self.ttable.get(&self.board.hash) {
+        let kmove = if let Some(e) = self.ttable.probe(&self.board.hash) {
             if e.depth >= depth {
-                match e.data & (EXACT_BIT | UPPER_BIT | LOWER_BIT) {
-                    EXACT_BIT => return e.score,
-                    LOWER_BIT => alpha = max(alpha, e.score),
-                    UPPER_BIT => beta = min(beta, e.score),
-                    _ => unreachable!(),
+                if e.exact_bound() {
+                    return e.score;
+                } else if e.lower_bound() {
+                    alpha = max(alpha, e.score)
+                } else {
+                    beta = min(beta, e.score)
                 }
                 if alpha >= beta {
                     return e.score;
@@ -378,7 +397,8 @@ impl Game {
             (None, false) => 0,
             (None, true) => bscore,
             (Some(m), _) => {
-                self.ttstore(depth, bscore, alpha, beta, m);
+                self.ttable
+                    .store(self.board.hash, depth, bscore, alpha, beta, m);
                 bscore
             }
         }

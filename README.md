@@ -1,4 +1,6 @@
-# Puccinia's Checkmate
+![Mateus Logo](Mateus128x128.png) **Mateus**
+
+# Mateus
 
 A rusty chess library:
 * Principle variation negamax search with alpha beta pruning (See [1]).
@@ -6,6 +8,11 @@ A rusty chess library:
 * Evaluation based on material, pawn structure & mobility
 * Checks draw by 3x repetition and 50 move rule
 * Opening library
+
+<p>
+  <img src="Mateus128x128.png" alt="Mateus Logo" width="64" style="vertical-align: middle; margin-right: 10px;">
+  <strong>Mateus</strong>
+</p>
 
 ## References:
 
@@ -58,11 +65,11 @@ Run CLI app like this to play white:
 ```
 % cargo run --release --bin main -- -k 1 -n 1000000000
 
-Position  1; Searched:   2897549, Score:  9995, Move (black): d6d1 = Qd1+; Expected: Qd1+
+Position  1; Searched:   1933257, Score: 31995, Move (black): d6d1 = Qd1+; Expected: Qd1+
 Position  2; Searched: 2385104986, Score:    93, Move (white): f2g1 =  Kg1; Expected: d5
 Position  3; Searched: 3095552897, Score:   -40, Move (black): f6f5 =   f5; Expected: f5
 Position  4; Searched: 4405549624, Score:     4, Move (white): d4f3 =  Nf3; Expected: e6
-Position  5; Searched: 3602789387, Score:   115, Move (white): h2h3 =   h3; Expected: Nd5 a4
+Position  5; Searched: 3602789387, Score:   115, Move (white): h2h3 =   h3; Expected: Nd5,a4
 Position  6; Searched: 1493427119, Score:    76, Move (white): g5g6 =   g6; Expected: g6
 Position  7; Searched: 3192294619, Score:   115, Move (white): a3b4 =  Bb4; Expected: Nf6
 Position  8; Searched: 1300546970, Score:    35, Move (white): f4f5 =   f5; Expected: f5
@@ -85,8 +92,8 @@ Position 24; Searched: 1911993857, Score:    -4, Move (white): f2f4 =   f4; Expe
 
 Correct: [1, 3, 6, 8, 12, 13, 14, 15, 16, 18, 24] 11/24
 Points: 11.5
-Time: 3844848 ms => 160202 ms/position
-Search total: 63082088182; Time 3844848 ms => 16406 nodes/ms
+Time: 1237268 ms => 51552 ms/position
+Search total: 63081123890; Time 1237268 ms => 50984 nodes/ms
 ```
 
 ### Kaufman [4]
@@ -104,7 +111,7 @@ Position  7; Searched: 3228789409, Score:   -52, Move (black): f6h5 =  Nh5; Expe
 Position  8; Searched: 1762483231, Score:   -86, Move (black): e1f2 =  Qf2; Expected: h6
 Position  9; Searched: 1676113339, Score:   361, Move (white): f3e2 =  Be2; Expected: Be2
 Position 10; Searched: 4643368365, Score:   164, Move (black): d5f4 =  Nf4; Expected: Nxc3
-Position 11; Searched: 2989767685, Score:  9989, Move (white): g3f5 =  Nf5; Expected: Nf5
+Position 11; Searched: 382441239, Score: 31987, Move (white): g3f5 =  Nf5; Expected: Nf5
 Position 12; Searched: 1182887301, Score:  -185, Move (black): c6d6 =  Rd6; Expected: Rd6
 Position 13; Searched: 1439438417, Score:   200, Move (white): c3d5 = Nxd5; Expected: Nxd5
 Position 14; Searched: 3504831448, Score:   -32, Move (white): f1d1 = Rfd1; Expected: Rxb2
@@ -122,8 +129,8 @@ Position 25; Searched: 3911903594, Score:   153, Move (white): e3e4 =   e4; Expe
 
 Correct: [1, 5, 9, 11, 12, 13, 16, 17, 19, 20, 24] 11/25
 Points: 12.49
-Time: 3852473 ms => 154098 ms/position
-Search total: 60693879117; Time 3852473 ms => 15754 nodes/ms
+Time: 1431776 ms => 57271 ms/position
+Search total: 58086552671; Time 1431776 ms => 40569 nodes/ms
 ```
 
 ### Lasker [5]
@@ -135,6 +142,6 @@ Position  1; Searched:   1721145, Score:   103, Move (white): a1b1 =  Kb1; Expec
 
 Correct: [1] 1/1
 Points: 1
-Time: 209 ms => 209 ms/position
-Search total: 1721125; Time 209 ms => 8235 nodes/ms
+Time: 131 ms => 131 ms/position
+Search total: 1721125; Time 131 ms => 13138 nodes/ms
 ```

@@ -7,7 +7,7 @@
 use clap::Parser;
 use csv::Writer;
 use flate2::read::GzDecoder;
-use puccinia_s_checkmate::Game;
+use mateus::Game;
 use regex::Regex;
 use std::collections::HashMap;
 use std::fs::File;

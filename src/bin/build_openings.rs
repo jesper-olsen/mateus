@@ -1,7 +1,7 @@
 // Generate openings.rs
 
-use puccinia_s_checkmate::Game;
-use puccinia_s_checkmate::misc::str2move;
+use mateus::Game;
+use mateus::misc::str2move;
 use std::collections::hash_map::HashMap;
 
 #[rustfmt::skip]

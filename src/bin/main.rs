@@ -5,12 +5,12 @@
 
 use ::std::time::Instant;
 use clap::Parser;
-use puccinia_s_checkmate::Game;
-use puccinia_s_checkmate::benchmark;
-use puccinia_s_checkmate::mgen::{Board, Move};
-use puccinia_s_checkmate::misc::str2move;
-use puccinia_s_checkmate::openings::library_moves;
-use puccinia_s_checkmate::val::*;
+use mateus::Game;
+use mateus::benchmark;
+use mateus::mgen::{Board, Move};
+use mateus::misc::str2move;
+use mateus::openings::library_moves;
+use mateus::val::*;
 use rand::random;
 use std::collections::hash_map::HashMap;
 use std::io;
@@ -241,7 +241,7 @@ fn play(
             println!(
                 "hash size r {} t {} ",
                 game.board.rep.len(),
-                game.ttable_len(),
+                game.ttable.len(),
             );
             for (i, (m, score)) in l.iter().enumerate() {
                 println!("{}/{}: {} {}/{}", i, moves.len(), m, m.val, score);
