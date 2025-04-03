@@ -4,80 +4,18 @@ pub mod hashkeys_generated;
 pub mod mgen;
 pub mod misc;
 pub mod openings;
+pub mod transposition;
 pub mod val;
+
 use crate::Colour;
 use core::cmp::{max, min};
 use mgen::*;
-use std::collections::hash_map::HashMap;
 use std::fmt;
+use transposition::Transpositions;
 use val::*;
 use val::{BPAWN, WPAWN};
 
 const INFINITE: i16 = 32000;
-
-#[derive(Debug, Copy, Clone)]
-struct TEntry {
-    depth: u16,
-    score: i16,
-    data: u16, // frm, to, bound: 2x6 bits + 3 bits
-}
-
-impl TEntry {
-    // Score is either exact, a lower bound or an upper bound
-    const EXACT_BIT: u16 = 1 << 12;
-    const LOWER_BIT: u16 = 1 << 13;
-    #[inline(always)]
-    fn exact_bound(&self) -> bool {
-        self.data & TEntry::EXACT_BIT != 0
-    }
-    #[inline(always)]
-    fn lower_bound(&self) -> bool {
-        self.data & TEntry::LOWER_BIT != 0
-    }
-}
-
-pub struct Transpositions(HashMap<u64, TEntry>);
-
-impl Default for Transpositions {
-    fn default() -> Transpositions {
-        Transpositions(HashMap::new())
-    }
-}
-
-impl Transpositions {
-    fn store(&mut self, key: u64, depth: u16, score: i16, alpha: i16, beta: i16, m: &Move) {
-        // TODO - implement more efficient hashing function
-        let bound = if score <= alpha {
-            0 // Upper bound
-        } else if score >= beta {
-            TEntry::LOWER_BIT
-        } else {
-            TEntry::EXACT_BIT
-        };
-        let data = (m.data & (mgen::FRM_MASK | mgen::TO_MASK)) | bound;
-        let e = TEntry { depth, score, data };
-        self.0
-            .entry(key)
-            .and_modify(|x| {
-                if x.depth < e.depth {
-                    *x = e;
-                }
-            })
-            .or_insert(e);
-    }
-
-    pub fn len(&self) -> usize {
-        self.0.len()
-    }
-
-    pub fn clear(&mut self) {
-        self.0.clear();
-    }
-
-    fn probe(&self, key: &u64) -> Option<&TEntry> {
-        self.0.get(key)
-    }
-}
 
 pub struct Game {
     pub board: Board,
@@ -342,9 +280,7 @@ impl Game {
                     return e.score;
                 }
             }
-            let frm = mgen::ext_frm(e.data);
-            let to = mgen::ext_to(e.data);
-            Some((frm, to))
+            Some(e.frmto())
         } else {
             None
         };
