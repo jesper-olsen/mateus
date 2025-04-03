@@ -21,10 +21,6 @@ A rusty chess library:
 
 ## Run:
 
-Two example apps included - terminal CLI app (src/bin) and browser web application ([examples/spa](https://github.com/jesper-olsen/puccinia_s_checkmate/tree/main/examples/spa)).
-
-Run CLI app like this to see options: 
-
 ```
 % cargo run --release --bin main -- -h
 
