@@ -43,6 +43,16 @@ impl fmt::Display for Game {
     }
 }
 
+struct MovePicker {
+    moves: Vec<Move>,
+}
+
+impl MovePicker {
+    fn new(board: &Board, kmove: Option<(u8, u8)>) -> Self {
+        MovePicker { moves: vec![] }
+    }
+}
+
 fn move_to_head(moves: &mut Vec<Move>, frmto: &(u8, u8)) {
     if let Some(q) = moves
         .iter()
@@ -267,17 +277,17 @@ impl Game {
         let mut bmove = None;
         let colour = self.board.colour;
 
-        let kmove = if let Some(e) = self.ttable.probe(&self.board.hash) {
-            if e.depth >= depth {
+        let kmove = if let Some(e) = self.ttable.probe(self.board.hash) {
+            if e.depth() >= depth {
                 if e.exact_bound() {
-                    return e.score;
+                    return e.score();
                 } else if e.lower_bound() {
-                    alpha = max(alpha, e.score)
+                    alpha = max(alpha, e.score())
                 } else {
-                    beta = min(beta, e.score)
+                    beta = min(beta, e.score())
                 }
                 if alpha >= beta {
-                    return e.score;
+                    return e.score();
                 }
             }
             Some(e.frmto())

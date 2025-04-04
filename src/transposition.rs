@@ -1,13 +1,44 @@
 use crate::mgen::{self, Move};
-use std::collections::HashMap;
+use static_assertions::const_assert;
 
-//const TABLE_SIZE: usize = 1 << 20; // Example: 2^20 = 1,048,576 entries
-//const MASK: usize = TABLE_SIZE - 1;
+// Ensure usize is at least 64-bit at compile time
+const_assert!(std::mem::size_of::<usize>() >= std::mem::size_of::<u64>());
+
+// Table size - examples
+// 2 ^ 20 =    1048576 =   1M
+// 2 ^ 21 =    2097152 =   2M
+// 2 ^ 22 =    4194304 =   4M
+// 2 ^ 23 =    8388608 =   8M
+// 2 ^ 24 =   16777216 =  16M
+// 2 ^ 25 =   33554432 =  34M
+// 2 ^ 26 =   67108864 =  67M
+// 2 ^ 27 =  134217728 = 134M
+// 2 ^ 28 =  268435456 = 268M
+// 2 ^ 29 =  536870912 = 537M
+// 2 ^ 30 = 1073741824 =   1G
+
+const TABLE_SIZE: usize = 1 << 23;
+const MASK: usize = TABLE_SIZE - 1;
 #[derive(Debug, Copy, Clone)]
 pub struct TEntry {
-    pub depth: u16,
-    pub score: i16,
-    data: u16, // frm, to, bound: 2x6 bits + 3 bits
+    key: u64,
+    depth: u16,
+    score: i16,
+    data: u16, // frm, to, bound: 2x6 + 2 = 14 bits
+               // 2x16 + 14 = 46
+               // 64-46 = 18
+}
+
+impl Default for TEntry {
+    #[inline(always)]
+    fn default() -> TEntry {
+        TEntry {
+            key: 0,
+            depth: 0,
+            score: 0,
+            data: 0,
+        }
+    }
 }
 
 impl TEntry {
@@ -27,19 +58,33 @@ impl TEntry {
     pub fn frmto(&self) -> (u8, u8) {
         (mgen::ext_frm(self.data), mgen::ext_to(self.data))
     }
+
+    #[inline(always)]
+    pub fn depth(&self) -> u16 {
+        self.depth
+    }
+
+    #[inline(always)]
+    pub fn score(&self) -> i16 {
+        self.score
+    }
 }
 
-pub struct Transpositions(HashMap<u64, TEntry>);
+pub struct Transpositions(Vec<TEntry>);
 
 impl Default for Transpositions {
     fn default() -> Transpositions {
-        Transpositions(HashMap::new())
+        Transpositions(vec![TEntry::default(); TABLE_SIZE])
     }
+}
+
+#[inline(always)]
+fn index(key: u64) -> usize {
+    key as usize & MASK
 }
 
 impl Transpositions {
     pub fn store(&mut self, key: u64, depth: u16, score: i16, alpha: i16, beta: i16, m: &Move) {
-        // TODO - implement more efficient hashing function
         let bound = if score <= alpha {
             0 // Upper bound
         } else if score >= beta {
@@ -48,15 +93,14 @@ impl Transpositions {
             TEntry::EXACT_BIT
         };
         let data = (m.data & (mgen::FRM_MASK | mgen::TO_MASK)) | bound;
-        let e = TEntry { depth, score, data };
-        self.0
-            .entry(key)
-            .and_modify(|x| {
-                if x.depth < e.depth {
-                    *x = e;
-                }
-            })
-            .or_insert(e);
+        let e = TEntry {
+            key,
+            depth,
+            score,
+            data,
+        };
+
+        self.0[index(key)] = e
     }
 
     pub fn len(&self) -> usize {
@@ -64,10 +108,11 @@ impl Transpositions {
     }
 
     pub fn clear(&mut self) {
-        self.0.clear();
+        self.0.fill(TEntry::default());
     }
 
-    pub fn probe(&self, key: &u64) -> Option<&TEntry> {
-        self.0.get(key)
+    pub fn probe(&self, key: u64) -> Option<&TEntry> {
+        let entry = &self.0[index(key)];
+        if entry.key == key { Some(entry) } else { None }
     }
 }
