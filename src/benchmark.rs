@@ -293,3 +293,11 @@ pub const BT2630: [(&str,&str);30] = [
 ("rnb1k1nr/p2p1ppp/3B4/1p1N1N1P/4P1P1/3P1Q2/PqP5/R4Kb1 w kq -", "e5"),
 ("r1b1kb1r/pp1n1ppp/2q5/2p3B1/Q1B5/2p2N2/PP3PPP/R3K2R w KQkq -", "O-O-O"),
 ("2k5/2p3Rp/p1pb4/1p2p3/4P3/PN1P1P2/1P2KP1r/8 w - -", "f4")];
+
+// Not a benchmark - example of en passant leading to check mate
+// from Gunnar Gundersen vs Albert H. Faul in 1928
+#[rustfmt::skip]
+pub const GUNDERSEN_FAUL: [(&str,&str);3] = [
+("r1bq1r2/pp2npp1/7k/3pP1NP/1b4Q1/2N5/PP3PP1/R1B1K2R w - -", "Ne6+"),
+("r1bq1r2/pp2npp1/4N2k/3pP2P/1b4Q1/2N5/PP3PP1/R1B1K2R b - -", "g5"),
+("r1bq1r2/pp2npp1/4N2k/3pP2P/1b4Q1/2N5/PP3PP1/R1B1K2R w - -", "hxg6#")];

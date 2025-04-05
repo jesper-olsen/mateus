@@ -1,5 +1,5 @@
 // convert board move coordinates "d2d4" to int tuple
-pub fn str2move(s: &str) -> Option<(usize, usize)> {
+pub fn str2move(s: &str) -> Option<(u8, u8)> {
     if s.len() < 4 {
         None
     } else if let (Some(frm), Some(to)) = (parse_chess_coord(&s[0..2]), parse_chess_coord(&s[2..4]))
@@ -10,7 +10,7 @@ pub fn str2move(s: &str) -> Option<(usize, usize)> {
     }
 }
 
-pub fn parse_chess_coord(coord: &str) -> Option<usize> {
+pub fn parse_chess_coord(coord: &str) -> Option<u8> {
     if coord.len() != 2 {
         return None; // 2 characters
     }
@@ -24,8 +24,8 @@ pub fn parse_chess_coord(coord: &str) -> Option<usize> {
         return None; // Invalid input
     }
 
-    let col = (file - b'a') as usize;
-    let row = (rank - b'1') as usize;
+    let col = (file - b'a') as u8;
+    let row = (rank - b'1') as u8;
 
     let sq = (7 - col) * 8 + row;
     Some(sq)

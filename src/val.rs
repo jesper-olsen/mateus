@@ -124,13 +124,13 @@ impl Piece {
     }
 
     #[inline(always)]
-    pub const fn hashkey(&self, pos: usize) -> u64 {
-        HASH[self.index()][self.colour().as_usize()][pos]
+    pub const fn hashkey(&self, pos: u8) -> u64 {
+        HASH[self.index()][self.colour().as_usize()][pos as usize]
     }
 
     #[inline(always)]
-    pub const fn val(&self, pos: usize) -> i16 {
-        VAL[self.index()][self.colour().as_usize()][pos]
+    pub const fn val(&self, pos: u8) -> i16 {
+        VAL[self.index()][self.colour().as_usize()][pos as usize]
     }
 
     #[inline(always)]

@@ -46,7 +46,7 @@ struct FicsG {
     eco: String,
     ply_count: usize,
     result: &'static str,
-    moves: Vec<(usize, usize)>,
+    moves: Vec<(u8, u8)>,
     fens: Vec<Vec<u8>>,
     comment: &'static str,
 }
@@ -157,7 +157,7 @@ fn static_comment(s: &str) -> &'static str {
     }
 }
 
-fn parse_moves(fg: &mut FicsG, line: String) -> (Vec<(usize, usize)>, Vec<Vec<u8>>, &'static str) {
+fn parse_moves(fg: &mut FicsG, line: String) -> (Vec<(u8, u8)>, Vec<Vec<u8>>, &'static str) {
     let result = "000"; // dummy
     let mut lmoves = Vec::new();
     let mut lfens = Vec::new();

@@ -69,7 +69,7 @@ const OPENINGS: [&str;107]=[
 
 fn main() {
     let mut game = Game::default();
-    let mut h: HashMap<u64, Vec<(usize, usize)>> = HashMap::new();
+    let mut h: HashMap<u64, Vec<(u8, u8)>> = HashMap::new();
     let mut log = vec![];
     for s in &OPENINGS {
         if &s[0..1] == "#" {

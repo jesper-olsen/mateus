@@ -43,20 +43,20 @@ impl fmt::Display for Game {
     }
 }
 
-struct MovePicker {
-    moves: Vec<Move>,
-}
+// struct MovePicker {
+//     moves: Vec<Move>,
+// }
 
-impl MovePicker {
-    fn new(board: &Board, kmove: Option<(u8, u8)>) -> Self {
-        MovePicker { moves: vec![] }
-    }
-}
+// impl MovePicker {
+//     fn new(board: &Board, kmove: Option<(u8, u8)>) -> Self {
+//         MovePicker { moves: vec![] }
+//     }
+// }
 
 fn move_to_head(moves: &mut Vec<Move>, frmto: &(u8, u8)) {
     if let Some(q) = moves
         .iter()
-        .position(|m| (m.frm(), m.to()) == (frmto.0 as usize, frmto.1 as usize))
+        .position(|m| (m.frm(), m.to()) == (frmto.0, frmto.1))
     {
         if q != 0 {
             let m = moves.remove(q);
@@ -80,7 +80,7 @@ impl Game {
 
     //https://cheatography.com/davechild/cheat-sheets/chess-algebraic-notation/
     pub fn move2label(&mut self, m: &Move, moves: &[Move]) -> String {
-        fn i2xy(i: usize) -> (usize, usize) {
+        fn i2xy(i: u8) -> (u8, u8) {
             let x = 7 - i / 8; // col
             let y = i % 8; // row
             (x, y)
@@ -94,12 +94,12 @@ impl Game {
                 label.push_str("O-O-O");
             }
         } else {
-            if self.board[m.frm()].kind() == PAWN {
-                if self.board[m.to()] != EMPTY || m.en_passant() {
-                    label.push_str(&I2SQ[m.frm()][0..1])
+            if self.board[m.frm() as usize].kind() == PAWN {
+                if self.board[m.to() as usize] != EMPTY || m.en_passant() {
+                    label.push_str(&I2SQ[m.frm() as usize][0..1])
                 }
             } else {
-                label.push_str(&self.board[m.frm()].to_string().to_uppercase());
+                label.push_str(&self.board[m.frm() as usize].to_string().to_uppercase());
             }
 
             // If two or more pieces of the same type can move to the same sq we need to disambiguate
@@ -110,8 +110,8 @@ impl Game {
             let (x0, y0) = i2xy(m.frm());
             for m2 in moves {
                 if m2.to() == m.to()
-                    && self.board[m.frm()].is_officer()
-                    && self.board[m.frm()] == self.board[m2.frm()]
+                    && self.board[m.frm() as usize].is_officer()
+                    && self.board[m.frm() as usize] == self.board[m2.frm() as usize]
                 {
                     n += 1;
                     let (x, y) = i2xy(m2.frm());
@@ -125,17 +125,17 @@ impl Game {
             }
             if n > 1 {
                 if nx > 1 && ny > 1 {
-                    label.push_str(I2SQ[m.frm()])
+                    label.push_str(I2SQ[m.frm() as usize])
                 } else if nx <= ny {
-                    label.push_str(&I2SQ[m.frm()][0..1])
+                    label.push_str(&I2SQ[m.frm() as usize][0..1])
                 } else {
-                    label.push_str(&I2SQ[m.frm()][1..2])
+                    label.push_str(&I2SQ[m.frm() as usize][1..2])
                 }
             }
-            if m.en_passant() || self.board[m.to()] != EMPTY {
+            if m.en_passant() || self.board[m.to() as usize] != EMPTY {
                 label.push('x');
             }
-            label.push_str(I2SQ[m.to()]);
+            label.push_str(I2SQ[m.to() as usize]);
             if m.transform() {
                 label.push_str(m.promote_label())
             }
@@ -155,7 +155,7 @@ impl Game {
     fn is_quiescent(&self, last: &Move) -> bool {
         // quiescent unless last move was pawn near promotion
         // !self.in_check(self.colour) &&
-        match self.board[last.to()] {
+        match self.board[last.to() as usize] {
             WPAWN => last.to() % 8 != 6,
             BPAWN => last.to() % 8 != 1,
             _ => true,
@@ -163,7 +163,10 @@ impl Game {
     }
 
     pub fn make_move(&mut self, m: Move) {
-        if m.en_passant() || self.board[m.to()] != EMPTY || self.board[m.frm()].kind() == PAWN {
+        if m.en_passant()
+            || self.board[m.to() as usize] != EMPTY
+            || self.board[m.frm() as usize].kind() == PAWN
+        {
             self.board.rep.clear(); // ireversible move
             self.board.half_move_clock = 0;
         }
@@ -175,7 +178,7 @@ impl Game {
         self.board.move_log.push(m);
 
         //update castling permissions
-        match (self.board[m.to()], m.frm()) {
+        match (self.board[m.to() as usize], m.frm()) {
             (WKING, 24) => self.board.can_castle &= !CASTLE_W_SHORT & !CASTLE_W_LONG,
             (BKING, 31) => self.board.can_castle &= !CASTLE_B_SHORT & !CASTLE_B_LONG,
             (WROOK, 0) => self.board.can_castle &= !CASTLE_W_SHORT,
@@ -235,7 +238,7 @@ impl Game {
             if rfab {
                 m.to() == last.to()
             } else {
-                m.en_passant() || self.board[m.to()] != EMPTY
+                m.en_passant() || self.board[m.to() as usize] != EMPTY
             }
         );
         for m in moves {
