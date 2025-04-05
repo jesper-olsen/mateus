@@ -26,7 +26,9 @@ pub struct TEntry {
     score: i16,
     data: u16, // frm, to, bound: 2x6 + 2 = 14 bits
                // 2x16 + 14 = 46
-               // 64-46 = 18
+               // 64-46 = 18 unused with u64 alignment
+               // 18 + 23 redundant hash = 41
+               // TODO - store extra moves without score, e.g. 41 available / 12 per move => +3 moves (36 bits)
 }
 
 impl Default for TEntry {

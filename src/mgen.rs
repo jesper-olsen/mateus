@@ -56,12 +56,6 @@ pub struct Move {
 }
 
 impl Move {
-    pub fn new(castle: bool, en_passant: bool, frm: usize, to: usize) -> Self {
-        // incomplete - needed by from_fen
-        let data = pack_data(castle, en_passant, EMPTY, frm, to);
-        Move { data, val: 0 }
-    }
-
     #[inline]
     pub fn castle(&self) -> bool {
         self.data & CASTLE_BIT != 0 && !self.transform()
@@ -98,22 +92,6 @@ impl Move {
     #[inline]
     pub fn transform(&self) -> bool {
         self.data & TRANSFORM_BIT != 0
-    }
-
-    pub fn transform_to_rook(&self) -> bool {
-        self.transform() && self.data & 1 << 15 == 0b10000000_00000000
-    }
-
-    pub fn transform_to_bishop(&self) -> bool {
-        self.transform() && self.data & 1 << 13 == 0b00100000_00000000
-    }
-
-    pub fn transform_to_knight(&self) -> bool {
-        self.transform() && self.data & 1 << 12 == 0b00010000_00000000
-    }
-
-    pub fn transform_to_queen(&self) -> bool {
-        self.transform() && self.data & (1 << 15 | 1 << 13 | 1 << 12) == 0
     }
 
     #[inline]
