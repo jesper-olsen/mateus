@@ -24,8 +24,8 @@ pub fn parse_chess_coord(coord: &str) -> Option<u8> {
         return None; // Invalid input
     }
 
-    let col = (file - b'a') as u8;
-    let row = (rank - b'1') as u8;
+    let col = file - b'a';
+    let row = rank - b'1';
 
     let sq = (7 - col) * 8 + row;
     Some(sq)

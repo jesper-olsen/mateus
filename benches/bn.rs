@@ -1,13 +1,13 @@
 use criterion::{Criterion, black_box, criterion_group, criterion_main};
-use puccinia_s_checkmate::benchmark::BRATKO_KOPEC;
-use puccinia_s_checkmate::mgen::*;
-use puccinia_s_checkmate::val::Colour;
+use mateus::benchmark::BRATKO_KOPEC;
+use mateus::mgen::*;
+use mateus::val::Colour;
 
 fn bench_move_gen(c: &mut Criterion) {
     let fen = BRATKO_KOPEC[0].0;
     let board = Board::from_fen(fen);
     c.bench_function("mgen BK1", |b| {
-        b.iter(|| black_box(board.moves(false, false, None)))
+        b.iter(|| black_box(board.moves(false, false)))
     });
 }
 

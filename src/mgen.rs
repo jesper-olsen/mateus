@@ -145,7 +145,6 @@ pub struct Board {
     squares: [Piece; 64],
     pub colour: Colour,
     pub can_castle: u8, // white short, long, black short, long
-    pub move_log: Vec<Move>,
     pub material: i16,
     pub hash: u64,
     pub half_move_clock: usize, // since last irreversible move
@@ -314,20 +313,11 @@ impl Board {
             }
         }
 
-        let mut move_log = Vec::new();
-        let mut en_passant_sq = 0;
-        if parts.len() > 3 {
-            // en passant attack
-            if let Some(sq) = misc::parse_chess_coord(parts[3]) {
-                let sq = sq as isize;
-                let o = if colour.is_white() { -1 } else { 1 };
-                let to: usize = (sq + o).try_into().expect("must be positive");
-                let frm: usize = (sq - o).try_into().expect("must be positive");
-                let m = Move::new(false, true, frm, to);
-                move_log.push(m);
-                en_passant_sq = sq as u8;
-            }
-        }
+        let en_passant_sq = if parts.len() > 3 {
+            misc::parse_chess_coord(parts[3]).unwrap_or(0)
+        } else {
+            0
+        };
 
         let half_move_clock = if parts.len() > 4 {
             // moves since last irreversible move
@@ -337,15 +327,10 @@ impl Board {
         };
 
         let full_move_count = if parts.len() > 5 {
-            // full-move count
-            parts[5].parse::<usize>().unwrap_or(1)
-            // if let Ok(value) = parts[5].parse::<usize>() {
-            //     value
-            // } else {
-            //     0 // TODO - Err ?
-            // }
+            parts[5].parse::<usize>().unwrap_or(1) - 1
+            // TODO - Err ?
         } else {
-            1
+            0
         };
 
         let bitmaps = to_bitmaps(&squares);
@@ -362,7 +347,6 @@ impl Board {
             can_castle,
             end_game_material,
             log_bms: vec![],
-            move_log,
             material,
             hash,
             en_passant_sq,
@@ -418,27 +402,14 @@ impl Board {
         } else {
             s.push('-');
         }
-        // if let Some(last) = self.move_log.last() {
-        //     if self[last.to() as usize].kind() == PAWN && last.to().abs_diff(last.frm()) == 2 {
-        //         let idx = last.to() as isize + if self.colour.is_white() { 1 } else { -1 };
-        //         s.push_str(I2SQ[idx as usize])
-        //     } else {
-        //         s.push('-');
-        //     }
-        // } else {
-        //     s.push('-');
-        // }
 
         // reversible moves,move nr
-        s.push_str(
-            format!(
-                " {} {}",
-                self.half_moves() - 1,
-                self.full_move_count + self.move_log.len() / 2
-            )
-            .as_str(),
-        );
+        s.push_str(format!(" {} {}", self.half_moves() - 1, self.move_number()).as_str());
         s
+    }
+
+    pub fn move_number(&self) -> usize {
+        self.full_move_count / 2 + 1
     }
 
     #[rustfmt::skip]
@@ -759,16 +730,14 @@ impl Board {
     }
 
     fn knight_moves(&self, v: &mut Vec<Move>, frm: usize) {
-        let mut b = BM_KNIGHT_MOVES[frm as usize] & !self.bitmaps.pieces[self.colour.as_usize()];
+        let mut b = BM_KNIGHT_MOVES[frm] & !self.bitmaps.pieces[self.colour.as_usize()];
         while b != 0 {
             let to = b.trailing_zeros() as usize;
             b &= !(1 << to);
 
             v.push(Move {
                 data: pack_data(false, false, EMPTY, frm, to),
-                val: self[frm].val(to as u8)
-                    - self[frm].val(frm as u8)
-                    - self[to as usize].val(to as u8),
+                val: self[frm].val(to as u8) - self[frm].val(frm as u8) - self[to].val(to as u8),
             })
         }
     }
@@ -1079,21 +1048,21 @@ mod tests {
     fn test_en_passant() {
         let board = Board::from_fen(GUNDERSEN_FAUL[1].0);
         let mut game = Game::new(board);
-        let moves = game.legal_moves(None);
+        let moves = game.legal_moves();
         let (frm, to) = misc::str2move("g7g5").unwrap();
         let r = moves.iter().position(|m| (m.frm(), m.to()) == (frm, to));
-        assert_eq!(r.is_some(), true);
+        assert!(r.is_some());
         let m = moves[r.unwrap()];
         game.make_move(m);
 
-        let moves = game.legal_moves(Some(&m));
+        let moves = game.legal_moves();
         let (frm, to) = misc::str2move("h5g6").unwrap();
         let r = moves.iter().position(|m| (m.frm(), m.to()) == (frm, to));
-        assert_eq!(r.is_some(), true);
+        assert!(r.is_some());
         let m = moves[r.unwrap()];
         game.make_move(m);
 
-        let moves = game.legal_moves(Some(&m));
+        let moves = game.legal_moves();
         assert_eq!(moves.len(), 0);
     }
 }

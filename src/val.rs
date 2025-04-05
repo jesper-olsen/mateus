@@ -104,7 +104,7 @@ impl Piece {
     #[inline(always)]
     pub const fn colour(&self) -> Colour {
         // black: 0, white: 1
-        Colour((self.0 & 1) as u8)
+        Colour(self.0 & 1)
     }
 
     #[inline(always)]
@@ -307,17 +307,17 @@ mod tests {
 
     #[test]
     fn test_kind() {
-        assert_eq!(WROOK.is_officer(), true);
-        assert_eq!(WKNIGHT.is_officer(), true);
-        assert_eq!(WBISHOP.is_officer(), true);
-        assert_eq!(WQUEEN.is_officer(), true);
-        assert_eq!(WKING.is_officer(), false);
-        assert_eq!(WPAWN.is_officer(), false);
-        assert_eq!(BROOK.is_officer(), true);
-        assert_eq!(BKNIGHT.is_officer(), true);
-        assert_eq!(BBISHOP.is_officer(), true);
-        assert_eq!(BQUEEN.is_officer(), true);
-        assert_eq!(BKING.is_officer(), false);
-        assert_eq!(BPAWN.is_officer(), false);
+        assert!(WROOK.is_officer());
+        assert!(WKNIGHT.is_officer());
+        assert!(WBISHOP.is_officer());
+        assert!(WQUEEN.is_officer());
+        assert!(!WKING.is_officer());
+        assert!(!WPAWN.is_officer());
+        assert!(BROOK.is_officer());
+        assert!(BKNIGHT.is_officer());
+        assert!(BBISHOP.is_officer());
+        assert!(BQUEEN.is_officer());
+        assert!(!BKING.is_officer());
+        assert!(!BPAWN.is_officer());
     }
 }

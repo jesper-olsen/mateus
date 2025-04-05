@@ -22,7 +22,7 @@ struct Args {
     ///break off search threshold - positions generated
     n: usize,
     #[arg(short, long, default_value_t = -1)]
-    ///number of (half) moves before stopping
+    ///number of moves before stopping
     m: isize,
     #[arg(short, long, default_value_t = false)]
     ///play white (human-computer)
@@ -99,8 +99,8 @@ fn check_game_over(game: &Game, moves: &[Move], half_moves: isize) -> String {
         "1/2-1/2 Draw by repetition".to_string()
     } else if game.board.half_moves() >= 100 {
         "1/2-1/2 Draw by the 50-move rule".to_string()
-    } else if half_moves != -1 && half_moves <= game.board.move_log.len() as isize {
-        format!("stopping after {} half move(s)", game.board.move_log.len())
+    } else if half_moves != -1 && half_moves <= game.board.full_move_count as isize {
+        format!("stopping after {} move(s)", game.board.full_move_count)
     } else if moves.is_empty() {
         if game.in_check(game.turn()) {
             if game.turn().is_white() { "0-1" } else { "1-0" }
@@ -253,7 +253,7 @@ fn play(
         game.make_move(m);
         println!("{game}");
         moves = game.legal_moves();
-        println!("{}. {label}", game.board.move_log.len() / 2 + 1);
+        println!("{}. {label}", game.board.move_number());
 
         if verbose {
             if game.board.rep_count() > 1 {

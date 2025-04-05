@@ -175,7 +175,7 @@ impl Game {
 
         //adjust king value in end game
         self.end_game = self.board.is_end_game();
-        self.board.move_log.push(m);
+        self.board.full_move_count += 1;
 
         //update castling permissions
         match (self.board[m.to() as usize], m.frm()) {
