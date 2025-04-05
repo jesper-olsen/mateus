@@ -136,7 +136,7 @@ pub struct Board {
 
 impl Default for Board {
     fn default() -> Self {
-        Board::from_fen(ROOT_FEN)
+        Board::from_fen(ROOT_FEN).expect("Always good for ROOT_FEN")
     }
 }
 
@@ -263,7 +263,7 @@ impl Board {
         // }
     }
 
-    pub fn from_fen(s: &str) -> Self {
+    pub fn from_fen(s: &str) -> Result<Board, String> {
         let parts = s.split(' ').collect::<Vec<&str>>();
         let squares = from_fen(parts[0]);
 
@@ -292,21 +292,32 @@ impl Board {
         }
 
         let en_passant_sq = if parts.len() > 3 {
-            misc::parse_chess_coord(parts[3]).unwrap_or(0)
+            if parts[3].starts_with('-') {
+                0
+            } else {
+                match misc::parse_chess_coord(parts[3]) {
+                    None => return Err("Bad en passant square in fen string".into()),
+                    Some(val) => val,
+                }
+            }
         } else {
             0
         };
 
         let half_move_clock = if parts.len() > 4 {
-            // moves since last irreversible move
-            parts[4].parse::<usize>().unwrap_or(0)
+            match parts[4].parse::<usize>() {
+                Ok(val) => val,
+                Err(_) => return Err("Expected an integer for half-move clock".into()),
+            }
         } else {
             0
         };
 
         let full_move_count = if parts.len() > 5 {
-            parts[5].parse::<usize>().unwrap_or(1) - 1
-            // TODO - Err ?
+            match parts[5].parse::<usize>() {
+                Ok(val) => val - 1,
+                Err(_) => return Err("Expected an integer for full-move count".into()),
+            }
         } else {
             0
         };
@@ -318,7 +329,7 @@ impl Board {
         let material = material(&squares);
         let rep = HashMap::from([(hash, 1)]);
 
-        Board {
+        Ok(Board {
             squares,
             bitmaps,
             colour,
@@ -331,7 +342,7 @@ impl Board {
             half_move_clock,
             full_move_count,
             rep,
-        }
+        })
     }
 
     pub fn to_fen(&self) -> String {

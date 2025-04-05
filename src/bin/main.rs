@@ -120,7 +120,11 @@ fn benchmark(verbose: bool, search_threshold: usize, tname: &str, tpos: &[(&str,
     let mut n_searched: usize = 0;
     let start = Instant::now();
     for (i, (fen, label)) in tpos.iter().enumerate() {
-        let mut game = Game::new(Board::from_fen(fen));
+        let Ok(board) = Board::from_fen(fen) else {
+            println!("Bad fen: {fen}");
+            continue;
+        };
+        let mut game = Game::new(board);
         let moves = game.legal_moves();
         game.n_searched = 0;
 
@@ -185,9 +189,8 @@ fn play(
     half_moves: isize,
     library_bypass: bool,
     fen: &str,
-) {
-    let mut game = Game::new(Board::from_fen(fen));
-    println!("{}", game);
+) -> Result<(), String> {
+    let mut game = Game::new(Board::from_fen(fen)?);
 
     let mut tot = 0;
     let mut moves = game.legal_moves();
@@ -310,6 +313,8 @@ fn main() {
         }
     } else {
         let players = HashMap::from([(Colour::white(), args.w), (Colour::black(), args.b)]);
-        play(players, args.v, args.n, args.m, args.l, args.f.as_str());
+        if let Err(m) = play(players, args.v, args.n, args.m, args.l, args.f.as_str()) {
+            println!("Bad fen: {m}");
+        }
     }
 }
