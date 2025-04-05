@@ -143,7 +143,7 @@ impl Game {
 
         self.board.update(m);
         let in_check = self.in_check(self.turn());
-        if self.legal_moves(Some(m)).is_empty() && in_check {
+        if self.legal_moves().is_empty() && in_check {
             label.push('#')
         } else if self.in_check(self.turn()) {
             label.push('+')
@@ -202,15 +202,15 @@ impl Game {
         !flag
     }
 
-    pub fn legal_moves(&mut self, last: Option<&Move>) -> Vec<Move> {
+    pub fn legal_moves(&mut self) -> Vec<Move> {
         let in_check = self.in_check(self.board.colour);
-        let mut moves = self.moves(last, in_check);
+        let mut moves = self.moves(in_check);
         moves.retain(|m| self.legal_move(m));
         moves
     }
 
-    fn moves(&mut self, last: Option<&Move>, in_check: bool) -> Vec<Move> {
-        let mut l = self.board.moves(in_check, self.end_game, last);
+    fn moves(&mut self, in_check: bool) -> Vec<Move> {
+        let mut l = self.board.moves(in_check, self.end_game);
         if self.board.colour.is_white() {
             //l.sort_by(|b, a| a.val.cmp(&b.val)); // decreasing
             l.sort_unstable_by(|b, a| a.val.cmp(&b.val)); // decreasing
@@ -232,7 +232,7 @@ impl Game {
         let mut bscore = None;
         let mut alpha = alp;
         let in_check = false; // TODO - calculate?
-        let mut moves = self.moves(Some(last), in_check);
+        let mut moves = self.moves(in_check);
         moves.retain(|m|
             //let ic = self.in_check(colour);
             if rfab {
@@ -308,7 +308,7 @@ impl Game {
             (_, false) => depth,
         };
 
-        let mut moves = self.moves(Some(last), in_check);
+        let mut moves = self.moves(in_check);
         if let Some(k) = kmove {
             move_to_head(&mut moves, &k);
         }

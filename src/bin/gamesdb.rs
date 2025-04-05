@@ -188,8 +188,6 @@ fn parse_moves(fg: &mut FicsG, line: String) -> (Vec<(u8, u8)>, Vec<Vec<u8>>, &'
     //println!("Comments: {comments:?}");
     //println!("CLine: {line}");
 
-    let mut last_move;
-    let mut last = None;
     for s in line.split_whitespace() {
         if re_move_number.is_match(s) || re_comment.is_match(s) {
             continue;
@@ -198,15 +196,13 @@ fn parse_moves(fg: &mut FicsG, line: String) -> (Vec<(u8, u8)>, Vec<Vec<u8>>, &'
             return (lmoves, lfens, static_outcome(s));
         }
 
-        let moves = game.legal_moves(last);
+        let moves = game.legal_moves();
         let alg_labels: Vec<_> = moves.iter().map(|m| game.move2label(m, &moves)).collect();
         match alg_labels.iter().position(|r| r == s) {
             Some(index) => {
                 game.make_move(moves[index]);
                 lmoves.push((moves[index].frm(), moves[index].to()));
                 lfens.push(game.board.to_csv());
-                last_move = moves[index];
-                last = Some(&last_move);
             }
             None => {
                 println!("Logged moves: {line}");

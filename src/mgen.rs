@@ -134,11 +134,6 @@ pub fn ext_to(data: u16) -> u8 {
     ((data & TO_MASK) >> TO_SHIFT) as u8
 }
 
-pub const NULL_MOVE: Move = Move {
-    data: pack_data(false, false, EMPTY, 0, 0),
-    val: 0,
-};
-
 impl fmt::Display for Move {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let (frm, to) = (self.frm() as usize, self.to() as usize);
@@ -156,9 +151,10 @@ pub struct Board {
     pub half_move_clock: usize, // since last irreversible move
     pub full_move_count: usize,
     pub rep: HashMap<u64, u8>,
+    en_passant_sq: u8,
     bitmaps: Bitmaps,
     end_game_material: i16,
-    log_bms: Vec<(Bitmaps, Piece, u64, u8)>,
+    log_bms: Vec<(Bitmaps, Piece, u64, u8, u8)>,
 }
 
 impl Default for Board {
@@ -319,6 +315,7 @@ impl Board {
         }
 
         let mut move_log = Vec::new();
+        let mut en_passant_sq = 0;
         if parts.len() > 3 {
             // en passant attack
             if let Some(sq) = misc::parse_chess_coord(parts[3]) {
@@ -328,6 +325,7 @@ impl Board {
                 let frm: usize = (sq - o).try_into().expect("must be positive");
                 let m = Move::new(false, true, frm, to);
                 move_log.push(m);
+                en_passant_sq = sq as u8;
             }
         }
 
@@ -367,6 +365,7 @@ impl Board {
             move_log,
             material,
             hash,
+            en_passant_sq,
             half_move_clock,
             full_move_count,
             rep,
@@ -414,16 +413,21 @@ impl Board {
 
         // en passant sq
         s.push(' ');
-        if let Some(last) = self.move_log.last() {
-            if self[last.to() as usize].kind() == PAWN && last.to().abs_diff(last.frm()) == 2 {
-                let idx = last.to() as isize + if self.colour.is_white() { 1 } else { -1 };
-                s.push_str(I2SQ[idx as usize])
-            } else {
-                s.push('-');
-            }
+        if self.en_passant_sq > 0 {
+            s.push_str(I2SQ[self.en_passant_sq as usize])
         } else {
             s.push('-');
         }
+        // if let Some(last) = self.move_log.last() {
+        //     if self[last.to() as usize].kind() == PAWN && last.to().abs_diff(last.frm()) == 2 {
+        //         let idx = last.to() as isize + if self.colour.is_white() { 1 } else { -1 };
+        //         s.push_str(I2SQ[idx as usize])
+        //     } else {
+        //         s.push('-');
+        //     }
+        // } else {
+        //     s.push('-');
+        // }
 
         // reversible moves,move nr
         s.push_str(
@@ -458,18 +462,13 @@ impl Board {
         );
 
         // en passant
-        if let Some(last) = self.move_log.last() {
-            if self[last.to() as usize].kind() == PAWN  && last.to().abs_diff(last.frm()) == 2 {
-                let idx = last.to() as isize + if self.colour.is_white() { 1 } else { -1 };
-                for i in 0..64 {
-                    v.push((i == idx) as u8);
-                }
-            } else {
-                v.resize(v.len() + 64, 0);
+        if self.en_passant_sq>0 {
+            for i in 0..64 {
+                v.push((i == self.en_passant_sq) as u8);
             }
         } else {
             v.resize(v.len() + 64, 0);
-        };
+        }
 
         v
     }
@@ -484,8 +483,10 @@ impl Board {
             self[m.to() as usize],
             self.hash,
             self.can_castle,
+            self.en_passant_sq,
         ));
         let hash;
+        self.en_passant_sq = 0;
         self[m.to() as usize] = if m.castle() {
             let (x, y) = if m.to() <= 15 {
                 (m.frm() - 24, m.frm() - 8) // short
@@ -564,6 +565,9 @@ impl Board {
                     self.bitmaps.pieces[c.as_usize()] ^= 1 << m.to();
                 }
                 (PAWN, _) => {
+                    if m.frm().abs_diff(m.to()) == 2 {
+                        self.en_passant_sq = m.frm() + 2 * self.colour.as_u8() - 1;
+                    }
                     self.bitmaps.pawns |= 1 << m.to();
                     self.bitmaps.pawns ^= 1 << m.frm();
                 }
@@ -608,7 +612,13 @@ impl Board {
     pub fn backdate(&mut self, m: &Move) {
         let bms = self.log_bms.pop().unwrap();
         let capture;
-        (self.bitmaps, capture, self.hash, self.can_castle) = bms;
+        (
+            self.bitmaps,
+            capture,
+            self.hash,
+            self.can_castle,
+            self.en_passant_sq,
+        ) = bms;
         self.colour.flip();
         //self.hash ^= m.hash ^ WHITE_HASH;
         self.rep_dec();
@@ -730,9 +740,7 @@ impl Board {
             })
     }
 
-    pub fn moves(&self, in_check: bool, end_game: bool, last: Option<&Move>) -> Vec<Move> {
-        let last = if let Some(m) = last { m } else { &NULL_MOVE };
-
+    pub fn moves(&self, in_check: bool, end_game: bool) -> Vec<Move> {
         let mut v = Vec::with_capacity(50);
         self.squares
             .iter()
@@ -741,7 +749,7 @@ impl Board {
             .for_each(|(frm, &p)| match p.kind() {
                 KNIGHT => self.knight_moves(&mut v, frm),
                 KING => self.king_moves(&mut v, frm, end_game, in_check),
-                PAWN => self.pawn_moves(&mut v, frm, last),
+                PAWN => self.pawn_moves(&mut v, frm),
                 ROOK => self.ray_moves(&mut v, frm, BM_ROOK_MOVES[frm]),
                 BISHOP => self.ray_moves(&mut v, frm, BM_BISHOP_MOVES[frm]),
                 QUEEN => self.ray_moves(&mut v, frm, BM_QUEEN_MOVES[frm]),
@@ -781,7 +789,7 @@ impl Board {
         }
     }
 
-    fn pawn_moves(&self, v: &mut Vec<Move>, frm: usize, last: &Move) {
+    fn pawn_moves(&self, v: &mut Vec<Move>, frm: usize) {
         let bm_board =
             self.bitmaps.pieces[WHITE.as_usize()] | self.bitmaps.pieces[BLACK.as_usize()];
         let cap = BM_PAWN_CAPTURES[self.colour.as_usize()][frm]
@@ -827,11 +835,9 @@ impl Board {
         }
 
         // en passant
-        if self[last.to() as usize].kind() == PAWN && last.to().abs_diff(last.frm()) == 2 {
-            // square attacked if last move was a step-2 pawn move
-            let idx = last.frm() as isize - 2 * self.colour.as_isize() + 1;
-
-            let mut b = BM_PAWN_CAPTURES[self.colour.as_usize()][frm] & 1 << idx;
+        if self.en_passant_sq > 0 {
+            let lto = self.en_passant_sq + 2 * self.colour.opposite().as_u8() - 1;
+            let mut b = BM_PAWN_CAPTURES[self.colour.as_usize()][frm] & 1 << self.en_passant_sq;
             while b != 0 {
                 let to = b.trailing_zeros() as usize;
                 b &= !(1 << to);
@@ -840,7 +846,8 @@ impl Board {
                     data: pack_data(false, true, EMPTY, frm, to),
                     val: self[frm].val(to as u8)
                         - self[frm].val(frm as u8)
-                        - self[last.to() as usize].val(last.to()),
+                        //- self[last.to() as usize].val(last.to()),
+                        - self[lto as usize].val(lto),
                 });
             }
         }
