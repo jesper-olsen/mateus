@@ -16,6 +16,59 @@ use val::{BPAWN, WPAWN};
 
 const INFINITE: i16 = 32000;
 
+// pub struct MovePicker<'a> {
+//     board: &'a Board,
+//     tt_move: Option<Move>,
+//     generated: bool,
+//     moves: Vec<Move>,
+//     index: usize,
+//     n_generated: usize,
+//     is_end_game: bool,
+// }
+
+// impl<'a> MovePicker<'a> {
+//     pub fn new(board: &'a Board, tt_move: Option<Move>) -> Self {
+//         MovePicker {
+//             board,
+//             tt_move,
+//             generated: false,
+//             moves: Vec::new(),
+//             index: 0,
+//             n_generated: 0,
+//             is_end_game: false,
+//         }
+//     }
+
+//     pub fn next(&mut self) -> Option<Move> {
+//         if let Some(m) = self.tt_move.take() {
+//             return Some(m);
+//         }
+
+//         if !self.generated {
+//             let in_check = self.board.in_check(self.board.colour);
+
+//             self.moves = self.board.moves(in_check, self.is_end_game);
+//             if self.board.colour.is_white() {
+//                 self.moves.sort_unstable_by(|b, a| a.val.cmp(&b.val)); // decreasing
+//             } else {
+//                 self.moves.sort_unstable_by(|a, b| a.val.cmp(&b.val)); // increasing
+//             }
+//             self.n_generated += self.moves.len();
+
+//             self.generated = true;
+//         }
+
+//         // Return next move
+//         if self.index < self.moves.len() {
+//             let m = self.moves[self.index];
+//             self.index += 1;
+//             Some(m)
+//         } else {
+//             None
+//         }
+//     }
+// }
+
 pub struct Game {
     pub board: Board,
     pub n_searched: usize,
@@ -41,16 +94,6 @@ impl fmt::Display for Game {
         write!(f, "{}", self.board)
     }
 }
-
-// struct MovePicker {
-//     moves: Vec<Move>,
-// }
-
-// impl MovePicker {
-//     fn new(board: &Board, kmove: Option<(u8, u8)>) -> Self {
-//         MovePicker { moves: vec![] }
-//     }
-// }
 
 fn move_to_head(moves: &mut Vec<Move>, frmto: &(u8, u8)) {
     if let Some(q) = moves
@@ -142,10 +185,10 @@ impl Game {
         }
 
         self.board.update(m);
-        let in_check = self.board.in_check(self.board.colour);
+        let in_check = self.board.in_check(self.board.turn);
         if self.legal_moves().is_empty() && in_check {
             label.push('#')
-        } else if self.board.in_check(self.board.colour) {
+        } else if self.board.in_check(self.board.turn) {
             label.push('+')
         }
         self.board.backdate(m);
@@ -192,13 +235,13 @@ impl Game {
     fn legal_move(&mut self, m: &Move) -> bool {
         // verify move does not expose own king
         self.board.update(m);
-        let flag = self.board.in_check(self.board.colour.opposite());
+        let flag = self.board.in_check(self.board.turn.opposite());
         self.board.backdate(m);
         !flag
     }
 
     pub fn legal_moves(&mut self) -> Vec<Move> {
-        let in_check = self.board.in_check(self.board.colour);
+        let in_check = self.board.in_check(self.board.turn);
         let mut moves = self.moves(in_check);
         moves.retain(|m| self.legal_move(m));
         moves
@@ -206,11 +249,9 @@ impl Game {
 
     fn moves(&mut self, in_check: bool) -> Vec<Move> {
         let mut l = self.board.moves(in_check, self.end_game);
-        if self.board.colour.is_white() {
-            //l.sort_by(|b, a| a.val.cmp(&b.val)); // decreasing
+        if self.board.turn.is_white() {
             l.sort_unstable_by(|b, a| a.val.cmp(&b.val)); // decreasing
         } else {
-            //l.sort_by(|a, b| a.val.cmp(&b.val)); // increasing
             l.sort_unstable_by(|a, b| a.val.cmp(&b.val)); // increasing
         }
         self.n_searched += l.len();
@@ -218,7 +259,7 @@ impl Game {
     }
 
     fn quiescence_fab(&mut self, alp: i16, beta: i16, last: &Move, rfab: bool) -> i16 {
-        let colour = self.board.colour;
+        let colour = self.board.turn;
 
         let mut bscore = None;
         let mut alpha = alp;
@@ -270,7 +311,7 @@ impl Game {
         let mut beta = beta;
         let mut bscore = -INFINITE + ply as i16;
         let mut bmove = None;
-        let colour = self.board.colour;
+        let colour = self.board.turn;
 
         let kmove = if let Some(e) = self.ttable.probe(self.board.hash) {
             if e.depth() >= depth {
@@ -300,12 +341,15 @@ impl Game {
             (_, false) => depth,
         };
 
+        //let mut picker = MovePicker::new(&self.board, kmove);
+
         let mut moves = self.moves(in_check);
         if let Some(k) = kmove {
             move_to_head(&mut moves, &k);
         }
+        //while let Some(m) = picker.next() {
         for m in moves.iter() {
-            self.board.update(m);
+            self.board.update(&m);
             if !self.board.in_check(colour) {
                 // legal move
                 if bmove.is_none() {

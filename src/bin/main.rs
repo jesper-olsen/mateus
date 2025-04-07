@@ -45,7 +45,7 @@ struct Args {
 }
 
 fn pick_move(game: &mut Game, moves: &[Move]) -> Vec<(Move, i16)> {
-    let label = if game.board.colour.is_white() {
+    let label = if game.board.turn.is_white() {
         "White"
     } else {
         "Black"
@@ -102,8 +102,8 @@ fn check_game_over(game: &Game, moves: &[Move], half_moves: isize) -> String {
     } else if half_moves != -1 && half_moves <= game.board.full_move_count as isize {
         format!("stopping after {} move(s)", game.board.full_move_count)
     } else if moves.is_empty() {
-        if game.board.in_check(game.board.colour) {
-            if game.board.colour.is_white() {
+        if game.board.in_check(game.board.turn) {
+            if game.board.turn.is_white() {
                 "0-1"
             } else {
                 "1-0"
@@ -136,7 +136,7 @@ fn benchmark(verbose: bool, search_threshold: usize, tname: &str, tpos: &[(&str,
         let (best, score) = l[0];
         n_searched += game.n_searched;
         let clabel = game.move2label(&best, &moves);
-        let colour = if game.board.colour.is_white() {
+        let colour = if game.board.turn.is_white() {
             "white"
         } else {
             "black"
@@ -207,7 +207,7 @@ fn play(
             std::process::exit(1);
         }
 
-        let l = if players[&game.board.colour] {
+        let l = if players[&game.board.turn] {
             pick_move(&mut game, &moves)
         } else {
             // try library 1st - compute if not there
