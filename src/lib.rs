@@ -7,7 +7,6 @@ pub mod openings;
 pub mod transposition;
 pub mod val;
 
-use crate::Colour;
 use core::cmp::{max, min};
 use mgen::*;
 use std::fmt;
@@ -143,10 +142,10 @@ impl Game {
         }
 
         self.board.update(m);
-        let in_check = self.in_check(self.turn());
+        let in_check = self.board.in_check(self.board.colour);
         if self.legal_moves().is_empty() && in_check {
             label.push('#')
-        } else if self.in_check(self.turn()) {
+        } else if self.board.in_check(self.board.colour) {
             label.push('+')
         }
         self.board.backdate(m);
@@ -190,11 +189,6 @@ impl Game {
         }
     }
 
-    pub fn in_check(&self, colour: Colour) -> bool {
-        // true if other side can capture king
-        self.board.in_check(colour)
-    }
-
     fn legal_move(&mut self, m: &Move) -> bool {
         // verify move does not expose own king
         self.board.update(m);
@@ -204,7 +198,7 @@ impl Game {
     }
 
     pub fn legal_moves(&mut self) -> Vec<Move> {
-        let in_check = self.in_check(self.board.colour);
+        let in_check = self.board.in_check(self.board.colour);
         let mut moves = self.moves(in_check);
         moves.retain(|m| self.legal_move(m));
         moves
@@ -221,10 +215,6 @@ impl Game {
         }
         self.n_searched += l.len();
         l
-    }
-
-    pub fn turn(&self) -> Colour {
-        self.board.colour
     }
 
     fn quiescence_fab(&mut self, alp: i16, beta: i16, last: &Move, rfab: bool) -> i16 {
@@ -245,7 +235,7 @@ impl Game {
         );
         for m in moves {
             self.board.update(&m);
-            if !self.in_check(colour) {
+            if !self.board.in_check(colour) {
                 // legal move
                 let score = -self.quiescence_fab(-beta, -alpha, &m, true);
                 match bscore {
@@ -300,7 +290,7 @@ impl Game {
             None
         };
 
-        let in_check = self.in_check(colour);
+        let in_check = self.board.in_check(colour);
         let depth = match (depth, in_check) {
             (_, true) => depth + 1,
             (0, false) if self.is_quiescent(last) => {
@@ -316,7 +306,7 @@ impl Game {
         }
         for m in moves.iter() {
             self.board.update(m);
-            if !self.in_check(colour) {
+            if !self.board.in_check(colour) {
                 // legal move
                 if bmove.is_none() {
                     bscore = -self.pvs(depth - 1, ply + 1, -beta, -alpha, m); // full beam
