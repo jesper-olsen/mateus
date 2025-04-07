@@ -29,6 +29,11 @@ impl Colour {
     }
 
     #[inline(always)]
+    pub const fn as_i8(&self) -> i8 {
+        self.0 as i8
+    }
+
+    #[inline(always)]
     pub const fn as_isize(&self) -> isize {
         self.0 as isize
     }

@@ -10,7 +10,11 @@ pub fn str2move(s: &str) -> Option<(u8, u8)> {
     }
 }
 
-pub fn parse_chess_coord(coord: &str) -> Option<u8> {
+pub const fn sq2i(coord: &str) -> u8 {
+    parse_chess_coord(coord).unwrap()
+}
+
+pub const fn parse_chess_coord(coord: &str) -> Option<u8> {
     if coord.len() != 2 {
         return None; // 2 characters
     }
@@ -20,9 +24,13 @@ pub fn parse_chess_coord(coord: &str) -> Option<u8> {
     let rank = bytes[1]; // row number, e.g., '4'
 
     // a-h, 1-8
-    if !(b'a'..=b'h').contains(&file) || !(b'1'..=b'8').contains(&rank) {
+    if file < b'a' || file > b'h' || rank < b'1' || rank > b'8' {
         return None; // Invalid input
     }
+
+    // if !(b'a'..=b'h').contains(&file) || !(b'1'..=b'8').contains(&rank) {
+    //     return None; // Invalid input
+    // }
 
     let col = file - b'a';
     let row = rank - b'1';

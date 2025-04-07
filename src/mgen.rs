@@ -1,6 +1,6 @@
 use crate::bitmaps::*;
 use crate::hashkeys_generated::WHITE_HASH;
-use crate::misc;
+use crate::misc::{self, sq2i};
 use crate::val::*;
 use crate::val::{BLACK, BPAWN, Colour, Piece, WHITE, WPAWN};
 use std::collections::hash_map::{Entry, HashMap};
@@ -17,9 +17,6 @@ pub struct Bitmaps {
 
 // bitpacking - 1st 12 bits (6+6) for from/to, remaining 4 bits for castling and
 // pawn transforms & enpassant. Castling, en passant & transform are mutually exclusive.
-const CASTLE_BIT: u16 = 1 << 12;
-const EN_PASSANT_BIT: u16 = 1 << 13;
-const TRANSFORM_BIT: u16 = 1 << 14;
 const TO_SHIFT: u16 = 6;
 pub const CASTLE_W_SHORT: u8 = 0b0001;
 pub const CASTLE_W_LONG: u8 = 0b0010;
@@ -27,26 +24,15 @@ pub const CASTLE_B_SHORT: u8 = 0b0100;
 pub const CASTLE_B_LONG: u8 = 0b1000;
 pub const FRM_MASK: u16 = 0b111111;
 pub const TO_MASK: u16 = FRM_MASK << TO_SHIFT;
+pub const PROMOTE_ROOK: u16 = 0b0010000_00000000;
+pub const PROMOTE_KNIGHT: u16 = 0b0100000_00000000;
+pub const PROMOTE_BISHOP: u16 = 0b0110000_00000000;
+pub const PROMOTE_QUEEN: u16 = 0b1000000_00000000;
+pub const PROMOTE_MASK: u16 = 0b1110000_00000000;
 
-const fn pack_data(
-    castle: bool,
-    en_passant: bool,
-    ptransform: Piece,
-    frm: usize,
-    to: usize,
-) -> u16 {
-    let (transform, tbits) = match ptransform.kind() {
-        ROOK => (true, 1 << 15),
-        KNIGHT => (true, 1 << 12),
-        BISHOP => (true, 1 << 13),
-        QUEEN => (true, 0),
-        _ => (false, 0),
-    };
-    ((castle as u16) << 12)
-        | ((en_passant as u16) << 13)
-        | ((transform as u16) << 14)
-        | ((to << 6) | frm) as u16
-        | tbits
+#[inline(always)]
+const fn pack_data(promote: u16, frm: usize, to: usize) -> u16 {
+    promote | ((to << 6) | frm) as u16
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -56,42 +42,30 @@ pub struct Move {
 }
 
 impl Move {
-    #[inline]
-    pub fn castle(&self) -> bool {
-        self.data & CASTLE_BIT != 0 && !self.transform()
-    }
-
-    #[inline]
-    pub fn en_passant(&self) -> bool {
-        (self.data & EN_PASSANT_BIT) != 0 && !self.transform()
-    }
-
     #[inline(always)]
-    pub fn promote_kind(&self) -> u8 {
-        match self.data & 0b10110000_00000000 {
-            0b10000000_00000000 => ROOK,
-            0b00100000_00000000 => BISHOP,
-            0b00010000_00000000 => KNIGHT,
-            _ => QUEEN,
+    fn promote_kind(&self) -> u8 {
+        match self.data & PROMOTE_MASK {
+            PROMOTE_ROOK => ROOK,
+            PROMOTE_BISHOP => BISHOP,
+            PROMOTE_KNIGHT => KNIGHT,
+            PROMOTE_QUEEN => QUEEN,
+            _ => 0,
         }
     }
 
     pub fn promote_label(&self) -> &str {
-        if self.transform() {
-            match self.data & 0b10110000_00000000 {
-                0b10000000_00000000 => "=R",
-                0b00100000_00000000 => "=B",
-                0b00010000_00000000 => "=N",
-                _ => "=Q",
-            }
-        } else {
-            ""
+        match self.data & PROMOTE_MASK {
+            PROMOTE_ROOK => "=R",
+            PROMOTE_BISHOP => "=B",
+            PROMOTE_KNIGHT => "=N",
+            PROMOTE_QUEEN => "=Q",
+            _ => "",
         }
     }
 
     #[inline]
-    pub fn transform(&self) -> bool {
-        self.data & TRANSFORM_BIT != 0
+    pub fn is_promote(&self) -> bool {
+        self.data & PROMOTE_MASK != 0
     }
 
     #[inline]
@@ -219,6 +193,26 @@ impl fmt::Display for Board {
 }
 
 impl Board {
+    /// true if move is castle right or left
+    #[inline(always)]
+    pub fn is_castle(&self, m: &Move) -> bool {
+        match (m.frm(), m.to(), self.colour.is_white()) {
+            (24, 8, true) => self.can_castle & CASTLE_W_SHORT != 0,
+            (24, 40, true) => self.can_castle & CASTLE_W_LONG != 0,
+            (31, 15, false) => self.can_castle & CASTLE_B_SHORT != 0,
+            (31, 47, false) => self.can_castle & CASTLE_B_LONG != 0,
+            _ => false,
+        }
+    }
+
+    #[inline(always)]
+    pub fn is_en_passant(&self, m: &Move) -> bool {
+        self.en_passant_sq > 0
+            && m.to() == self.en_passant_sq
+            && self.bitmaps.pawns & 1 << m.frm() != 0
+    }
+
+    #[inline(always)]
     pub fn rep_count(&self) -> u8 {
         if let Some(count) = self.rep.get(&self.hash) {
             *count
@@ -227,6 +221,7 @@ impl Board {
         }
     }
 
+    #[inline(always)]
     fn rep_inc(&mut self) {
         //*self.rep.entry(self.hash).or_default() += 1;
         self.rep
@@ -235,6 +230,7 @@ impl Board {
             .or_insert(1);
     }
 
+    #[inline(always)]
     fn rep_dec(&mut self) {
         if let Entry::Occupied(entry) = self
             .rep
@@ -446,9 +442,10 @@ impl Board {
             self.en_passant_sq,
         ));
         let hash;
-        self.en_passant_sq = 0;
-        self[m.to() as usize] = if m.castle() {
-            let (x, y) = if m.to() <= 15 {
+        //self[m.to() as usize] = if m.castle() {
+        self[m.to() as usize] = if self.is_castle(m) {
+            self.en_passant_sq = 0;
+            let (r_frm, r_to) = if m.to() <= 15 {
                 (m.frm() - 24, m.frm() - 8) // short
             } else {
                 (m.frm() + 32, m.frm() + 8) // long
@@ -458,23 +455,27 @@ impl Board {
             self.bitmaps.kings ^= 1 << m.frm();
             self.bitmaps.pieces[self.colour.as_usize()] |= 1 << m.to();
             self.bitmaps.pieces[self.colour.as_usize()] ^= 1 << m.frm();
-            self.bitmaps.pieces[self.colour.as_usize()] |= 1 << y;
-            self.bitmaps.pieces[self.colour.as_usize()] ^= 1 << x;
+            self.bitmaps.pieces[self.colour.as_usize()] |= 1 << r_to;
+            self.bitmaps.pieces[self.colour.as_usize()] ^= 1 << r_frm;
 
             match self[m.frm() as usize] {
-                WKING => self.can_castle &= !CASTLE_W_SHORT & !CASTLE_W_LONG,
-                BKING => self.can_castle &= !CASTLE_B_SHORT & !CASTLE_B_LONG,
-                _ => panic!("not castle..."),
+                WKING => self.can_castle &= !(CASTLE_W_SHORT | CASTLE_W_LONG),
+                BKING => self.can_castle &= !(CASTLE_B_SHORT | CASTLE_B_LONG),
+                _ => {
+                    println!("{}", self);
+                    panic!("not castle {m}...")
+                }
             }
 
             hash = self[m.frm() as usize].hashkey(m.to())
                 ^ self[m.frm() as usize].hashkey(m.frm())
-                ^ self[x as usize].hashkey(y)
-                ^ self[x as usize].hashkey(x);
-            self[y as usize] = self.squares[x as usize]; // move rook
-            self[x as usize] = EMPTY;
+                ^ self[r_frm as usize].hashkey(r_to)
+                ^ self[r_frm as usize].hashkey(r_frm);
+            self[r_to as usize] = self.squares[r_frm as usize]; // move rook
+            self[r_frm as usize] = EMPTY;
             self[m.frm() as usize]
-        } else if m.transform() {
+        } else if m.is_promote() {
+            self.en_passant_sq = 0;
             self.bitmaps.pieces[self.colour.as_usize()] |= 1 << m.to();
             self.bitmaps.pieces[self.colour.as_usize()] ^= 1 << m.frm();
             self.bitmaps.pawns ^= 1 << m.frm();
@@ -489,10 +490,12 @@ impl Board {
                 ^ self[m.frm() as usize].hashkey(m.frm())
                 ^ self[m.to() as usize].hashkey(m.to());
             p
-        } else if m.en_passant() {
+        //} else if m.en_passant() {
+        } else if self.is_en_passant(m) {
             // +9  +1 -7
             // +8   0 -8
             // +7  -1 -9
+            self.en_passant_sq = 0;
             let x = match m.to() > m.frm() {
                 true => m.frm() + 8,  // west
                 false => m.frm() - 8, // east
@@ -511,6 +514,7 @@ impl Board {
             self[x as usize] = EMPTY;
             self[m.frm() as usize]
         } else {
+            self.en_passant_sq = 0;
             self.bitmaps.pieces[self.colour.as_usize()] |= 1 << m.to();
             self.bitmaps.pieces[self.colour.as_usize()] ^= 1 << m.frm();
             let c = self[m.to() as usize].colour();
@@ -555,6 +559,15 @@ impl Board {
                 }
                 _ => (),
             }
+            match self[m.frm() as usize] {
+                WKING => self.can_castle &= !(CASTLE_W_SHORT | CASTLE_W_LONG),
+                BKING => self.can_castle &= !(CASTLE_B_SHORT | CASTLE_B_LONG),
+                WROOK if m.frm() == 0 => self.can_castle &= !CASTLE_W_SHORT,
+                WROOK if m.frm() == 56 => self.can_castle &= !CASTLE_W_LONG,
+                BROOK if m.frm() == 7 => self.can_castle &= !CASTLE_B_SHORT,
+                BROOK if m.frm() == 63 => self.can_castle &= !CASTLE_B_LONG,
+                _ => (),
+            }
 
             hash = self[m.frm() as usize].hashkey(m.to())
                 ^ self[m.frm() as usize].hashkey(m.frm())
@@ -582,7 +595,8 @@ impl Board {
         self.colour.flip();
         //self.hash ^= m.hash ^ WHITE_HASH;
         self.rep_dec();
-        if m.castle() {
+        //if m.castle() {
+        if self.is_castle(m) {
             let (frm, to) = if m.to() <= 15 {
                 (m.frm() - 24, m.frm() - 8) // short
             } else {
@@ -591,14 +605,15 @@ impl Board {
             self[frm as usize] = self.squares[to as usize]; // move rook
             self[to as usize] = EMPTY;
         }
-        self[m.frm() as usize] = if m.transform() {
+        self[m.frm() as usize] = if m.is_promote() {
             Piece::new(PAWN, self.colour)
         } else {
             self[m.to() as usize]
         };
         self[m.to() as usize] = capture;
 
-        if m.en_passant() {
+        if self.is_en_passant(m) {
+            //if m.en_passant() {
             let x = match m.to() > m.frm() {
                 true => m.frm() + 8,  // west
                 false => m.frm() - 8, // east
@@ -725,7 +740,7 @@ impl Board {
             b &= !(1 << to);
 
             v.push(Move {
-                data: pack_data(false, false, EMPTY, frm, to),
+                data: pack_data(0, frm, to),
                 val: self[frm].val(to as u8) - self[frm].val(frm as u8) - self[to].val(to as u8),
             })
         }
@@ -741,7 +756,7 @@ impl Board {
             let to = b.trailing_zeros() as usize;
             b &= !(1 << to);
             v.push(Move {
-                data: pack_data(false, false, EMPTY, frm, to),
+                data: pack_data(0, frm, to),
                 val: self[frm].val(to as u8) - self[frm].val(frm as u8) - self[to].val(to as u8),
             })
         }
@@ -771,20 +786,20 @@ impl Board {
                     let frm_val = self[frm].val(frm as u8);
                     let to_val = self[to].val(to as u8);
                     let officers = [
-                        Piece::new(QUEEN, self.colour),
-                        Piece::new(ROOK, self.colour),
-                        Piece::new(KNIGHT, self.colour),
-                        Piece::new(BISHOP, self.colour),
+                        (PROMOTE_QUEEN, Piece::new(QUEEN, self.colour)),
+                        (PROMOTE_ROOK, Piece::new(ROOK, self.colour)),
+                        (PROMOTE_KNIGHT, Piece::new(KNIGHT, self.colour)),
+                        (PROMOTE_BISHOP, Piece::new(BISHOP, self.colour)),
                     ];
-                    for p in officers {
+                    for (pk, p) in officers {
                         v.push(Move {
-                            data: pack_data(false, false, p, frm, to),
+                            data: pack_data(pk, frm, to),
                             val: p.val(to as u8) - frm_val - to_val,
                         })
                     }
                 }
                 _ => v.push(Move {
-                    data: pack_data(false, false, EMPTY, frm, to),
+                    data: pack_data(0, frm, to),
                     val: self[frm].val(to as u8)
                         - self[frm].val(frm as u8)
                         - self[to].val(to as u8),
@@ -792,19 +807,17 @@ impl Board {
             }
         }
 
-        // en passant
         if self.en_passant_sq > 0 {
-            let lto = self.en_passant_sq + 2 * self.colour.opposite().as_u8() - 1;
+            let lto = self.en_passant_sq as u8 + 2 * self.colour.opposite().as_u8() - 1;
             let mut b = BM_PAWN_CAPTURES[self.colour.as_usize()][frm] & 1 << self.en_passant_sq;
             while b != 0 {
                 let to = b.trailing_zeros() as usize;
                 b &= !(1 << to);
 
                 v.push(Move {
-                    data: pack_data(false, true, EMPTY, frm, to),
+                    data: pack_data(0, frm, to),
                     val: self[frm].val(to as u8)
                         - self[frm].val(frm as u8)
-                        //- self[last.to() as usize].val(last.to()),
                         - self[lto as usize].val(lto),
                 });
             }
@@ -822,12 +835,65 @@ impl Board {
             _ => panic!(),
         };
 
-        // castling
-        // check squares between K & R unoccupied
-        const WSHORT: u64 = 1 << 8 | 1 << 16;
-        const WLONG: u64 = 1 << 32 | 1 << 40 | 1 << 48;
-        const BSHORT: u64 = 1 << 15 | 1 << 23;
-        const BLONG: u64 = 1 << 55 | 1 << 47 | 1 << 39;
+        struct Castle {
+            side: u8,
+            block_mask: u64, // squares between K & R - must be unoccupied
+            rook: Piece,
+            rook_from: u8,
+            rook_to: u8,
+            king_to: u8,
+        }
+
+        const CASTLES: [[Castle; 2]; 2] = [
+            [
+                Castle {
+                    side: CASTLE_B_SHORT,
+                    block_mask: 1 << sq2i("f8") | 1 << sq2i("g8"),
+                    rook: BROOK,
+                    rook_from: sq2i("h8"),
+                    rook_to: sq2i("f8"),
+                    king_to: sq2i("g8"),
+                },
+                Castle {
+                    side: CASTLE_B_LONG,
+                    block_mask: 1 << sq2i("b8") | 1 << sq2i("c8") | 1 << sq2i("d8"),
+                    rook: BROOK,
+                    rook_from: sq2i("a8"),
+                    rook_to: sq2i("d8"),
+                    king_to: sq2i("c8"),
+                },
+            ],
+            [
+                Castle {
+                    side: CASTLE_W_SHORT,
+                    block_mask: 1 << sq2i("f1") | 1 << sq2i("g1"),
+                    rook: WROOK,
+                    rook_from: sq2i("h1"),
+                    rook_to: sq2i("f1"),
+                    king_to: sq2i("g1"),
+                },
+                Castle {
+                    side: CASTLE_W_LONG,
+                    block_mask: 1 << sq2i("d1") | 1 << sq2i("c1") | 1 << sq2i("b1"),
+                    rook: WROOK,
+                    rook_from: sq2i("a1"),
+                    rook_to: sq2i("d1"),
+                    king_to: sq2i("c1"),
+                },
+            ],
+        ];
+
+        if !in_check && self.bitmaps.kings & 1 << frm != 0 {
+            for c in &CASTLES[self.colour.as_usize()] {
+                if self.can_castle & c.side != 0 && bm_board & c.block_mask == 0 {
+                    v.push(Move {
+                        data: pack_data(0, frm, c.king_to as usize),
+                        val: p.val(c.king_to as u8) - p.val(frm as u8) + c.rook.val(c.rook_to)
+                            - c.rook.val(c.rook_from),
+                    });
+                }
+            }
+        }
 
         let mut b = BM_KING_MOVES[frm] & !self.bitmaps.pieces[self.colour.as_usize()];
         while b != 0 {
@@ -835,65 +901,10 @@ impl Board {
             b &= !(1 << to);
 
             v.push(Move {
-                data: pack_data(false, false, EMPTY, frm, to),
+                data: pack_data(0, frm, to),
                 val: p.val(to as u8) - p.val(frm as u8) - self[to].val(to as u8),
             })
         }
-
-        [
-            (
-                self.can_castle & CASTLE_W_SHORT != 0
-                    && frm == 24
-                    && !in_check
-                    && self[0] == WROOK
-                    && bm_board & WSHORT == 0,
-                WROOK,
-                8,
-                0,
-                16,
-            ),
-            (
-                self.can_castle & CASTLE_W_LONG != 0
-                    && frm == 24
-                    && !in_check
-                    && self[56] == WROOK
-                    && bm_board & WLONG == 0,
-                WROOK,
-                40,
-                56,
-                32,
-            ),
-            (
-                self.can_castle & CASTLE_B_SHORT != 0
-                    && frm == 31
-                    && !in_check
-                    && self[7] == BROOK
-                    && bm_board & BSHORT == 0,
-                BROOK,
-                15,
-                7,
-                23,
-            ),
-            (
-                self.can_castle & CASTLE_B_LONG != 0
-                    && frm == 31
-                    && !in_check
-                    && self[63] == BROOK
-                    && bm_board & BLONG == 0,
-                BROOK,
-                47,
-                63,
-                39,
-            ),
-        ]
-        .iter()
-        .filter(|(c, _, _, _, _)| *c)
-        .for_each(|(_, r, to, rfrm, rto)| {
-            v.push(Move {
-                data: pack_data(true, false, EMPTY, frm, *to),
-                val: p.val(*to as u8) - p.val(frm as u8) + r.val(*rto) - r.val(*rfrm),
-            })
-        })
     }
 
     // count pseudo legal moves - ignoring en passant & castling
@@ -1034,8 +1045,8 @@ mod tests {
     use crate::*;
 
     #[test]
-    fn test_en_passant() {
-        let board = Board::from_fen(GUNDERSEN_FAUL[1].0);
+    fn test_en_passant() -> Result<(), String> {
+        let board = Board::from_fen(GUNDERSEN_FAUL[1].0)?;
         let mut game = Game::new(board);
         let moves = game.legal_moves();
         let (frm, to) = misc::str2move("g7g5").unwrap();
@@ -1053,5 +1064,6 @@ mod tests {
 
         let moves = game.legal_moves();
         assert_eq!(moves.len(), 0);
+        Ok(())
     }
 }

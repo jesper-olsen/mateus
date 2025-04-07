@@ -87,7 +87,8 @@ impl Game {
         }
 
         let mut label = String::new();
-        if m.castle() {
+        //if m.castle() {
+        if self.board.is_castle(m) {
             if m.to() < 31 {
                 label.push_str("O-O");
             } else {
@@ -95,7 +96,7 @@ impl Game {
             }
         } else {
             if self.board[m.frm() as usize].kind() == PAWN {
-                if self.board[m.to() as usize] != EMPTY || m.en_passant() {
+                if self.board[m.to() as usize] != EMPTY || self.board.is_en_passant(m) {
                     label.push_str(&I2SQ[m.frm() as usize][0..1])
                 }
             } else {
@@ -132,11 +133,11 @@ impl Game {
                     label.push_str(&I2SQ[m.frm() as usize][1..2])
                 }
             }
-            if m.en_passant() || self.board[m.to() as usize] != EMPTY {
+            if self.board.is_en_passant(m) || self.board[m.to() as usize] != EMPTY {
                 label.push('x');
             }
             label.push_str(I2SQ[m.to() as usize]);
-            if m.transform() {
+            if m.is_promote() {
                 label.push_str(m.promote_label())
             }
         }
@@ -163,7 +164,7 @@ impl Game {
     }
 
     pub fn make_move(&mut self, m: Move) {
-        if m.en_passant()
+        if self.board.is_en_passant(&m)
             || self.board[m.to() as usize] != EMPTY
             || self.board[m.frm() as usize].kind() == PAWN
         {
@@ -238,7 +239,8 @@ impl Game {
             if rfab {
                 m.to() == last.to()
             } else {
-                m.en_passant() || self.board[m.to() as usize] != EMPTY
+                //m.en_passant() || self.board[m.to() as usize] != EMPTY
+                self.board.is_en_passant(m) || self.board[m.to() as usize] != EMPTY
             }
         );
         for m in moves {
