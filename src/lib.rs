@@ -239,7 +239,6 @@ impl Game {
         let mut alpha = alp;
         let in_check = false; // TODO - calculate?
         let mut moves = self.board.moves(in_check, self.end_game);
-        self.n_searched += moves.len();
         if rfab {
             moves.retain(|m| m.to() == last.to())
         } else {
@@ -250,6 +249,7 @@ impl Game {
         } else {
             moves.sort_unstable_by(|a, b| a.val.cmp(&b.val)); // increasing
         }
+        self.n_searched += moves.len();
         for m in moves {
             self.board.update(&m);
             if !self.board.in_check(colour) {
