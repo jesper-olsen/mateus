@@ -129,7 +129,7 @@ Search total: 6683618164; Time 748888 ms => 8924 nodes/ms
 ### Lasker [5]
 
 ```
-cargo run --release --bin main -- -k 3  | tee RES/OUTk3
+cargo run --release --bin main -- -k 3  
 Position  1; Searched:   1310590, Score:   103, Move (white): a1b1 =  Kb1; Expected: Kb1
 
 Correct: [1] 1/1

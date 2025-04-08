@@ -240,7 +240,7 @@ impl Game {
         let in_check = false; // TODO - calculate?
         let mut moves = self.board.moves(in_check, self.end_game);
         if rfab {
-            moves.retain(|m| m.to() == last.to())
+            moves.retain(|m| self.board.is_en_passant(m) || m.to() == last.to())
         } else {
             moves.retain(|m| self.board.is_en_passant(m) || self.board[m.to() as usize] != EMPTY);
         }
