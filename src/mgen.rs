@@ -830,12 +830,9 @@ impl Board {
 
         if self.en_passant_sq > 0 {
             let lto = self.en_passant_sq + 2 * self.turn.opposite().as_u8() - 1;
-            let mut b =
-                BM_PAWN_CAPTURES[self.turn.as_usize()][frm as usize] & 1 << self.en_passant_sq;
-            while b != 0 {
-                let to = b.trailing_zeros() as u8;
-                b &= !(1 << to);
-
+            let b = BM_PAWN_CAPTURES[self.turn.as_usize()][frm as usize] & 1 << self.en_passant_sq;
+            let to = self.en_passant_sq;
+            if b != 0 {
                 v.push(Move {
                     data: pack_data(0, frm as u16, to as u16),
                     val: self[frm as usize].val(to)
