@@ -331,7 +331,7 @@ impl Game {
         }
         //while let Some(m) = picker.next() {
         for m in moves.iter() {
-            self.board.update(&m);
+            self.board.update(m);
             if !self.board.in_check(colour) {
                 // legal move
                 if bmove.is_none() {

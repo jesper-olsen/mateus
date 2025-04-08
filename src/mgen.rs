@@ -31,8 +31,8 @@ pub const PROMOTE_QUEEN: u16 = 0b1000000_00000000;
 pub const PROMOTE_MASK: u16 = 0b1110000_00000000;
 
 #[inline(always)]
-const fn pack_data(promote: u16, frm: usize, to: usize) -> u16 {
-    promote | ((to << 6) | frm) as u16
+const fn pack_data(promote: u16, frm: u16, to: u16) -> u16 {
+    promote | ((to << 6) | frm)
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -723,9 +723,9 @@ impl Board {
                 KNIGHT => BM_KNIGHT_MOVES[frm] & bm_king != 0,
                 KING => BM_KING_MOVES[frm] & bm_king != 0,
                 PAWN => BM_PAWN_CAPTURES[opp][frm] & bm_king != 0,
-                ROOK => ray_check(frm, BM_ROOK_MOVES[frm], bm_board, bm_king),
-                BISHOP => ray_check(frm, BM_BISHOP_MOVES[frm], bm_board, bm_king),
-                QUEEN => ray_check(frm, BM_QUEEN_MOVES[frm], bm_board, bm_king),
+                ROOK => ray_check(frm as u8, BM_ROOK_MOVES[frm], bm_board, bm_king),
+                BISHOP => ray_check(frm as u8, BM_BISHOP_MOVES[frm], bm_board, bm_king),
+                QUEEN => ray_check(frm as u8, BM_QUEEN_MOVES[frm], bm_board, bm_king),
                 _ => false,
             })
     }
@@ -737,12 +737,12 @@ impl Board {
             .enumerate()
             .filter(|(frm, _)| 1 << frm & self.bitmaps.pieces[self.turn.as_usize()] != 0)
             .for_each(|(frm, &p)| match p.kind() {
-                KNIGHT => self.knight_moves(&mut v, frm),
-                KING => self.king_moves(&mut v, frm, end_game, in_check),
-                PAWN => self.pawn_moves(&mut v, frm),
-                ROOK => self.ray_moves(&mut v, frm, BM_ROOK_MOVES[frm]),
-                BISHOP => self.ray_moves(&mut v, frm, BM_BISHOP_MOVES[frm]),
-                QUEEN => self.ray_moves(&mut v, frm, BM_QUEEN_MOVES[frm]),
+                KNIGHT => self.knight_moves(&mut v, frm as u8),
+                KING => self.king_moves(&mut v, frm as u8, end_game, in_check),
+                PAWN => self.pawn_moves(&mut v, frm as u8),
+                ROOK => self.ray_moves(&mut v, frm as u8, BM_ROOK_MOVES[frm]),
+                BISHOP => self.ray_moves(&mut v, frm as u8, BM_BISHOP_MOVES[frm]),
+                QUEEN => self.ray_moves(&mut v, frm as u8, BM_QUEEN_MOVES[frm]),
                 _ => (),
             });
         v
@@ -756,58 +756,58 @@ impl Board {
             - self.squares[to as usize].val(to)
     }
 
-    fn knight_moves(&self, v: &mut Vec<Move>, frm: usize) {
-        let mut b = BM_KNIGHT_MOVES[frm] & !self.bitmaps.pieces[self.turn.as_usize()];
+    fn knight_moves(&self, v: &mut Vec<Move>, frm: u8) {
+        let mut b = BM_KNIGHT_MOVES[frm as usize] & !self.bitmaps.pieces[self.turn.as_usize()];
         while b != 0 {
             let to = b.trailing_zeros() as u8;
             b &= !(1 << to);
 
             v.push(Move {
-                data: pack_data(0, frm, to as usize),
-                val: self.delta_val(frm as u8, to),
+                data: pack_data(0, frm as u16, to as u16),
+                val: self.delta_val(frm, to),
             })
         }
     }
 
-    fn ray_moves(&self, v: &mut Vec<Move>, frm: usize, moves: u64) {
+    fn ray_moves(&self, v: &mut Vec<Move>, frm: u8, moves: u64) {
         let bm_board =
             self.bitmaps.pieces[WHITE.as_usize()] | self.bitmaps.pieces[BLACK.as_usize()];
-        let bl = bm_blockers(frm as u8, moves & bm_board);
+        let bl = bm_blockers(frm, moves & bm_board);
 
         let mut b = moves & !bl & !self.bitmaps.pieces[self.turn.as_usize()];
         while b != 0 {
             let to = b.trailing_zeros() as u8;
             b &= !(1 << to);
             v.push(Move {
-                data: pack_data(0, frm, to as usize),
-                val: self.delta_val(frm as u8, to),
+                data: pack_data(0, frm as u16, to as u16),
+                val: self.delta_val(frm, to),
             })
         }
     }
 
-    fn pawn_moves(&self, v: &mut Vec<Move>, frm: usize) {
+    fn pawn_moves(&self, v: &mut Vec<Move>, frm: u8) {
         let bm_board =
             self.bitmaps.pieces[WHITE.as_usize()] | self.bitmaps.pieces[BLACK.as_usize()];
-        let cap = BM_PAWN_CAPTURES[self.turn.as_usize()][frm]
+        let cap = BM_PAWN_CAPTURES[self.turn.as_usize()][frm as usize]
             & self.bitmaps.pieces[self.turn.opposite().as_usize()];
-        let step1: u64 = BM_PAWN_STEP1[self.turn.as_usize()][frm] & !bm_board;
+        let step1: u64 = BM_PAWN_STEP1[self.turn.as_usize()][frm as usize] & !bm_board;
         let step2: u64 = if self.turn.is_white() {
             step1 << 1
         } else {
             step1 >> 1
         };
-        let step2: u64 = step2 & BM_PAWN_STEP2[self.turn.as_usize()][frm] & !bm_board;
+        let step2: u64 = step2 & BM_PAWN_STEP2[self.turn.as_usize()][frm as usize] & !bm_board;
 
         let mut b = cap | step1 | step2;
         while b != 0 {
-            let to = b.trailing_zeros() as usize;
+            let to = b.trailing_zeros() as u8;
             b &= !(1 << to);
 
             match to % 8 {
                 0 | 7 => {
                     // promotion
-                    let frm_val = self[frm].val(frm as u8);
-                    let to_val = self[to].val(to as u8);
+                    let frm_val = self[frm as usize].val(frm);
+                    let to_val = self[to as usize].val(to);
                     let officers = [
                         (PROMOTE_QUEEN, Piece::new(QUEEN, self.turn)),
                         (PROMOTE_ROOK, Piece::new(ROOK, self.turn)),
@@ -816,51 +816,51 @@ impl Board {
                     ];
                     for (pk, p) in officers {
                         v.push(Move {
-                            data: pack_data(pk, frm, to),
-                            val: p.val(to as u8) - frm_val - to_val,
+                            data: pack_data(pk, frm as u16, to as u16),
+                            val: p.val(to) - frm_val - to_val,
                         })
                     }
                 }
                 _ => v.push(Move {
-                    data: pack_data(0, frm, to),
-                    val: self.delta_val(frm as u8, to as u8),
+                    data: pack_data(0, frm as u16, to as u16),
+                    val: self.delta_val(frm, to),
                 }),
             }
         }
 
         if self.en_passant_sq > 0 {
-            let lto = self.en_passant_sq as u8 + 2 * self.turn.opposite().as_u8() - 1;
-            let mut b = BM_PAWN_CAPTURES[self.turn.as_usize()][frm] & 1 << self.en_passant_sq;
+            let lto = self.en_passant_sq + 2 * self.turn.opposite().as_u8() - 1;
+            let mut b =
+                BM_PAWN_CAPTURES[self.turn.as_usize()][frm as usize] & 1 << self.en_passant_sq;
             while b != 0 {
-                let to = b.trailing_zeros() as usize;
+                let to = b.trailing_zeros() as u8;
                 b &= !(1 << to);
 
                 v.push(Move {
-                    data: pack_data(0, frm, to),
-                    val: self[frm].val(to as u8)
-                        - self[frm].val(frm as u8)
+                    data: pack_data(0, frm as u16, to as u16),
+                    val: self[frm as usize].val(to)
+                        - self[frm as usize].val(frm)
                         - self[lto as usize].val(lto),
                 });
             }
         }
     }
 
-    fn king_moves(&self, v: &mut Vec<Move>, frm: usize, end_game: bool, in_check: bool) {
+    fn king_moves(&self, v: &mut Vec<Move>, frm: u8, end_game: bool, in_check: bool) {
         let bm_board =
             self.bitmaps.pieces[WHITE.as_usize()] | self.bitmaps.pieces[BLACK.as_usize()];
+
         // change king valuation in end_game
-        let p = match (self[frm], end_game) {
-            (WKING, true) => BKING,
-            (BKING, true) => WKING,
-            (_, false) => self[frm],
-            _ => panic!(),
+        let p = if end_game {
+            Piece::new(KING, self.turn.opposite())
+        } else {
+            Piece::new(KING, self.turn)
         };
 
         struct Castle {
             side: u8,
             block_mask: u64, // squares between K & R - must be unoccupied
-            rook: Piece,
-            rook_from: u8,
+            rook_frm: u8,
             rook_to: u8,
             king_to: u8,
         }
@@ -870,16 +870,14 @@ impl Board {
                 Castle {
                     side: CASTLE_B_SHORT,
                     block_mask: 1 << sq2i("f8") | 1 << sq2i("g8"),
-                    rook: BROOK,
-                    rook_from: sq2i("h8"),
+                    rook_frm: sq2i("h8"),
                     rook_to: sq2i("f8"),
                     king_to: sq2i("g8"),
                 },
                 Castle {
                     side: CASTLE_B_LONG,
                     block_mask: 1 << sq2i("b8") | 1 << sq2i("c8") | 1 << sq2i("d8"),
-                    rook: BROOK,
-                    rook_from: sq2i("a8"),
+                    rook_frm: sq2i("a8"),
                     rook_to: sq2i("d8"),
                     king_to: sq2i("c8"),
                 },
@@ -888,16 +886,14 @@ impl Board {
                 Castle {
                     side: CASTLE_W_SHORT,
                     block_mask: 1 << sq2i("f1") | 1 << sq2i("g1"),
-                    rook: WROOK,
-                    rook_from: sq2i("h1"),
+                    rook_frm: sq2i("h1"),
                     rook_to: sq2i("f1"),
                     king_to: sq2i("g1"),
                 },
                 Castle {
                     side: CASTLE_W_LONG,
                     block_mask: 1 << sq2i("d1") | 1 << sq2i("c1") | 1 << sq2i("b1"),
-                    rook: WROOK,
-                    rook_from: sq2i("a1"),
+                    rook_frm: sq2i("a1"),
                     rook_to: sq2i("d1"),
                     king_to: sq2i("c1"),
                 },
@@ -908,22 +904,23 @@ impl Board {
             for c in &CASTLES[self.turn.as_usize()] {
                 if self.can_castle & c.side != 0 && bm_board & c.block_mask == 0 {
                     v.push(Move {
-                        data: pack_data(0, frm, c.king_to as usize),
-                        val: p.val(c.king_to as u8) - p.val(frm as u8) + c.rook.val(c.rook_to)
-                            - c.rook.val(c.rook_from),
+                        data: pack_data(0, frm as u16, c.king_to as u16),
+                        val: p.val(c.king_to) - p.val(frm)
+                            + self[c.rook_frm as usize].val(c.rook_to)
+                            - self[c.rook_frm as usize].val(c.rook_frm),
                     });
                 }
             }
         }
 
-        let mut b = BM_KING_MOVES[frm] & !self.bitmaps.pieces[self.turn.as_usize()];
+        let mut b = BM_KING_MOVES[frm as usize] & !self.bitmaps.pieces[self.turn.as_usize()];
         while b != 0 {
             let to = b.trailing_zeros() as u8;
             b &= !(1 << to);
 
             v.push(Move {
-                data: pack_data(0, frm, to as usize),
-                val: self.delta_val(frm as u8, to),
+                data: pack_data(0, frm as u16, to as u16),
+                val: self.delta_val(frm, to),
             })
         }
     }
@@ -942,10 +939,10 @@ impl Board {
             .map(|(frm, &p)| match p.kind() {
                 KNIGHT => (BM_KNIGHT_MOVES[frm] & !bm_own).count_ones(),
                 KING => (BM_KING_MOVES[frm] & !bm_own).count_ones(),
-                PAWN => count_pawn_moves(frm, bm_opp, bm_board, colour),
-                ROOK => count_ray_moves(frm, BM_ROOK_MOVES[frm], bm_board, bm_own),
-                BISHOP => count_ray_moves(frm, BM_BISHOP_MOVES[frm], bm_board, bm_own),
-                QUEEN => count_ray_moves(frm, BM_QUEEN_MOVES[frm], bm_board, bm_own),
+                PAWN => count_pawn_moves(frm as u8, bm_opp, bm_board, colour),
+                ROOK => count_ray_moves(frm as u8, BM_ROOK_MOVES[frm], bm_board, bm_own),
+                BISHOP => count_ray_moves(frm as u8, BM_BISHOP_MOVES[frm], bm_board, bm_own),
+                QUEEN => count_ray_moves(frm as u8, BM_QUEEN_MOVES[frm], bm_board, bm_own),
                 _ => 0,
             })
             .sum()
@@ -956,25 +953,27 @@ impl Board {
 // +8   0 -8
 // +7  -1 -9
 
-fn count_pawn_moves(frm: usize, bm_opp: u64, bm_board: u64, colour: Colour) -> u32 {
+const fn count_pawn_moves(frm: u8, bm_opp: u64, bm_board: u64, colour: Colour) -> u32 {
     // TODO  - calc all at the same time;
-    let cap = BM_PAWN_CAPTURES[colour.as_usize()][frm] & bm_opp;
-    let step1 = BM_PAWN_STEP1[colour.as_usize()][frm] & !bm_board;
+    let cap = BM_PAWN_CAPTURES[colour.as_usize()][frm as usize] & bm_opp;
+    let step1 = BM_PAWN_STEP1[colour.as_usize()][frm as usize] & !bm_board;
     let step2 = if colour.is_white() {
         step1 << 1
     } else {
         step1 >> 1
     };
-    let step2 = step2 & BM_PAWN_STEP2[colour.as_usize()][frm] & !bm_board;
+    let step2 = step2 & BM_PAWN_STEP2[colour.as_usize()][frm as usize] & !bm_board;
     (cap | step1 | step2).count_ones()
 }
 
-fn count_ray_moves(frm: usize, moves: u64, bm_board: u64, bm_own: u64) -> u32 {
-    (moves & !bm_own & !bm_blockers(frm as u8, moves & bm_board)).count_ones()
+#[inline(always)]
+const fn count_ray_moves(frm: u8, moves: u64, bm_board: u64, bm_own: u64) -> u32 {
+    (moves & !bm_own & !bm_blockers(frm, moves & bm_board)).count_ones()
 }
 
-fn ray_check(frm: usize, moves: u64, bm_board: u64, bm_king: u64) -> bool {
-    moves & bm_king & !bm_blockers(frm as u8, moves & bm_board) != 0
+#[inline(always)]
+const fn ray_check(frm: u8, moves: u64, bm_board: u64, bm_king: u64) -> bool {
+    moves & bm_king & !bm_blockers(frm, moves & bm_board) != 0
 }
 
 const fn to_bitmaps(squares: &[Piece]) -> Bitmaps {
@@ -1069,21 +1068,21 @@ mod tests {
     fn test_en_passant() -> Result<(), String> {
         let board = Board::from_fen(GUNDERSEN_FAUL[1].0)?;
         let mut game = Game::new(board);
-        let moves = game.legal_moves();
+        let moves = game.board.legal_moves();
         let (frm, to) = misc::str2move("g7g5").unwrap();
         let r = moves.iter().position(|m| (m.frm(), m.to()) == (frm, to));
         assert!(r.is_some());
         let m = moves[r.unwrap()];
         game.make_move(m);
 
-        let moves = game.legal_moves();
+        let moves = game.board.legal_moves();
         let (frm, to) = misc::str2move("h5g6").unwrap();
         let r = moves.iter().position(|m| (m.frm(), m.to()) == (frm, to));
         assert!(r.is_some());
         let m = moves[r.unwrap()];
         game.make_move(m);
 
-        let moves = game.legal_moves();
+        let moves = game.board.legal_moves();
         assert_eq!(moves.len(), 0);
         Ok(())
     }
