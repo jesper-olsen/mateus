@@ -193,6 +193,21 @@ impl fmt::Display for Board {
 }
 
 impl Board {
+    fn legal_move(&mut self, m: &Move) -> bool {
+        // verify move does not expose own king
+        self.update(m);
+        let flag = self.in_check(self.turn.opposite());
+        self.backdate(m);
+        !flag
+    }
+
+    pub fn legal_moves(&mut self) -> Vec<Move> {
+        let in_check = self.in_check(self.turn);
+        let mut moves = self.moves(in_check, false);
+        moves.retain(|m| self.legal_move(m));
+        moves
+    }
+
     /// true if move is castle right or left
     #[inline(always)]
     pub fn is_castle(&self, m: &Move) -> bool {

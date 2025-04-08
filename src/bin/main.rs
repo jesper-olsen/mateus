@@ -129,7 +129,7 @@ fn benchmark(verbose: bool, search_threshold: usize, tname: &str, tpos: &[(&str,
             continue;
         };
         let mut game = Game::new(board);
-        let moves = game.legal_moves();
+        let moves = game.board.legal_moves();
         game.n_searched = 0;
 
         let l = game.score_moves(&moves, search_threshold, verbose);
@@ -197,7 +197,7 @@ fn play(
     let mut game = Game::new(Board::from_fen(fen)?);
 
     let mut tot = 0;
-    let mut moves = game.legal_moves();
+    let mut moves = game.board.legal_moves();
 
     let start = Instant::now();
     loop {
@@ -259,7 +259,7 @@ fn play(
         let label = game.move2label(&m, &moves);
         game.make_move(m);
         println!("{game}");
-        moves = game.legal_moves();
+        moves = game.board.legal_moves();
         println!("{}. {label}", game.board.move_number());
 
         if verbose {

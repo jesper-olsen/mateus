@@ -196,7 +196,7 @@ fn parse_moves(fg: &mut FicsG, line: String) -> (Vec<(u8, u8)>, Vec<Vec<u8>>, &'
             return (lmoves, lfens, static_outcome(s));
         }
 
-        let moves = game.legal_moves();
+        let moves = game.board.legal_moves();
         let alg_labels: Vec<_> = moves.iter().map(|m| game.move2label(m, &moves)).collect();
         match alg_labels.iter().position(|r| r == s) {
             Some(index) => {

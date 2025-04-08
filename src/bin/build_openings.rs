@@ -82,7 +82,7 @@ fn main() {
         let Some((frm, to)) = str2move(s) else {
             panic!("Not a legal move");
         };
-        let moves = game.legal_moves();
+        let moves = game.board.legal_moves();
         let Some(m) = moves.iter().find(|m| (m.frm(), m.to()) == (frm, to)) else {
             panic!("Not a legal move");
         };

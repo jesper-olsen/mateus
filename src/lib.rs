@@ -186,7 +186,7 @@ impl Game {
 
         self.board.update(m);
         let in_check = self.board.in_check(self.board.turn);
-        if self.legal_moves().is_empty() && in_check {
+        if self.board.legal_moves().is_empty() && in_check {
             label.push('#')
         } else if self.board.in_check(self.board.turn) {
             label.push('+')
@@ -232,48 +232,24 @@ impl Game {
         }
     }
 
-    fn legal_move(&mut self, m: &Move) -> bool {
-        // verify move does not expose own king
-        self.board.update(m);
-        let flag = self.board.in_check(self.board.turn.opposite());
-        self.board.backdate(m);
-        !flag
-    }
-
-    pub fn legal_moves(&mut self) -> Vec<Move> {
-        let in_check = self.board.in_check(self.board.turn);
-        let mut moves = self.moves(in_check);
-        moves.retain(|m| self.legal_move(m));
-        moves
-    }
-
-    fn moves(&mut self, in_check: bool) -> Vec<Move> {
-        let mut l = self.board.moves(in_check, self.end_game);
-        if self.board.turn.is_white() {
-            l.sort_unstable_by(|b, a| a.val.cmp(&b.val)); // decreasing
-        } else {
-            l.sort_unstable_by(|a, b| a.val.cmp(&b.val)); // increasing
-        }
-        self.n_searched += l.len();
-        l
-    }
-
     fn quiescence_fab(&mut self, alp: i16, beta: i16, last: &Move, rfab: bool) -> i16 {
         let colour = self.board.turn;
 
         let mut bscore = None;
         let mut alpha = alp;
         let in_check = false; // TODO - calculate?
-        let mut moves = self.moves(in_check);
-        moves.retain(|m|
-            //let ic = self.in_check(colour);
-            if rfab {
-                m.to() == last.to()
-            } else {
-                //m.en_passant() || self.board[m.to() as usize] != EMPTY
-                self.board.is_en_passant(m) || self.board[m.to() as usize] != EMPTY
-            }
-        );
+        let mut moves = self.board.moves(in_check, self.end_game);
+        self.n_searched += moves.len();
+        if rfab {
+            moves.retain(|m| m.to() == last.to())
+        } else {
+            moves.retain(|m| self.board.is_en_passant(m) || self.board[m.to() as usize] != EMPTY);
+        }
+        if self.board.turn.is_white() {
+            moves.sort_unstable_by(|b, a| a.val.cmp(&b.val)); // decreasing
+        } else {
+            moves.sort_unstable_by(|a, b| a.val.cmp(&b.val)); // increasing
+        }
         for m in moves {
             self.board.update(&m);
             if !self.board.in_check(colour) {
@@ -343,7 +319,13 @@ impl Game {
 
         //let mut picker = MovePicker::new(&self.board, kmove);
 
-        let mut moves = self.moves(in_check);
+        let mut moves = self.board.moves(in_check, self.end_game);
+        self.n_searched += moves.len();
+        if self.board.turn.is_white() {
+            moves.sort_unstable_by(|b, a| a.val.cmp(&b.val)); // decreasing
+        } else {
+            moves.sort_unstable_by(|a, b| a.val.cmp(&b.val)); // increasing
+        }
         if let Some(k) = kmove {
             move_to_head(&mut moves, &k);
         }
