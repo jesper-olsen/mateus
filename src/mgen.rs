@@ -748,15 +748,23 @@ impl Board {
         v
     }
 
+    /// delta value of moving a piece between two squares  and possibly capturing another piece
+    #[inline(always)]
+    const fn delta_val(&self, frm: u8, to: u8) -> i16 {
+        self.squares[frm as usize].val(to)
+            - self.squares[frm as usize].val(frm)
+            - self.squares[to as usize].val(to)
+    }
+
     fn knight_moves(&self, v: &mut Vec<Move>, frm: usize) {
         let mut b = BM_KNIGHT_MOVES[frm] & !self.bitmaps.pieces[self.turn.as_usize()];
         while b != 0 {
-            let to = b.trailing_zeros() as usize;
+            let to = b.trailing_zeros() as u8;
             b &= !(1 << to);
 
             v.push(Move {
-                data: pack_data(0, frm, to),
-                val: self[frm].val(to as u8) - self[frm].val(frm as u8) - self[to].val(to as u8),
+                data: pack_data(0, frm, to as usize),
+                val: self.delta_val(frm as u8, to),
             })
         }
     }
@@ -764,15 +772,15 @@ impl Board {
     fn ray_moves(&self, v: &mut Vec<Move>, frm: usize, moves: u64) {
         let bm_board =
             self.bitmaps.pieces[WHITE.as_usize()] | self.bitmaps.pieces[BLACK.as_usize()];
-        let bl = bm_blockers(frm, moves & bm_board);
+        let bl = bm_blockers(frm as u8, moves & bm_board);
 
         let mut b = moves & !bl & !self.bitmaps.pieces[self.turn.as_usize()];
         while b != 0 {
-            let to = b.trailing_zeros() as usize;
+            let to = b.trailing_zeros() as u8;
             b &= !(1 << to);
             v.push(Move {
-                data: pack_data(0, frm, to),
-                val: self[frm].val(to as u8) - self[frm].val(frm as u8) - self[to].val(to as u8),
+                data: pack_data(0, frm, to as usize),
+                val: self.delta_val(frm as u8, to),
             })
         }
     }
@@ -815,9 +823,7 @@ impl Board {
                 }
                 _ => v.push(Move {
                     data: pack_data(0, frm, to),
-                    val: self[frm].val(to as u8)
-                        - self[frm].val(frm as u8)
-                        - self[to].val(to as u8),
+                    val: self.delta_val(frm as u8, to as u8),
                 }),
             }
         }
@@ -912,12 +918,12 @@ impl Board {
 
         let mut b = BM_KING_MOVES[frm] & !self.bitmaps.pieces[self.turn.as_usize()];
         while b != 0 {
-            let to = b.trailing_zeros() as usize;
+            let to = b.trailing_zeros() as u8;
             b &= !(1 << to);
 
             v.push(Move {
-                data: pack_data(0, frm, to),
-                val: p.val(to as u8) - p.val(frm as u8) - self[to].val(to as u8),
+                data: pack_data(0, frm, to as usize),
+                val: self.delta_val(frm as u8, to),
             })
         }
     }
@@ -964,11 +970,11 @@ fn count_pawn_moves(frm: usize, bm_opp: u64, bm_board: u64, colour: Colour) -> u
 }
 
 fn count_ray_moves(frm: usize, moves: u64, bm_board: u64, bm_own: u64) -> u32 {
-    (moves & !bm_own & !bm_blockers(frm, moves & bm_board)).count_ones()
+    (moves & !bm_own & !bm_blockers(frm as u8, moves & bm_board)).count_ones()
 }
 
 fn ray_check(frm: usize, moves: u64, bm_board: u64, bm_king: u64) -> bool {
-    moves & bm_king & !bm_blockers(frm, moves & bm_board) != 0
+    moves & bm_king & !bm_blockers(frm as u8, moves & bm_board) != 0
 }
 
 const fn to_bitmaps(squares: &[Piece]) -> Bitmaps {

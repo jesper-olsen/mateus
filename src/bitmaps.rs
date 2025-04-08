@@ -347,11 +347,11 @@ pub const fn bm2arr(bm: u64) -> ([u8; 64], usize) {
     (out, n)
 }
 
-pub const fn bm_blockers(frm: usize, mut b: u64) -> u64 {
+pub const fn bm_blockers(frm: u8, mut b: u64) -> u64 {
     let mut bl = 0;
     while b != 0 {
         let i = b.trailing_zeros();
-        bl |= BM_BLOCKED[frm][i as usize];
+        bl |= BM_BLOCKED[frm as usize][i as usize];
         b &= !(1 << i);
     }
     bl
