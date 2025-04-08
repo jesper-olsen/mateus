@@ -917,7 +917,7 @@ impl Board {
 
             v.push(Move {
                 data: pack_data(0, frm as u16, to as u16),
-                val: self.delta_val(frm, to),
+                val: p.val(to) - p.val(frm) - self.squares[to as usize].val(to),
             })
         }
     }
