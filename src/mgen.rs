@@ -9,10 +9,10 @@ use std::ops::{Index, IndexMut};
 use std::slice::Iter;
 
 #[derive(Debug, Copy, Clone)]
-pub struct Bitmaps {
-    pub pieces: [u64; 2],
-    pub pawns: u64,
-    pub kings: u64,
+struct Bitmaps {
+    pieces: [u64; 2],
+    pawns: u64,
+    kings: u64,
 }
 
 // bitpacking - 1st 12 bits (6+6) for from/to, remaining 4 bits for castling and
@@ -653,10 +653,6 @@ impl Board {
         abs_material(&self.squares) < self.end_game_material
     }
 
-    pub const fn to_bitmaps(&self) -> Bitmaps {
-        to_bitmaps(&self.squares)
-    }
-
     pub fn score_pawn_structure(&self) -> i16 {
         let mut pen: i16 = 0;
         let bm: [u64; 2] = [
@@ -756,46 +752,43 @@ impl Board {
             - self.squares[to as usize].val(to)
     }
 
-    fn knight_moves(&self, v: &mut Vec<Move>, frm: u8) {
-        let mut b = BM_KNIGHT_MOVES[frm as usize] & !self.bitmaps.pieces[self.turn.as_usize()];
-        while b != 0 {
-            let to = b.trailing_zeros() as u8;
-            b &= !(1 << to);
-
+    #[inline]
+    fn add_moves_from_bitmap(&self, v: &mut Vec<Move>, frm: u8, mut bitmap: u64) {
+        while bitmap != 0 {
+            let to = bitmap.trailing_zeros() as u8;
+            bitmap &= !(1 << to);
             v.push(Move {
                 data: pack_data(0, frm, to),
                 val: self.delta_val(frm, to),
-            })
+            });
         }
     }
 
-    fn ray_moves(&self, v: &mut Vec<Move>, frm: u8, moves: u64) {
-        let bm_board =
-            self.bitmaps.pieces[WHITE.as_usize()] | self.bitmaps.pieces[BLACK.as_usize()];
-        let bl = bm_blockers(frm, moves & bm_board);
+    #[inline]
+    fn knight_moves(&self, v: &mut Vec<Move>, frm: u8) {
+        let b = BM_KNIGHT_MOVES[frm as usize] & !self.bitmaps.pieces[self.turn.as_usize()];
+        self.add_moves_from_bitmap(v, frm, b);
+    }
 
-        let mut b = moves & !bl & !self.bitmaps.pieces[self.turn.as_usize()];
-        while b != 0 {
-            let to = b.trailing_zeros() as u8;
-            b &= !(1 << to);
-            v.push(Move {
-                data: pack_data(0, frm, to),
-                val: self.delta_val(frm, to),
-            })
-        }
+    #[inline]
+    fn ray_moves(&self, v: &mut Vec<Move>, frm: u8, moves: u64) {
+        let board = self.bitmaps.pieces[0] | self.bitmaps.pieces[1];
+        let bl = bm_blockers(frm, moves & board);
+        let b = moves & !bl & !self.bitmaps.pieces[self.turn.as_usize()];
+        self.add_moves_from_bitmap(v, frm, b);
     }
 
     fn pawn_moves(&self, v: &mut Vec<Move>, frm: u8) {
-        let bm_board =
-            self.bitmaps.pieces[WHITE.as_usize()] | self.bitmaps.pieces[BLACK.as_usize()];
         let cap = BM_PAWN_CAPTURES[self.turn.as_usize()][frm as usize]
             & self.bitmaps.pieces[self.turn.opposite().as_usize()];
-        let step1: u64 = BM_PAWN_STEP1[self.turn.as_usize()][frm as usize] & !bm_board;
+        let step1: u64 = BM_PAWN_STEP1[self.turn.as_usize()][frm as usize]
+            & !(self.bitmaps.pieces[0] | self.bitmaps.pieces[1]);
         let step2: u64 = if self.turn.is_white() {
             step1 << 1
         } else {
             step1 >> 1
         };
+        let bm_board = self.bitmaps.pieces[0] | self.bitmaps.pieces[1];
         let step2: u64 = step2 & BM_PAWN_STEP2[self.turn.as_usize()][frm as usize] & !bm_board;
 
         let mut b = cap | step1 | step2;
