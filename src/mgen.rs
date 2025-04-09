@@ -31,8 +31,8 @@ pub const PROMOTE_QUEEN: u16 = 0b1000000_00000000;
 pub const PROMOTE_MASK: u16 = 0b1110000_00000000;
 
 #[inline(always)]
-const fn pack_data(promote: u16, frm: u16, to: u16) -> u16 {
-    promote | ((to << 6) | frm)
+const fn pack_data(promote: u16, frm: u8, to: u8) -> u16 {
+    promote | (((to as u16) << 6) | (frm as u16))
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -763,7 +763,7 @@ impl Board {
             b &= !(1 << to);
 
             v.push(Move {
-                data: pack_data(0, frm as u16, to as u16),
+                data: pack_data(0, frm, to),
                 val: self.delta_val(frm, to),
             })
         }
@@ -779,7 +779,7 @@ impl Board {
             let to = b.trailing_zeros() as u8;
             b &= !(1 << to);
             v.push(Move {
-                data: pack_data(0, frm as u16, to as u16),
+                data: pack_data(0, frm, to),
                 val: self.delta_val(frm, to),
             })
         }
@@ -816,13 +816,13 @@ impl Board {
                     ];
                     for (pk, p) in officers {
                         v.push(Move {
-                            data: pack_data(pk, frm as u16, to as u16),
+                            data: pack_data(pk, frm, to),
                             val: p.val(to) - frm_val - to_val,
                         })
                     }
                 }
                 _ => v.push(Move {
-                    data: pack_data(0, frm as u16, to as u16),
+                    data: pack_data(0, frm, to),
                     val: self.delta_val(frm, to),
                 }),
             }
@@ -834,7 +834,7 @@ impl Board {
             let to = self.en_passant_sq;
             if b != 0 {
                 v.push(Move {
-                    data: pack_data(0, frm as u16, to as u16),
+                    data: pack_data(0, frm, to),
                     val: self[frm as usize].val(to)
                         - self[frm as usize].val(frm)
                         - self[lto as usize].val(lto),
@@ -901,7 +901,7 @@ impl Board {
             for c in &CASTLES[self.turn.as_usize()] {
                 if self.can_castle & c.side != 0 && bm_board & c.block_mask == 0 {
                     v.push(Move {
-                        data: pack_data(0, frm as u16, c.king_to as u16),
+                        data: pack_data(0, frm, c.king_to),
                         val: p.val(c.king_to) - p.val(frm)
                             + self[c.rook_frm as usize].val(c.rook_to)
                             - self[c.rook_frm as usize].val(c.rook_frm),
@@ -916,7 +916,7 @@ impl Board {
             b &= !(1 << to);
 
             v.push(Move {
-                data: pack_data(0, frm as u16, to as u16),
+                data: pack_data(0, frm, to),
                 val: p.val(to) - p.val(frm) - self.squares[to as usize].val(to),
             })
         }
