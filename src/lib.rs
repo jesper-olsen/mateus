@@ -16,59 +16,6 @@ use val::{BPAWN, WPAWN};
 
 const INFINITE: i16 = 32000;
 
-// pub struct MovePicker<'a> {
-//     board: &'a Board,
-//     tt_move: Option<Move>,
-//     generated: bool,
-//     moves: Vec<Move>,
-//     index: usize,
-//     n_generated: usize,
-//     is_end_game: bool,
-// }
-
-// impl<'a> MovePicker<'a> {
-//     pub fn new(board: &'a Board, tt_move: Option<Move>) -> Self {
-//         MovePicker {
-//             board,
-//             tt_move,
-//             generated: false,
-//             moves: Vec::new(),
-//             index: 0,
-//             n_generated: 0,
-//             is_end_game: false,
-//         }
-//     }
-
-//     pub fn next(&mut self) -> Option<Move> {
-//         if let Some(m) = self.tt_move.take() {
-//             return Some(m);
-//         }
-
-//         if !self.generated {
-//             let in_check = self.board.in_check(self.board.colour);
-
-//             self.moves = self.board.moves(in_check, self.is_end_game);
-//             if self.board.colour.is_white() {
-//                 self.moves.sort_unstable_by(|b, a| a.val.cmp(&b.val)); // decreasing
-//             } else {
-//                 self.moves.sort_unstable_by(|a, b| a.val.cmp(&b.val)); // increasing
-//             }
-//             self.n_generated += self.moves.len();
-
-//             self.generated = true;
-//         }
-
-//         // Return next move
-//         if self.index < self.moves.len() {
-//             let m = self.moves[self.index];
-//             self.index += 1;
-//             Some(m)
-//         } else {
-//             None
-//         }
-//     }
-// }
-
 pub struct Game {
     pub board: Board,
     pub n_searched: usize,
@@ -307,19 +254,24 @@ impl Game {
         let mut moves = self.board.moves(in_check, self.end_game);
         self.n_searched += moves.len();
         if self.board.turn.is_white() {
-            moves.sort_unstable_by(|b, a| a.val.cmp(&b.val)); // decreasing
-        } else {
             moves.sort_unstable_by(|a, b| a.val.cmp(&b.val)); // increasing
+        } else {
+            moves.sort_unstable_by(|b, a| a.val.cmp(&b.val)); // decreasing
         }
         if let Some(k) = kmove {
             if let Some(q) = moves.iter().position(|&m| m == k) {
                 if q != 0 {
                     let m = moves.remove(q);
-                    moves.insert(0, m);
+                    //moves.insert(0, m);
+                    moves.push(m);
                 }
             }
         }
-        for m in moves {
+        loop {
+            let m = match moves.pop() {
+                Some(m) => m,
+                None => break,
+            };
             self.board.update(&m);
             if !self.board.in_check(colour) {
                 // legal move
