@@ -95,20 +95,6 @@ impl fmt::Display for Game {
     }
 }
 
-fn move_to_head(moves: &mut Vec<Move>, frmto: &(u8, u8)) {
-    if let Some(q) = moves
-        .iter()
-        .position(|m| (m.frm(), m.to()) == (frmto.0, frmto.1))
-    {
-        if q != 0 {
-            let m = moves.remove(q);
-            //let m = moves.swap_remove(q);
-            //println!("Move {} to head {}->0", m, q);
-            moves.insert(0, m);
-        }
-    }
-}
-
 impl Game {
     pub fn new(board: Board) -> Self {
         //println!("size of TEntry {}", std::mem::size_of::<TEntry>());
@@ -302,7 +288,8 @@ impl Game {
                     return e.score();
                 }
             }
-            Some(e.frmto())
+            let (frm, to) = e.frmto();
+            Some(self.board.infer_move(frm, to))
         } else {
             None
         };
@@ -317,8 +304,6 @@ impl Game {
             (_, false) => depth,
         };
 
-        //let mut picker = MovePicker::new(&self.board, kmove);
-
         let mut moves = self.board.moves(in_check, self.end_game);
         self.n_searched += moves.len();
         if self.board.turn.is_white() {
@@ -327,15 +312,19 @@ impl Game {
             moves.sort_unstable_by(|a, b| a.val.cmp(&b.val)); // increasing
         }
         if let Some(k) = kmove {
-            move_to_head(&mut moves, &k);
+            if let Some(q) = moves.iter().position(|&m| m == k) {
+                if q != 0 {
+                    let m = moves.remove(q);
+                    moves.insert(0, m);
+                }
+            }
         }
-        //while let Some(m) = picker.next() {
-        for m in moves.iter() {
-            self.board.update(m);
+        for m in moves {
+            self.board.update(&m);
             if !self.board.in_check(colour) {
                 // legal move
                 if bmove.is_none() {
-                    bscore = -self.pvs(depth - 1, ply + 1, -beta, -alpha, m); // full beam
+                    bscore = -self.pvs(depth - 1, ply + 1, -beta, -alpha, &m); // full beam
                     bmove = Some(m);
                 } else {
                     let mut score = -self.pvs(
@@ -343,18 +332,18 @@ impl Game {
                         ply + 1,
                         -max(alpha, bscore) - 1,
                         -max(alpha, bscore),
-                        m,
+                        &m,
                     );
                     if score > bscore {
                         if score > max(bscore, alpha) && score < beta && depth > 2 {
-                            score = -self.pvs(depth - 1, ply + 1, -beta, -score, m);
+                            score = -self.pvs(depth - 1, ply + 1, -beta, -score, &m);
                         }
                         bscore = score;
                         bmove = Some(m);
                     }
                 }
             }
-            self.board.backdate(m);
+            self.board.backdate(&m);
             if bscore >= beta {
                 break;
             }

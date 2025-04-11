@@ -5,16 +5,25 @@ use static_assertions::const_assert;
 const_assert!(std::mem::size_of::<usize>() >= std::mem::size_of::<u64>());
 
 // Table size - examples
+// 2 ^  0 =          1
+// 2 ^  1 =          2
+// 2 ^  2 =          4
+// 2 ^  3 =          8
+// 2 ^  4 =         16
+// 2 ^  5 =         32
+// 2 ^  6 =         64
+// 2 ^  7 =        128
+// 2 ^  8 =        256
 // 2 ^ 20 =    1048576 =   1M
 // 2 ^ 21 =    2097152 =   2M
 // 2 ^ 22 =    4194304 =   4M
 // 2 ^ 23 =    8388608 =   8M
 // 2 ^ 24 =   16777216 =  16M
 // 2 ^ 25 =   33554432 =  34M
-// 2 ^ 26 =   67108864 =  67M
-// 2 ^ 27 =  134217728 = 134M
-// 2 ^ 28 =  268435456 = 268M
-// 2 ^ 29 =  536870912 = 537M
+// 2 ^ 26 =   67108864 =  64M
+// 2 ^ 27 =  134217728 = 128M
+// 2 ^ 28 =  268435456 = 256M
+// 2 ^ 29 =  536870912 = 512M
 // 2 ^ 30 = 1073741824 =   1G
 
 const TABLE_SIZE: usize = 1 << 23;
@@ -29,6 +38,9 @@ pub struct TEntry {
                // 64-46 = 18 unused with u64 alignment
                // 18 + 23 redundant hash = 41
                // TODO - store extra moves without score, e.g. 41 available / 12 per move => +3 moves (36 bits)
+               // 64-23 = 41 hash bits + 15 bits move + 16 (or 8?) depth + 2 bound bits =
+               // 64-23 = 41 hash bits + 2 bound + 16 score + 8 depth = 67 bits
+               // 64-26 = 38 hash bits + 2 bound + 16 score + 8 depth = 64 bits
 }
 
 impl Default for TEntry {
@@ -86,7 +98,7 @@ fn index(key: u64) -> usize {
 }
 
 impl Transpositions {
-    pub fn store(&mut self, key: u64, depth: u16, score: i16, alpha: i16, beta: i16, m: &Move) {
+    pub fn store(&mut self, key: u64, depth: u16, score: i16, alpha: i16, beta: i16, m: Move) {
         let bound = if score <= alpha {
             0 // Upper bound
         } else if score >= beta {

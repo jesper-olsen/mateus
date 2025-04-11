@@ -15,8 +15,7 @@ struct Bitmaps {
     kings: u64,
 }
 
-// bitpacking - 1st 12 bits (6+6) for from/to, remaining 4 bits for castling and
-// pawn transforms & enpassant. Castling, en passant & transform are mutually exclusive.
+// bitpacking - 15 bits: 1st 12 (6+6) for from/to, next 3 bits for pawn promotion
 const TO_SHIFT: u16 = 6;
 pub const CASTLE_W_SHORT: u8 = 0b0001;
 pub const CASTLE_W_LONG: u8 = 0b0010;
@@ -193,6 +192,62 @@ impl fmt::Display for Board {
 }
 
 impl Board {
+    /// Fills in value - assumes frm,to is a valid board move & that promotion is to queen...
+    pub fn infer_move(&self, frm: u8, to: u8) -> Move {
+        match self.squares[frm as usize].kind() {
+            ROOK | KNIGHT | BISHOP | QUEEN => Move {
+                data: pack_data(0, frm, to),
+                val: self.delta_val(frm, to),
+            },
+            KING => match (frm, to) {
+                // W_SHORT, W_LONG B_SHORT B_LONG
+                (24, 8) => Move {
+                    data: pack_data(0, frm, to),
+                    val: self.delta_val(frm, to) + self.delta_val(sq2i("h8"), sq2i("f8")),
+                },
+                (24, 40) => Move {
+                    data: pack_data(0, frm, to),
+                    val: self.delta_val(frm, to) + self.delta_val(sq2i("a8"), sq2i("d8")),
+                },
+                (31, 15) => Move {
+                    data: pack_data(0, frm, to),
+                    val: self.delta_val(frm, to) + self.delta_val(sq2i("h1"), sq2i("f1")),
+                },
+                (31, 47) => Move {
+                    data: pack_data(0, frm, to),
+                    val: self.delta_val(frm, to) + self.delta_val(sq2i("a1"), sq2i("d1")),
+                },
+                _ => Move {
+                    data: pack_data(0, frm, to),
+                    val: self.delta_val(frm, to),
+                },
+            },
+            PAWN => match to % 8 {
+                0 | 7 => Move {
+                    data: pack_data(PROMOTE_QUEEN, frm, to),
+                    val: Piece::new(QUEEN, self.turn).val(to)
+                        - self[frm as usize].val(frm)
+                        - self[to as usize].val(to),
+                },
+                2 | 5 if self.en_passant_sq == to => {
+                    //lto - the sq the captured pawn is actually on
+                    let lto = self.en_passant_sq + 2 * self.turn.opposite().as_u8() - 1;
+                    Move {
+                        data: pack_data(0, frm, to),
+                        val: self[frm as usize].val(to)
+                            - self[frm as usize].val(frm)
+                            - self[lto as usize].val(lto),
+                    }
+                }
+                _ => Move {
+                    data: pack_data(0, frm, to),
+                    val: self.delta_val(frm, to),
+                },
+            },
+            _ => unimplemented!(),
+        }
+    }
+
     fn legal_move(&mut self, m: &Move) -> bool {
         // verify move does not expose own king
         self.update(m);
@@ -744,7 +799,7 @@ impl Board {
         v
     }
 
-    /// delta value of moving a piece between two squares  and possibly capturing another piece
+    /// delta value of moving a piece between two squares and possibly capturing another piece
     #[inline(always)]
     const fn delta_val(&self, frm: u8, to: u8) -> i16 {
         self.squares[frm as usize].val(to)
