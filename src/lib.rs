@@ -182,7 +182,6 @@ impl Game {
         } else {
             moves.sort_unstable_by(|a, b| a.val.cmp(&b.val)); // increasing
         }
-        self.n_searched += moves.len();
         for m in moves {
             self.board.update(&m);
             if !self.board.in_check(colour) {
@@ -251,27 +250,48 @@ impl Game {
             (_, false) => depth,
         };
 
-        let mut moves = self.board.moves(in_check, self.end_game);
-        self.n_searched += moves.len();
-        if self.board.turn.is_white() {
-            moves.sort_unstable_by(|a, b| a.val.cmp(&b.val)); // increasing
-        } else {
-            moves.sort_unstable_by(|b, a| a.val.cmp(&b.val)); // decreasing
-        }
+        // let mut moves = self.board.moves(in_check, self.end_game);
+        // if self.board.turn.is_white() {
+        //     moves.sort_unstable_by(|a, b| a.val.cmp(&b.val)); // increasing
+        // } else {
+        //     moves.sort_unstable_by(|b, a| a.val.cmp(&b.val)); // decreasing
+        // }
+        // if let Some(k) = kmove {
+        //     if let Some(q) = moves.iter().position(|&m| m == k) {
+        //         if q != 0 {
+        //             let m = moves.remove(q);
+        //             //moves.insert(0, m);
+        //             moves.push(m);
+        //         }
+        //     }
+        // }
+
+        let mut moves = Vec::new();
         if let Some(k) = kmove {
-            if let Some(q) = moves.iter().position(|&m| m == k) {
-                if q != 0 {
-                    let m = moves.remove(q);
-                    //moves.insert(0, m);
-                    moves.push(m);
-                }
-            }
+            moves.push(k);
         }
+        let mut generated = false;
         loop {
             let m = match moves.pop() {
                 Some(m) => m,
+                None if !generated => {
+                    generated = true;
+                    moves = self.board.moves(in_check, self.end_game);
+                    if let Some(k) = kmove {
+                        if let Some(q) = moves.iter().position(|&m| m == k) {
+                            moves.remove(q);
+                        }
+                    }
+                    if self.board.turn.is_white() {
+                        moves.sort_unstable_by(|a, b| a.val.cmp(&b.val)); // increasing
+                    } else {
+                        moves.sort_unstable_by(|b, a| a.val.cmp(&b.val)); // decreasing
+                    }
+                    continue;
+                }
                 None => break,
             };
+            self.n_searched += 1;
             self.board.update(&m);
             if !self.board.in_check(colour) {
                 // legal move
