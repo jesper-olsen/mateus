@@ -71,16 +71,25 @@ impl Move {
     pub fn frm(&self) -> u8 {
         (self.data & FRM_MASK) as u8
     }
+
     #[inline]
     pub fn to(&self) -> u8 {
         ((self.data & TO_MASK) >> TO_SHIFT) as u8
     }
+
+    /// frm,to - 12 lower bits (6+6)
+    #[inline]
+    pub fn encode(&self) -> u16 {
+        self.data & (TO_MASK | FRM_MASK)
+    }
 }
 
+#[inline]
 pub fn ext_frm(data: u16) -> u8 {
     (data & FRM_MASK) as u8
 }
 
+#[inline]
 pub fn ext_to(data: u16) -> u8 {
     ((data & TO_MASK) >> TO_SHIFT) as u8
 }

@@ -208,7 +208,7 @@ impl Game {
         }
     } // fn quiescence fab
 
-    pub fn pvs(&mut self, depth: u16, ply: usize, alpha: i16, beta: i16, last: &Move) -> i16 {
+    pub fn pvs(&mut self, depth: u8, ply: usize, alpha: i16, beta: i16, last: &Move) -> i16 {
         if let Some(count) = self.board.rep.get(&self.board.hash) {
             if *count >= 2 {
                 return 0;
@@ -347,7 +347,7 @@ impl Game {
 
         self.n_searched = 0;
         let mut pq0: Vec<(Move, i16)> = moves.iter().map(|m| (*m, 0)).collect();
-        for depth in (2..).step_by(1) {
+        for depth in (2..255).step_by(1) {
             let mut pq: Vec<(Move, i16)> = Vec::new();
             let mut alpha = -INFINITE;
             let beta = INFINITE;

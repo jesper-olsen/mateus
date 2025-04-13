@@ -26,31 +26,71 @@ const_assert!(std::mem::size_of::<usize>() >= std::mem::size_of::<u64>());
 // 2 ^ 29 =  536870912 = 512M
 // 2 ^ 30 = 1073741824 =   1G
 
-const TABLE_SIZE: usize = 1 << 23;
+const N_INDEX_BITS: usize = 24;
+const TABLE_SIZE: usize = 1 << N_INDEX_BITS;
 const MASK: usize = TABLE_SIZE - 1;
+
+const N_REMINDER_BITS: usize = 64 - N_INDEX_BITS;
+const N_REMINDER_BYTES: usize = (N_REMINDER_BITS + 7) / 8;
+const N_ENTRY_BYTES: usize = N_REMINDER_BYTES + 5;
+
+// N_INDEX_BITS is 24 => TABLE_SIZE = 16M
+//                       N_REMINDER_BITS = 40
+//                       N_REMINDER_BYTES = 5
+//                       N_ENTRY_BYTES = 10
+// Entry: N_REMINDER_BYTES (5) + Depth (1) + score (2) + move data (2 bytes / 14 bits)
+
+const fn reminder_to_slice(hash_key: u64, array: &mut [u8]) {
+    let reminder = hash_key >> N_INDEX_BITS;
+    let bytes = reminder.to_le_bytes();
+
+    let mut i = 0;
+    while i < N_REMINDER_BYTES {
+        array[i] = bytes[i];
+        i += 1;
+    }
+}
+
+const fn reminder_from_slice(array: &[u8]) -> u64 {
+    let mut bytes = [0u8; 8];
+    let mut i = 0;
+    while i < N_REMINDER_BYTES {
+        bytes[i] = array[i];
+        i += 1;
+    }
+    u64::from_le_bytes(bytes)
+}
+
+const fn i16_to_slice(value: i16, array: &mut [u8]) {
+    let bytes = value.to_le_bytes();
+    array[0] = bytes[0];
+    array[1] = bytes[1];
+}
+
+const fn u16_to_slice(value: u16, array: &mut [u8]) {
+    let bytes = value.to_le_bytes();
+    array[0] = bytes[0];
+    array[1] = bytes[1];
+}
+
+const fn u16_from_slice(array: &[u8]) -> u16 {
+    u16::from_le_bytes([array[0], array[1]])
+}
+
+const fn i16_from_slice(array: &[u8]) -> i16 {
+    i16::from_le_bytes([array[0], array[1]])
+}
+
 #[derive(Debug, Copy, Clone)]
 pub struct TEntry {
-    key: u64,
-    depth: u16,
-    score: i16,
-    data: u16, // frm, to, bound: 2x6 + 2 = 14 bits
-               // 2x16 + 14 = 46
-               // 64-46 = 18 unused with u64 alignment
-               // 18 + 23 redundant hash = 41
-               // TODO - store extra moves without score, e.g. 41 available / 12 per move => +3 moves (36 bits)
-               // 64-23 = 41 hash bits + 15 bits move + 16 (or 8?) depth + 2 bound bits =
-               // 64-23 = 41 hash bits + 2 bound + 16 score + 8 depth = 67 bits
-               // 64-26 = 38 hash bits + 2 bound + 16 score + 8 depth = 64 bits
+    rmdata: [u8; N_ENTRY_BYTES],
 }
 
 impl Default for TEntry {
     #[inline(always)]
     fn default() -> TEntry {
         TEntry {
-            key: 0,
-            depth: 0,
-            score: 0,
-            data: 0,
+            rmdata: [0; N_ENTRY_BYTES],
         }
     }
 }
@@ -61,26 +101,45 @@ impl TEntry {
     const LOWER_BIT: u16 = 1 << 13;
     #[inline(always)]
     pub fn exact_bound(&self) -> bool {
-        self.data & TEntry::EXACT_BIT != 0
+        let data = u16_from_slice(&self.rmdata[N_REMINDER_BYTES + 3..]);
+        data & TEntry::EXACT_BIT != 0
     }
     #[inline(always)]
     pub fn lower_bound(&self) -> bool {
-        self.data & TEntry::LOWER_BIT != 0
+        let data = u16_from_slice(&self.rmdata[N_REMINDER_BYTES + 3..]);
+        data & TEntry::LOWER_BIT != 0
     }
 
     #[inline(always)]
     pub fn frmto(&self) -> (u8, u8) {
-        (mgen::ext_frm(self.data), mgen::ext_to(self.data))
+        let data = u16_from_slice(&self.rmdata[N_REMINDER_BYTES + 3..]);
+        (mgen::ext_frm(data), mgen::ext_to(data))
     }
 
     #[inline(always)]
-    pub fn depth(&self) -> u16 {
-        self.depth
+    pub fn frmto2(&self) -> (u8, u8) {
+        let data = u16_from_slice(&self.rmdata[N_REMINDER_BYTES + 3..]);
+        (mgen::ext_frm(data), mgen::ext_to(data))
     }
+
+    // #[inline(always)]
+    // pub fn depth(&self) -> u8 {
+    //     self.depth
+    // }
+
+    #[inline(always)]
+    pub fn depth(&self) -> u8 {
+        self.rmdata[N_REMINDER_BYTES]
+    }
+
+    // #[inline(always)]
+    // pub fn score(&self) -> i16 {
+    //     self.score
+    // }
 
     #[inline(always)]
     pub fn score(&self) -> i16 {
-        self.score
+        i16_from_slice(&self.rmdata[N_REMINDER_BYTES + 1..])
     }
 }
 
@@ -98,7 +157,7 @@ fn index(key: u64) -> usize {
 }
 
 impl Transpositions {
-    pub fn store(&mut self, key: u64, depth: u16, score: i16, alpha: i16, beta: i16, m: Move) {
+    pub fn store(&mut self, key: u64, depth: u8, score: i16, alpha: i16, beta: i16, m: Move) {
         let bound = if score <= alpha {
             0 // Upper bound
         } else if score >= beta {
@@ -106,15 +165,12 @@ impl Transpositions {
         } else {
             TEntry::EXACT_BIT
         };
-        let data = (m.data & (mgen::FRM_MASK | mgen::TO_MASK)) | bound;
-        let e = TEntry {
-            key,
-            depth,
-            score,
-            data,
-        };
-
-        self.0[index(key)] = e
+        let move_data = (m.data & (mgen::FRM_MASK | mgen::TO_MASK)) | bound;
+        let e = &mut self.0[index(key)];
+        reminder_to_slice(key, &mut e.rmdata);
+        e.rmdata[N_REMINDER_BYTES] = depth;
+        i16_to_slice(score, &mut e.rmdata[N_REMINDER_BYTES + 1..]);
+        u16_to_slice(move_data, &mut e.rmdata[N_REMINDER_BYTES + 3..]);
     }
 
     pub fn len(&self) -> usize {
@@ -127,6 +183,11 @@ impl Transpositions {
 
     pub fn probe(&self, key: u64) -> Option<&TEntry> {
         let entry = &self.0[index(key)];
-        if entry.key == key { Some(entry) } else { None }
+        let reminder = key >> N_INDEX_BITS;
+        if reminder == reminder_from_slice(&entry.rmdata) {
+            Some(entry)
+        } else {
+            None
+        }
     }
 }
