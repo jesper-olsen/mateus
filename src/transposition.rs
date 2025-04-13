@@ -82,16 +82,12 @@ const fn i16_from_slice(array: &[u8]) -> i16 {
 }
 
 #[derive(Debug, Copy, Clone)]
-pub struct TEntry {
-    rmdata: [u8; N_ENTRY_BYTES],
-}
+pub struct TEntry([u8; N_ENTRY_BYTES]);
 
 impl Default for TEntry {
     #[inline(always)]
     fn default() -> TEntry {
-        TEntry {
-            rmdata: [0; N_ENTRY_BYTES],
-        }
+        TEntry([0; N_ENTRY_BYTES])
     }
 }
 
@@ -101,53 +97,39 @@ impl TEntry {
     const LOWER_BIT: u16 = 1 << 13;
     #[inline(always)]
     pub fn exact_bound(&self) -> bool {
-        let data = u16_from_slice(&self.rmdata[N_REMINDER_BYTES + 3..]);
+        let data = u16_from_slice(&self.0[N_REMINDER_BYTES + 3..]);
         data & TEntry::EXACT_BIT != 0
     }
     #[inline(always)]
     pub fn lower_bound(&self) -> bool {
-        let data = u16_from_slice(&self.rmdata[N_REMINDER_BYTES + 3..]);
+        let data = u16_from_slice(&self.0[N_REMINDER_BYTES + 3..]);
         data & TEntry::LOWER_BIT != 0
     }
 
     #[inline(always)]
     pub fn frmto(&self) -> (u8, u8) {
-        let data = u16_from_slice(&self.rmdata[N_REMINDER_BYTES + 3..]);
+        let data = u16_from_slice(&self.0[N_REMINDER_BYTES + 3..]);
         (mgen::ext_frm(data), mgen::ext_to(data))
     }
-
-    #[inline(always)]
-    pub fn frmto2(&self) -> (u8, u8) {
-        let data = u16_from_slice(&self.rmdata[N_REMINDER_BYTES + 3..]);
-        (mgen::ext_frm(data), mgen::ext_to(data))
-    }
-
-    // #[inline(always)]
-    // pub fn depth(&self) -> u8 {
-    //     self.depth
-    // }
 
     #[inline(always)]
     pub fn depth(&self) -> u8 {
-        self.rmdata[N_REMINDER_BYTES]
+        self.0[N_REMINDER_BYTES]
     }
-
-    // #[inline(always)]
-    // pub fn score(&self) -> i16 {
-    //     self.score
-    // }
 
     #[inline(always)]
     pub fn score(&self) -> i16 {
-        i16_from_slice(&self.rmdata[N_REMINDER_BYTES + 1..])
+        i16_from_slice(&self.0[N_REMINDER_BYTES + 1..])
     }
 }
 
-pub struct Transpositions(Vec<TEntry>);
+pub struct Transpositions(Box<[TEntry]>);
 
 impl Default for Transpositions {
-    fn default() -> Transpositions {
-        Transpositions(vec![TEntry::default(); TABLE_SIZE])
+    fn default() -> Self {
+        // To avoid stack overflow, first create Vec, then convert to Box
+        let vec = vec![TEntry::default(); TABLE_SIZE];
+        Transpositions(vec.into_boxed_slice())
     }
 }
 
@@ -167,10 +149,10 @@ impl Transpositions {
         };
         let move_data = (m.data & (mgen::FRM_MASK | mgen::TO_MASK)) | bound;
         let e = &mut self.0[index(key)];
-        reminder_to_slice(key, &mut e.rmdata);
-        e.rmdata[N_REMINDER_BYTES] = depth;
-        i16_to_slice(score, &mut e.rmdata[N_REMINDER_BYTES + 1..]);
-        u16_to_slice(move_data, &mut e.rmdata[N_REMINDER_BYTES + 3..]);
+        reminder_to_slice(key, &mut e.0);
+        e.0[N_REMINDER_BYTES] = depth;
+        i16_to_slice(score, &mut e.0[N_REMINDER_BYTES + 1..]);
+        u16_to_slice(move_data, &mut e.0[N_REMINDER_BYTES + 3..]);
     }
 
     pub fn len(&self) -> usize {
@@ -184,7 +166,7 @@ impl Transpositions {
     pub fn probe(&self, key: u64) -> Option<&TEntry> {
         let entry = &self.0[index(key)];
         let reminder = key >> N_INDEX_BITS;
-        if reminder == reminder_from_slice(&entry.rmdata) {
+        if reminder == reminder_from_slice(&entry.0) {
             Some(entry)
         } else {
             None

@@ -146,7 +146,7 @@ impl Game {
             self.board.rep.clear(); // ireversible move
             self.board.half_move_clock = 0;
         }
-        self.ttable.clear();
+        //self.ttable.clear();
         self.board.update(&m);
 
         //adjust king value in end game
