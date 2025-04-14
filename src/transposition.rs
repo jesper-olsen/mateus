@@ -4,6 +4,21 @@ use static_assertions::const_assert;
 // Ensure usize is at least 64-bit at compile time
 const_assert!(std::mem::size_of::<usize>() >= std::mem::size_of::<u64>());
 
+// Transposition table - specify table size with N_INDEX_BITS.
+// Each table entry stores
+// * reminder of hash key - the part that was not used for the index
+// * search depth
+// * search score
+// * best move
+// * score bound - upper, lower, exact
+//
+// Example
+// N_INDEX_BITS is 24 => TABLE_SIZE = 16M
+//                       N_REMINDER_BITS = 40
+//                       N_REMINDER_BYTES = 5
+//                       N_ENTRY_BYTES = 10
+// Entry: N_REMINDER_BYTES (5) + Depth (1) + score (2) + move data (2 bytes / 14 bits) = 10
+
 // Table size - examples
 // 2 ^  0 =          1
 // 2 ^  1 =          2
@@ -33,12 +48,6 @@ const MASK: usize = TABLE_SIZE - 1;
 const N_REMINDER_BITS: usize = 64 - N_INDEX_BITS;
 const N_REMINDER_BYTES: usize = (N_REMINDER_BITS + 7) / 8;
 const N_ENTRY_BYTES: usize = N_REMINDER_BYTES + 5;
-
-// N_INDEX_BITS is 24 => TABLE_SIZE = 16M
-//                       N_REMINDER_BITS = 40
-//                       N_REMINDER_BYTES = 5
-//                       N_ENTRY_BYTES = 10
-// Entry: N_REMINDER_BYTES (5) + Depth (1) + score (2) + move data (2 bytes / 14 bits)
 
 const fn reminder_to_slice(hash_key: u64, array: &mut [u8]) {
     let reminder = hash_key >> N_INDEX_BITS;
@@ -140,6 +149,7 @@ fn index(key: u64) -> usize {
 
 impl Transpositions {
     pub fn store(&mut self, key: u64, depth: u8, score: i16, alpha: i16, beta: i16, m: Move) {
+        let e = &mut self.0[index(key)];
         let bound = if score <= alpha {
             0 // Upper bound
         } else if score >= beta {
@@ -148,8 +158,7 @@ impl Transpositions {
             TEntry::EXACT_BIT
         };
         let move_data = (m.data & (mgen::FRM_MASK | mgen::TO_MASK)) | bound;
-        let e = &mut self.0[index(key)];
-        reminder_to_slice(key, &mut e.0);
+        reminder_to_slice(key, &mut e.0); // store reminder
         e.0[N_REMINDER_BYTES] = depth;
         i16_to_slice(score, &mut e.0[N_REMINDER_BYTES + 1..]);
         u16_to_slice(move_data, &mut e.0[N_REMINDER_BYTES + 3..]);
