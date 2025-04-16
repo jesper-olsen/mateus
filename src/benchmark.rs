@@ -112,7 +112,7 @@ pub const CCR: [(&str,&str);25] = [
 //https://glarean-magazin.ch/2017/03/05/computerschach-testaufgaben-engines-eigenmann-rapid-engine-test-eret/
 #[rustfmt::skip]
 pub const ERET: [(&str,&str);111] = [
-    ("r1bqk1r1/1p1p1n2/p1n2pN1/2p1b2Q/2P1Pp2/1PN5/PB4PP/R4RK1 w q - -",   "Rxf4"), //; id "ERET 001 - Relief";
+    ("r1bqk1r1/1p1p1n2/p1n2pN1/2p1b2Q/2P1Pp2/1PN5/PB4PP/R4RK1 w q -",   "Rxf4"), //; id "ERET 001 - Relief";
     ("r1n2N1k/2n2K1p/3pp3/5Pp1/b5R1/8/1PPP4/8 w - -",                     "Ng6"), //; id "ERET 002 - Zugzwang";
     ("r1b1r1k1/1pqn1pbp/p2pp1p1/P7/1n1NPP1Q/2NBBR2/1PP3PP/R6K w - -",     "f5"), //; id "ERET 003 - Open Line";
     ("5b2/p2k1p2/P3pP1p/n2pP1p1/1p1P2P1/1P1KBN2/7P/8 w - -",              "Nxg5"), //; id "ERET 004 - Endgame";
