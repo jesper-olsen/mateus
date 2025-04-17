@@ -22,23 +22,21 @@ A rusty chess library:
 ## Run:
 
 ```
-% cargo run --release --bin main -- -h
+% cargo run --release --bin main -- --help
 
 Usage: main [OPTIONS]
 
 Options:
   -n, --n <N>    break off search threshold - positions generated [default: 1000000]
-  -d, --d <D>    max depth of regular search [default: 30]
-  -m, --m <M>    number of (half) moves before stopping [default: -1]
+  -m, --m <M>    number of moves before stopping [default: -1]
   -w, --w        play white (human-computer)
   -b, --b        play black (human-computer)
   -l, --l        no opening library
-  -k, --k <K>    benchmark test positions - Bratko-Kopec (1) / Kaufman (2) / Lasker (3) [default: 0]
+  -k, --k <K>    benchmark test sets - Bratko-Kopec (1) / Kaufman (2) / Lasker (3) / Nolot (4) / CCR (5) / ERET (6) / BT-2450 (7) / BT-2630 (8) [default: 0]
   -v, --v        verbose output
-  -f, --f <F>    fen board - start position [default: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR]
+  -f, --f <F>    fen board - start position [default: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"]
   -h, --help     Print help
   -V, --version  Print version
-
 ```
 
 Run CLI app like this to play white:
