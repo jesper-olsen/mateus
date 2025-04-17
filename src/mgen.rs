@@ -719,19 +719,14 @@ impl Board {
 
     pub fn score_pawn_structure(&self) -> i16 {
         let mut pen: i16 = 0;
-        let bm: [u64; 2] = [
-            self.bitmaps.pawns & self.bitmaps.pieces[WHITE.as_usize()],
-            self.bitmaps.pawns & self.bitmaps.pieces[BLACK.as_usize()],
-        ];
-        for (i, &p) in [WPAWN, BPAWN].iter().enumerate() {
-            let nfiles = (0..8)
-                .filter(|&q| 0b11111111 << (q * 8) & bm[i] > 0)
-                .count() as i16;
-            let npawns = bm[i].count_ones() as i16;
+        for c in [WHITE, BLACK] {
+            let bm = self.bitmaps.pawns & self.bitmaps.pieces[c.as_usize()];
+            let nfiles = (0..8).filter(|&q| 0b11111111 << (q * 8) & bm > 0).count() as i16;
+            let npawns = bm.count_ones() as i16;
             let double_pawns = npawns - nfiles;
 
             let l = (0..8)
-                .map(|q| (0b11111111 << (q * 8)) & bm[i] > 0)
+                .map(|q| (0b11111111 << (q * 8)) & bm > 0)
                 .collect::<Vec<bool>>();
             let isolated_pawns = (0..8)
                 .filter(|&q| {
@@ -742,14 +737,14 @@ impl Board {
                 .count() as i16;
 
             let x = 20 * double_pawns + 4 * isolated_pawns;
-            pen += if p == WPAWN { -x } else { x };
+            pen += if c.is_white() { -x } else { x };
         }
 
         // passed pawn bonus
         for i in 0..8 {
             let file: u64 = 0b11111111 << (i * 8);
-            let w = file & bm[0];
-            let b = file & bm[1];
+            let w = file & self.bitmaps.pawns & self.bitmaps.pieces[WHITE.as_usize()];
+            let b = file & self.bitmaps.pawns & self.bitmaps.pieces[BLACK.as_usize()];
             if w > 0 && w > b {
                 let k = 63 - w.leading_zeros();
                 let q = (k % 8) as i16;
