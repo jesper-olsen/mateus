@@ -722,26 +722,26 @@ impl Board {
         for c in [WHITE, BLACK] {
             let bm = self.bitmaps.pawns & self.bitmaps.pieces[c.as_usize()];
 
-            let mut flags: u8 = 0;
+            let mut file: u8 = 0;
             for q in 0..8 {
                 if ((0b11111111u64 << (q * 8)) & bm) > 0 {
-                    flags |= 1 << q;
+                    file |= 1 << q;
                 }
             }
 
-            let n_occupied_files = flags.count_ones();
-            let npawns = bm.count_ones();
-            let double_pawns = (npawns - n_occupied_files) as i16;
+            let n_occupied_file = file.count_ones();
+            let n_pawns = bm.count_ones();
+            let double_pawns = (n_pawns - n_occupied_file) as i16;
 
             let mut isolated_pawns = 0;
             for q in 0..8 {
                 isolated_pawns += match q {
-                    0 => ((flags & 1) != 0 && flags & 2 == 0) as i16,
-                    7 => ((flags & 128) != 0 && flags & 64 == 0) as i16,
+                    0 => ((file & 1) != 0 && file & 2 == 0) as i16,
+                    7 => ((file & 128) != 0 && file & 64 == 0) as i16,
                     _ => {
-                        (flags & 1 << q != 0
-                            && flags & 1 << (q - 1) == 0
-                            && flags & 1 << (q + 1) == 0) as i16
+                        ((file & (1 << q)) != 0
+                            && (file & (1 << (q - 1))) == 0
+                            && (file & (1 << (q + 1))) == 0) as i16
                     }
                 };
             }
