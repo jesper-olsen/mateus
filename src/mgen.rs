@@ -721,20 +721,30 @@ impl Board {
         let mut pen: i16 = 0;
         for c in [WHITE, BLACK] {
             let bm = self.bitmaps.pawns & self.bitmaps.pieces[c.as_usize()];
-            let nfiles = (0..8).filter(|&q| 0b11111111 << (q * 8) & bm > 0).count() as i16;
-            let npawns = bm.count_ones() as i16;
-            let double_pawns = npawns - nfiles;
 
-            let l = (0..8)
-                .map(|q| (0b11111111 << (q * 8)) & bm > 0)
-                .collect::<Vec<bool>>();
-            let isolated_pawns = (0..8)
-                .filter(|&q| {
-                    (q == 0 && l[0] && !l[1])
-                        || (q > 0 && q < 7 && l[q] && !l[q - 1] && !l[q + 1])
-                        || (q == 7 && l[7] && !l[6])
-                })
-                .count() as i16;
+            let mut flags: u8 = 0;
+            for q in 0..8 {
+                if ((0b11111111u64 << (q * 8)) & bm) > 0 {
+                    flags |= 1 << q;
+                }
+            }
+
+            let n_occupied_files = flags.count_ones();
+            let npawns = bm.count_ones();
+            let double_pawns = (npawns - n_occupied_files) as i16;
+
+            let mut isolated_pawns = 0;
+            for q in 0..8 {
+                isolated_pawns += match q {
+                    0 => ((flags & 1) != 0 && flags & 2 == 0) as i16,
+                    7 => ((flags & 128) != 0 && flags & 64 == 0) as i16,
+                    _ => {
+                        (flags & 1 << q != 0
+                            && flags & 1 << (q - 1) == 0
+                            && flags & 1 << (q + 1) == 0) as i16
+                    }
+                };
+            }
 
             let x = 20 * double_pawns + 4 * isolated_pawns;
             pen += if c.is_white() { -x } else { x };
