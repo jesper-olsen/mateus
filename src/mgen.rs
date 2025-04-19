@@ -719,51 +719,61 @@ impl Board {
 
     pub fn score_pawn_structure(&self) -> i16 {
         let mut pen: i16 = 0;
+
         for c in [WHITE, BLACK] {
             let bm = self.bitmaps.pawns & self.bitmaps.pieces[c.as_usize()];
 
-            let mut file: u8 = 0;
-            for q in 0..8 {
-                if ((0b11111111u64 << (q * 8)) & bm) > 0 {
-                    file |= 1 << q;
-                }
+            // Generate file occupancy bitmap
+            let mut file_mask: u8 = 0;
+            let mut pawns = bm;
+            while pawns != 0 {
+                let sq = pawns.trailing_zeros() as u8;
+                file_mask |= 1 << (sq / 8);
+                pawns &= pawns - 1; // clear lsb (sq)
             }
 
-            let n_occupied_file = file.count_ones();
+            let n_occupied_files = file_mask.count_ones();
             let n_pawns = bm.count_ones();
-            let double_pawns = (n_pawns - n_occupied_file) as i16;
+            let double_pawns = (n_pawns - n_occupied_files) as i16;
 
+            // Count isolated pawns
             let mut isolated_pawns = 0;
-            for q in 0..8 {
-                isolated_pawns += match q {
-                    0 => ((file & 1) != 0 && file & 2 == 0) as i16,
-                    7 => ((file & 128) != 0 && file & 64 == 0) as i16,
-                    _ => {
-                        ((file & (1 << q)) != 0
-                            && (file & (1 << (q - 1))) == 0
-                            && (file & (1 << (q + 1))) == 0) as i16
-                    }
+            let mut fm = file_mask;
+            while fm != 0 {
+                let file = fm.trailing_zeros() as i8;
+                let mask = match file {
+                    0 => 0b00000010,
+                    7 => 0b01000000,
+                    _ => 0b00000101 << (file - 1),
                 };
+                if mask & file_mask == 0 {
+                    isolated_pawns += 1
+                }
+                fm &= fm - 1;
             }
 
-            let x = 20 * double_pawns + 4 * isolated_pawns;
-            pen += if c.is_white() { -x } else { x };
+            let score = 20 * double_pawns + 4 * isolated_pawns;
+            pen += if c.is_white() { -score } else { score };
         }
 
         // passed pawn bonus
-        for i in 0..8 {
-            let file: u64 = 0b11111111 << (i * 8);
-            let w = file & self.bitmaps.pawns & self.bitmaps.pieces[WHITE.as_usize()];
-            let b = file & self.bitmaps.pawns & self.bitmaps.pieces[BLACK.as_usize()];
-            if w > 0 && w > b {
-                let k = 63 - w.leading_zeros();
-                let q = (k % 8) as i16;
-                pen += 2 * q * q;
+        // just checking a hole has been punched - actual passed requires neighbour
+        // files to be clear as well...
+        for file in 0..8 {
+            let mask = 0xFFu64 << (file * 8); // a file, starting from H
+
+            let wp = mask & self.bitmaps.pawns & self.bitmaps.pieces[WHITE.as_usize()];
+            let bp = mask & self.bitmaps.pawns & self.bitmaps.pieces[BLACK.as_usize()];
+
+            if wp != 0 && wp.leading_zeros() < bp.leading_zeros() {
+                let sq = 63 - wp.leading_zeros();
+                let rank = (sq % 8) as i16;
+                pen += 2 * rank * rank;
             }
-            if b > 0 && (w == 0 || b < w) {
-                let k = b.trailing_zeros();
-                let q = (7 - k % 8) as i16;
-                pen -= 2 * q * q;
+            if bp != 0 && bp.trailing_zeros() < wp.trailing_zeros() {
+                let sq = bp.trailing_zeros();
+                let rank = (7 - (sq % 8)) as i16;
+                pen -= 2 * rank * rank;
             }
         }
 
