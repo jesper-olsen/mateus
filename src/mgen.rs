@@ -781,7 +781,7 @@ impl Board {
     }
 
     pub fn mobility(&self) -> i16 {
-        self.count_moves(WHITE) as i16 - self.count_moves(BLACK) as i16
+        self.count_moves(WHITE) - self.count_moves(BLACK)
     }
 
     // true if !colour side can capture colour king
@@ -993,7 +993,7 @@ impl Board {
     }
 
     // count pseudo legal moves - ignoring en passant & castling
-    fn count_moves(&self, colour: Colour) -> u32 {
+    fn count_moves(&self, colour: Colour) -> i16 {
         let bm_board =
             self.bitmaps.pieces[WHITE.as_usize()] | self.bitmaps.pieces[BLACK.as_usize()];
         let bm_own = self.bitmaps.pieces[colour.as_usize()];
@@ -1004,8 +1004,8 @@ impl Board {
             .enumerate()
             .filter(|(frm, _)| 1 << frm & self.bitmaps.pieces[colour.as_usize()] != 0)
             .map(|(frm, &p)| match p.kind() {
-                KNIGHT => (BM_KNIGHT_MOVES[frm] & !bm_own).count_ones(),
-                KING => (BM_KING_MOVES[frm] & !bm_own).count_ones(),
+                KNIGHT => (BM_KNIGHT_MOVES[frm] & !bm_own).count_ones() as i16,
+                KING => (BM_KING_MOVES[frm] & !bm_own).count_ones() as i16,
                 PAWN => count_pawn_moves(frm as u8, bm_opp, bm_board, colour),
                 ROOK => count_ray_moves(frm as u8, BM_ROOK_MOVES[frm], bm_board, bm_own),
                 BISHOP => count_ray_moves(frm as u8, BM_BISHOP_MOVES[frm], bm_board, bm_own),
@@ -1020,7 +1020,7 @@ impl Board {
 // +8   0 -8
 // +7  -1 -9
 
-const fn count_pawn_moves(frm: u8, bm_opp: u64, bm_board: u64, colour: Colour) -> u32 {
+const fn count_pawn_moves(frm: u8, bm_opp: u64, bm_board: u64, colour: Colour) -> i16 {
     // TODO  - calc all at the same time;
     let cap = BM_PAWN_CAPTURES[colour.as_usize()][frm as usize] & bm_opp;
     let step1 = 1u64 << (frm + 2 * colour.as_u8() - 1) & !bm_board;
@@ -1029,12 +1029,12 @@ const fn count_pawn_moves(frm: u8, bm_opp: u64, bm_board: u64, colour: Colour) -
         BLACK if ROW7 & 1 << frm != 0 => (step1 >> 1) & !bm_board,
         _ => 0,
     };
-    (cap | step1 | step2).count_ones()
+    (cap | step1 | step2).count_ones() as i16
 }
 
 #[inline(always)]
-const fn count_ray_moves(frm: u8, moves: u64, bm_board: u64, bm_own: u64) -> u32 {
-    (moves & !bm_own & !bm_blockers(frm, moves & bm_board)).count_ones()
+const fn count_ray_moves(frm: u8, moves: u64, bm_board: u64, bm_own: u64) -> i16 {
+    (moves & !bm_own & !bm_blockers(frm, moves & bm_board)).count_ones() as i16
 }
 
 #[inline(always)]
