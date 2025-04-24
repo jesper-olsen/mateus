@@ -8,7 +8,8 @@ pub static BM_KNIGHT_MOVES: [u64; 64] = bm_knight_moves();
 pub static BM_KING_MOVES: [u64; 64] = bm_king_moves();
 pub static BM_PAWN_CAPTURES: [[u64; 64]; 2] = bm_pawn_captures();
 pub static BM_PAWN_STEP1: [[u64; 64]; 2] = bm_pawn_step1();
-pub static BM_PAWN_STEP2: [[u64; 64]; 2] = bm_pawn_step2();
+pub const WSTEP2: u64 = 0b00000010_00000010_00000010_00000010_00000010_00000010_00000010_00000010;
+pub const BSTEP2: u64 = 0b01000000_01000000_01000000_01000000_01000000_01000000_01000000_01000000;
 
 ///valid moves from a given square assuming one square is blocked..
 const fn bm_queen_blockers() -> [[u64; 64]; 64] {
@@ -184,17 +185,6 @@ const fn bm_queen_moves_bb(frm: usize, blocked: usize) -> u64 {
         }
     }
     b
-}
-
-const fn bm_pawn_step2() -> [[u64; 64]; 2] {
-    let mut bm = [[0u64; 64]; 2];
-    let mut i = 0;
-    while i < 64 {
-        bm[Colour::white().as_usize()][i] = if i % 8 == 1 { 1 << (i + 2) } else { 0 };
-        bm[Colour::black().as_usize()][i] = if i % 8 == 6 { 1 << (i - 2) } else { 0 };
-        i += 1;
-    }
-    bm
 }
 
 const fn bm_pawn_step1() -> [[u64; 64]; 2] {

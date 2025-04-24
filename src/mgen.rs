@@ -862,14 +862,12 @@ impl Board {
             & self.bitmaps.pieces[self.turn.opposite().as_usize()];
         let step1: u64 = BM_PAWN_STEP1[self.turn.as_usize()][frm as usize]
             & !(self.bitmaps.pieces[0] | self.bitmaps.pieces[1]);
-        let step2: u64 = if self.turn.is_white() {
-            step1 << 1
-        } else {
-            step1 >> 1
-        };
         let bm_board = self.bitmaps.pieces[0] | self.bitmaps.pieces[1];
-        let step2: u64 = step2 & BM_PAWN_STEP2[self.turn.as_usize()][frm as usize] & !bm_board;
-
+        let step2 = match self.turn {
+            WHITE if WSTEP2 & 1 << frm != 0 => (step1 << 1) & !bm_board,
+            BLACK if BSTEP2 & 1 << frm != 0 => (step1 >> 1) & !bm_board,
+            _ => 0,
+        };
         let mut b = cap | step1 | step2;
         while b != 0 {
             let to = b.trailing_zeros() as u8;
@@ -1026,12 +1024,11 @@ const fn count_pawn_moves(frm: u8, bm_opp: u64, bm_board: u64, colour: Colour) -
     // TODO  - calc all at the same time;
     let cap = BM_PAWN_CAPTURES[colour.as_usize()][frm as usize] & bm_opp;
     let step1 = BM_PAWN_STEP1[colour.as_usize()][frm as usize] & !bm_board;
-    let step2 = if colour.is_white() {
-        step1 << 1
-    } else {
-        step1 >> 1
+    let step2 = match colour {
+        WHITE if WSTEP2 & 1 << frm != 0 => (step1 << 1) & !bm_board,
+        BLACK if BSTEP2 & 1 << frm != 0 => (step1 >> 1) & !bm_board,
+        _ => 0,
     };
-    let step2 = step2 & BM_PAWN_STEP2[colour.as_usize()][frm as usize] & !bm_board;
     (cap | step1 | step2).count_ones()
 }
 
