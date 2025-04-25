@@ -521,7 +521,6 @@ impl Board {
             self.en_passant_sq,
         ));
         let hash;
-        //self[m.to() as usize] = if m.castle() {
         self[m.to() as usize] = if self.is_castle(m) {
             self.en_passant_sq = 0;
             let (r_frm, r_to) = if m.to() <= 15 {
@@ -569,7 +568,6 @@ impl Board {
                 ^ self[m.frm() as usize].hashkey(m.frm())
                 ^ self[m.to() as usize].hashkey(m.to());
             p
-        //} else if m.en_passant() {
         } else if self.is_en_passant(m) {
             // +9  +1 -7
             // +8   0 -8
@@ -657,7 +655,7 @@ impl Board {
         self.material += m.val;
         self.rep_inc();
         self.hash ^= hash ^ WHITE_HASH;
-        // self.bitmaps = self.board.to_bitmaps();
+        //self.bitmaps = to_bitmaps(&self.squares);
         self.turn.flip();
     }
 

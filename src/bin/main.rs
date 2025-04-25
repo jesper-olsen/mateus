@@ -195,7 +195,7 @@ fn play(
     fen: &str,
 ) -> Result<(), String> {
     let mut game = Game::new(Board::from_fen(fen)?);
-
+    println!("{game}");
     let mut tot = 0;
     let mut moves = game.board.legal_moves();
 
