@@ -8,7 +8,9 @@ pub static BM_KNIGHT_MOVES: [u64; 64] = bm_knight_moves();
 pub static BM_KING_MOVES: [u64; 64] = bm_king_moves();
 pub static BM_PAWN_CAPTURES: [[u64; 64]; 2] = bm_pawn_captures();
 pub const ROW2: u64 = 0b00000010_00000010_00000010_00000010_00000010_00000010_00000010_00000010;
+pub const ROW3: u64 = 0b00000100_00000100_00000100_00000100_00000100_00000100_00000100_00000100;
 pub const ROW7: u64 = 0b01000000_01000000_01000000_01000000_01000000_01000000_01000000_01000000;
+pub const ROW6: u64 = 0b00100000_00100000_00100000_00100000_00100000_00100000_00100000_00100000;
 
 ///valid moves from a given square assuming one square is blocked..
 const fn bm_queen_blockers() -> [[u64; 64]; 64] {

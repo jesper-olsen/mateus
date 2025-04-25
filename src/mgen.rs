@@ -999,33 +999,61 @@ impl Board {
         self.squares
             .iter()
             .enumerate()
-            //.filter(|(frm, _)| 1 << frm & self.bitmaps.pieces[WHITE.as_usize()] != 0)
             .map(|(frm, &p)| match p {
                 WKNIGHT => (BM_KNIGHT_MOVES[frm] & !bm_w).count_ones() as i16,
                 WKING => (BM_KING_MOVES[frm] & !bm_w).count_ones() as i16,
-                WPAWN => count_pawn_moves(frm as u8, bm_b, bm_board, WHITE),
+                //WPAWN => count_pawn_moves(frm as u8, bm_b, bm_board, WHITE),
                 WROOK => count_ray_moves(frm as u8, BM_ROOK_MOVES[frm], bm_board, bm_w),
                 WBISHOP => count_ray_moves(frm as u8, BM_BISHOP_MOVES[frm], bm_board, bm_w),
                 WQUEEN => count_ray_moves(frm as u8, BM_QUEEN_MOVES[frm], bm_board, bm_w),
-
                 BKNIGHT => -((BM_KNIGHT_MOVES[frm] & !bm_b).count_ones() as i16),
                 BKING => -((BM_KING_MOVES[frm] & !bm_b).count_ones() as i16),
-                BPAWN => -count_pawn_moves(frm as u8, bm_w, bm_board, BLACK),
+                //BPAWN => count_pawn_moves(frm as u8, bm_w, bm_board, BLACK),
                 BROOK => -count_ray_moves(frm as u8, BM_ROOK_MOVES[frm], bm_board, bm_b),
                 BBISHOP => -count_ray_moves(frm as u8, BM_BISHOP_MOVES[frm], bm_board, bm_b),
                 BQUEEN => -count_ray_moves(frm as u8, BM_QUEEN_MOVES[frm], bm_board, bm_b),
                 _ => 0,
             })
-            .sum()
+            .sum::<i16>()
+            + self.count_all_pawn_moves()
+    }
+
+    // +9  +1 -7
+    // +8   0 -8
+    // +7  -1 -9
+
+    /// Count all pseudo legal pawn moves; white minus black, ignoring en passant
+    /// Note that for simplicity multiple pawn captures of the same enemy piece are only counted once;
+    /// Does not seem to make a difference on Bratko-Kopec & Kauffman test sets...
+    pub const fn count_all_pawn_moves(&self) -> i16 {
+        let bm_board =
+            self.bitmaps.pieces[WHITE.as_usize()] | self.bitmaps.pieces[BLACK.as_usize()];
+        let wpawns = self.bitmaps.pawns & self.bitmaps.pieces[WHITE.as_usize()];
+        let bpawns = self.bitmaps.pawns & self.bitmaps.pieces[BLACK.as_usize()];
+        let wcap = ((wpawns << 9) | (wpawns >> 7)) & self.bitmaps.pieces[BLACK.as_usize()];
+        let wstep1 = (wpawns << 1) & !bm_board;
+        let wstep2 = ((wstep1 & ROW3) << 1) & !bm_board;
+        let bcap = (bpawns >> 9 | bpawns << 7) & self.bitmaps.pieces[WHITE.as_usize()];
+        let bstep1 = (bpawns >> 1) & !bm_board;
+        let bstep2 = ((bstep1 & ROW6) >> 1) & !bm_board;
+        let nw = (wcap | wstep1 | wstep2).count_ones() as i16;
+        let nb = (bcap | bstep1 | bstep2).count_ones() as i16;
+        // println!(
+        //     "nw: {nw} nb: {nb}, wstep2:{} bstep2: {} wstep1: {}, bstep1: {}, wcap: {} bcap: {}",
+        //     wstep2.count_ones(),
+        //     bstep2.count_ones(),
+        //     wstep1.count_ones(),
+        //     bstep1.count_ones(),
+        //     wcap.count_ones(),
+        //     bcap.count_ones()
+        // );
+        nw - nb
     }
 }
 
-// +9  +1 -7
-// +8   0 -8
-// +7  -1 -9
-
+/// count for just one pawn - unlike count_all_pawn_moves()
+/// this is slower, but does not merge multiple captures of the same enemy piece...
 const fn count_pawn_moves(frm: u8, bm_opp: u64, bm_board: u64, colour: Colour) -> i16 {
-    // TODO  - calc all at the same time;
     let cap = BM_PAWN_CAPTURES[colour.as_usize()][frm as usize] & bm_opp;
     let step1 = 1u64 << (frm + 2 * colour.as_u8() - 1) & !bm_board;
     let step2 = match colour {
@@ -1155,5 +1183,37 @@ mod tests {
         let moves = game.board.legal_moves();
         assert_eq!(moves.len(), 0);
         Ok(())
+    }
+
+    #[test]
+    fn test_white_pawn_moves_start_pos() {
+        let board = Board::from_fen("8/8/8/8/8/8/PPPPPPPP/8 w - - 0 1").expect("bad fen");
+        assert_eq!(board.count_all_pawn_moves(), 16); // 8 single + 8 double pushes
+    }
+
+    #[test]
+    fn test_black_pawn_moves_start_pos() {
+        let board = Board::from_fen("8/pppppppp/8/8/8/8/8/8 b - - 0 1").expect("bad fen");
+        assert_eq!(board.count_all_pawn_moves(), -16); // Black's mobility is subtracted
+    }
+
+    #[test]
+    fn test_pawn_captures_center() {
+        let board = Board::from_fen("8/8/3p4/2P1P3/8/8/8/8 w - - 0 1").expect("bad fen");
+        // note that multiple captures of same pawn only counted once...
+        assert_eq!(board.count_all_pawn_moves(), 0);
+    }
+
+    #[test]
+    fn test_pawn_captures_edges() {
+        let board = Board::from_fen("8/8/8/8/8/8/p6P/8 w - - 0 1").expect("bad fen");
+        // h2 can capture a2
+        assert_eq!(board.count_all_pawn_moves(), 1);
+    }
+
+    #[test]
+    fn test_blocked_pawn_moves() {
+        let board = Board::from_fen("8/8/8/8/8/8/P7/P7 w - - 0 1").expect("bad fen");
+        assert_eq!(board.count_all_pawn_moves(), 2);
     }
 }
