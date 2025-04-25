@@ -636,13 +636,17 @@ impl Board {
                 }
                 _ => (),
             }
-            match self[m.frm() as usize] {
-                WKING => self.can_castle &= !(CASTLE_W_SHORT | CASTLE_W_LONG),
-                BKING => self.can_castle &= !(CASTLE_B_SHORT | CASTLE_B_LONG),
-                WROOK if m.frm() == 0 => self.can_castle &= !CASTLE_W_SHORT,
-                WROOK if m.frm() == 56 => self.can_castle &= !CASTLE_W_LONG,
-                BROOK if m.frm() == 7 => self.can_castle &= !CASTLE_B_SHORT,
-                BROOK if m.frm() == 63 => self.can_castle &= !CASTLE_B_LONG,
+            match (self[m.frm() as usize], self[m.to() as usize]) {
+                (WKING, _) => self.can_castle &= !(CASTLE_W_SHORT | CASTLE_W_LONG),
+                (BKING, _) => self.can_castle &= !(CASTLE_B_SHORT | CASTLE_B_LONG),
+                (WROOK, _) if m.frm() == 0 => self.can_castle &= !CASTLE_W_SHORT,
+                (WROOK, _) if m.frm() == 56 => self.can_castle &= !CASTLE_W_LONG,
+                (BROOK, _) if m.frm() == 7 => self.can_castle &= !CASTLE_B_SHORT,
+                (BROOK, _) if m.frm() == 63 => self.can_castle &= !CASTLE_B_LONG,
+                (_, WROOK) if m.to() == 0 => self.can_castle &= !CASTLE_W_SHORT,
+                (_, WROOK) if m.to() == 56 => self.can_castle &= !CASTLE_W_LONG,
+                (_, BROOK) if m.to() == 7 => self.can_castle &= !CASTLE_B_SHORT,
+                (_, BROOK) if m.to() == 63 => self.can_castle &= !CASTLE_B_LONG,
                 _ => (),
             }
 
@@ -672,7 +676,6 @@ impl Board {
         self.turn.flip();
         //self.hash ^= m.hash ^ WHITE_HASH;
         self.rep_dec();
-        //if m.castle() {
         if self.is_castle(m) {
             let (frm, to) = if m.to() <= 15 {
                 (m.frm() - 24, m.frm() - 8) // short
@@ -776,10 +779,6 @@ impl Board {
         }
 
         pen
-    }
-
-    pub fn mobility(&self) -> i16 {
-        self.count_moves(WHITE) - self.count_moves(BLACK)
     }
 
     // true if !colour side can capture colour king
@@ -991,23 +990,30 @@ impl Board {
     }
 
     // count pseudo legal moves - ignoring en passant & castling
-    fn count_moves(&self, colour: Colour) -> i16 {
+    pub fn mobility(&self) -> i16 {
         let bm_board =
             self.bitmaps.pieces[WHITE.as_usize()] | self.bitmaps.pieces[BLACK.as_usize()];
-        let bm_own = self.bitmaps.pieces[colour.as_usize()];
-        let bm_opp = self.bitmaps.pieces[colour.opposite().as_usize()];
+        let bm_w = self.bitmaps.pieces[WHITE.as_usize()];
+        let bm_b = self.bitmaps.pieces[BLACK.as_usize()];
 
         self.squares
             .iter()
             .enumerate()
-            .filter(|(frm, _)| 1 << frm & self.bitmaps.pieces[colour.as_usize()] != 0)
-            .map(|(frm, &p)| match p.kind() {
-                KNIGHT => (BM_KNIGHT_MOVES[frm] & !bm_own).count_ones() as i16,
-                KING => (BM_KING_MOVES[frm] & !bm_own).count_ones() as i16,
-                PAWN => count_pawn_moves(frm as u8, bm_opp, bm_board, colour),
-                ROOK => count_ray_moves(frm as u8, BM_ROOK_MOVES[frm], bm_board, bm_own),
-                BISHOP => count_ray_moves(frm as u8, BM_BISHOP_MOVES[frm], bm_board, bm_own),
-                QUEEN => count_ray_moves(frm as u8, BM_QUEEN_MOVES[frm], bm_board, bm_own),
+            //.filter(|(frm, _)| 1 << frm & self.bitmaps.pieces[WHITE.as_usize()] != 0)
+            .map(|(frm, &p)| match p {
+                WKNIGHT => (BM_KNIGHT_MOVES[frm] & !bm_w).count_ones() as i16,
+                WKING => (BM_KING_MOVES[frm] & !bm_w).count_ones() as i16,
+                WPAWN => count_pawn_moves(frm as u8, bm_b, bm_board, WHITE),
+                WROOK => count_ray_moves(frm as u8, BM_ROOK_MOVES[frm], bm_board, bm_w),
+                WBISHOP => count_ray_moves(frm as u8, BM_BISHOP_MOVES[frm], bm_board, bm_w),
+                WQUEEN => count_ray_moves(frm as u8, BM_QUEEN_MOVES[frm], bm_board, bm_w),
+
+                BKNIGHT => -((BM_KNIGHT_MOVES[frm] & !bm_b).count_ones() as i16),
+                BKING => -((BM_KING_MOVES[frm] & !bm_b).count_ones() as i16),
+                BPAWN => -count_pawn_moves(frm as u8, bm_w, bm_board, BLACK),
+                BROOK => -count_ray_moves(frm as u8, BM_ROOK_MOVES[frm], bm_board, bm_b),
+                BBISHOP => -count_ray_moves(frm as u8, BM_BISHOP_MOVES[frm], bm_board, bm_b),
+                BQUEEN => -count_ray_moves(frm as u8, BM_QUEEN_MOVES[frm], bm_board, bm_b),
                 _ => 0,
             })
             .sum()
