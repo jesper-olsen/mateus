@@ -1,7 +1,7 @@
 // Copyright (c) 2022 Jesper Olsen
 // License: MIT, see License.txt
 //
-// Puccinia's Checkmate - small chess engine implemented in rust
+// Mateus - small chess engine implemented in rust
 
 use ::std::time::Instant;
 use clap::Parser;
@@ -118,7 +118,7 @@ fn check_game_over(game: &Game, moves: &[Move], half_moves: isize) -> String {
 }
 
 fn benchmark(verbose: bool, search_threshold: usize, tname: &str, tpos: &[(&str, &str)]) {
-    println!("{} Test - search threshold: {search_threshold}", tname);
+    println!("{tname} Test - search threshold: {search_threshold}");
     let mut correct: Vec<usize> = vec![];
     let mut points: f64 = 0.0;
     let mut n_searched: usize = 0;
@@ -136,11 +136,7 @@ fn benchmark(verbose: bool, search_threshold: usize, tname: &str, tpos: &[(&str,
         let (best, score) = l[0];
         n_searched += game.n_searched;
         let clabel = game.move2label(&best, &moves);
-        let colour = if game.board.turn.is_white() {
-            "white"
-        } else {
-            "black"
-        };
+        let colour = ["white", "black"][game.board.turn.is_white() as usize];
         println!("{game}");
 
         for (i, (m, score)) in l.iter().enumerate() {
@@ -153,23 +149,22 @@ fn benchmark(verbose: bool, search_threshold: usize, tname: &str, tpos: &[(&str,
                 points += match i {
                     0 => 1.0,
                     1 => 0.5,
-                    2 => 0.25,
-                    3 => 0.33,
+                    2 => 0.33,
+                    3 => 0.25,
                     _ => 0.0,
                 }
             }
         }
         println!(
-            "Position {:>2}; Searched: {:>9}, Score: {score:>5 }, Move ({colour}): {} = {clabel:>4 }; Expected: {label}\n",
+            "Position {:>2}; Searched: {:>9}, Score: {score:>5 }, Move ({colour}): {best} = {clabel:>4 }; Expected: {label}\n",
             i + 1,
             game.n_searched,
-            best
         );
         if (*label).contains(clabel.as_str()) {
             //if clabel.as_str() == *label {
             correct.push(i + 1);
         }
-        println!("Correct: {:?} {}/{}", correct, correct.len(), tpos.len());
+        println!("Correct: {correct:?} {}/{}", correct.len(), tpos.len());
         println!("Points: {points}");
 
         let dur = (Instant::now() - start).as_millis();
@@ -203,8 +198,8 @@ fn play(
     loop {
         let msg = check_game_over(&game, &moves, half_moves);
         if !msg.is_empty() {
-            println!("{}", msg);
-            std::process::exit(1);
+            println!("{msg}");
+            std::process::exit(0);
         }
 
         let l = if players[&game.board.turn] {
@@ -215,12 +210,12 @@ fn play(
             if !library_bypass && !lmoves.is_empty() {
                 if verbose {
                     println!("#library moves from {}: {}", game.board.hash, lmoves.len());
-                    println!("{:?}", lmoves);
+                    println!("{lmoves:?}");
                 };
                 let i = random::<u32>() % lmoves.len() as u32;
                 let (frm, to) = lmoves[i as usize];
                 if let Some(m) = moves.iter().find(|m| (m.frm(), m.to()) == (frm, to)) {
-                    println!("Library Move {} ", m);
+                    println!("Library Move {m} ");
                     vec![(*m, 0i16)]
                 } else {
                     panic!("Not a valid library move")
@@ -240,10 +235,8 @@ fn play(
                 0
             };
             println!(
-                "Search total: {} / {} ms / {} nodes/ms",
-                tot,
+                "Search total: {tot} / {} ms / {speed} nodes/ms",
                 (Instant::now() - start).as_millis() as usize,
-                speed
             );
             println!(
                 "hash size r {} t {} ",
@@ -251,7 +244,7 @@ fn play(
                 game.ttable.len(),
             );
             for (i, (m, score)) in l.iter().enumerate() {
-                println!("{}/{}: {} {}/{}", i, moves.len(), m, m.val, score);
+                println!("{i}/{}: {m} {}/{score}", moves.len(), m.val);
             }
         }
         let (m, score) = l[0];
@@ -267,8 +260,7 @@ fn play(
                 println!("REP: {}", game.board.rep_count());
             }
             println!(
-                "score: {}, material: {}, is_end_game: {}, pawns: {}, mobility: {}",
-                score,
+                "score: {score}, material: {}, is_end_game: {}, pawns: {}, mobility: {}",
                 game.board.material,
                 game.board.is_end_game(),
                 game.board.score_pawn_structure(),

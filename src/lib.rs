@@ -209,10 +209,10 @@ impl Game {
     } // fn quiescence fab
 
     pub fn pvs(&mut self, depth: u8, ply: usize, alpha: i16, beta: i16, last: &Move) -> i16 {
-        if let Some(count) = self.board.rep.get(&self.board.hash) {
-            if *count >= 2 {
-                return 0;
-            }
+        if let Some(count) = self.board.rep.get(&self.board.hash)
+            && *count >= 2
+        {
+            return 0;
         }
 
         let mut alpha = alpha;
@@ -277,10 +277,10 @@ impl Game {
                 None if !generated => {
                     generated = true;
                     moves = self.board.moves(in_check, self.end_game);
-                    if let Some(k) = kmove {
-                        if let Some(q) = moves.iter().position(|&m| m == k) {
-                            moves.remove(q);
-                        }
+                    if let Some(k) = kmove
+                        && let Some(q) = moves.iter().position(|&m| m == k)
+                    {
+                        moves.remove(q);
                     }
                     if self.board.turn.is_white() {
                         moves.sort_unstable_by(|a, b| a.val.cmp(&b.val)); // increasing

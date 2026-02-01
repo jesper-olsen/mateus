@@ -315,10 +315,9 @@ impl Board {
             .rep
             .entry(self.hash)
             .and_modify(|x| *x = x.saturating_sub(1))
+            && *entry.get() == 0
         {
-            if *entry.get() == 0 {
-                self.rep.remove(&self.hash);
-            }
+            self.rep.remove(&self.hash);
         }
 
         // self.rep
@@ -1053,7 +1052,7 @@ impl Board {
 
 /// count for just one pawn - unlike count_all_pawn_moves()
 /// this is slower, but does not merge multiple captures of the same enemy piece...
-const fn count_pawn_moves(frm: u8, bm_opp: u64, bm_board: u64, colour: Colour) -> i16 {
+const fn _count_pawn_moves(frm: u8, bm_opp: u64, bm_board: u64, colour: Colour) -> i16 {
     let cap = BM_PAWN_CAPTURES[colour.as_usize()][frm as usize] & bm_opp;
     let step1 = 1u64 << (frm + 2 * colour.as_u8() - 1) & !bm_board;
     let step2 = match colour {

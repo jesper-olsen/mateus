@@ -58,6 +58,7 @@ const fn reminder_to_slice(hash_key: u64, array: &mut [u8]) {
         array[i] = bytes[i];
         i += 1;
     }
+    //array[..N_REMINDER_BYTES].copy_from_slice(&bytes[..N_REMINDER_BYTES]);
 }
 
 const fn reminder_from_slice(array: &[u8]) -> u64 {
@@ -67,6 +68,7 @@ const fn reminder_from_slice(array: &[u8]) -> u64 {
         bytes[i] = array[i];
         i += 1;
     }
+    //bytes[..N_REMINDER_BYTES].copy_from_slice(&array[..N_REMINDER_BYTES]);
     u64::from_le_bytes(bytes)
 }
 
@@ -166,6 +168,10 @@ impl Transpositions {
 
     pub fn len(&self) -> usize {
         self.0.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.len() == 0
     }
 
     pub fn clear(&mut self) {
