@@ -42,7 +42,7 @@ pub struct Move {
 
 impl Move {
     #[inline(always)]
-    fn promote_kind(&self) -> u8 {
+    pub fn promote_kind(&self) -> u8 {
         match self.data & PROMOTE_MASK {
             PROMOTE_ROOK => ROOK,
             PROMOTE_BISHOP => BISHOP,

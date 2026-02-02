@@ -130,7 +130,6 @@ fn benchmark(verbose: bool, search_threshold: usize, tname: &str, tpos: &[(&str,
         };
         let mut game = Game::new(board);
         let moves = game.board.legal_moves();
-        game.n_searched = 0;
 
         let l = game.score_moves(&moves, search_threshold, verbose);
         let (best, score) = l[0];

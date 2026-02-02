@@ -12,7 +12,6 @@ use mgen::*;
 use std::fmt;
 use transposition::Transpositions;
 use val::*;
-use val::{BPAWN, WPAWN};
 
 const INFINITE: i16 = 32000;
 
