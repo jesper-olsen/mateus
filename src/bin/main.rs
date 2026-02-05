@@ -5,12 +5,12 @@
 
 use ::std::time::Instant;
 use clap::Parser;
-use mateus::Game;
 use mateus::benchmark;
-use mateus::mgen::{Board, Move};
+use mateus::mgen::{self, Board, Move};
 use mateus::misc::str2move;
 use mateus::openings::library_moves;
 use mateus::val::*;
+use mateus::{Game, SearchConstraints};
 use rand::random;
 use std::collections::hash_map::HashMap;
 use std::io;
@@ -121,8 +121,9 @@ fn benchmark(verbose: bool, search_threshold: usize, tname: &str, tpos: &[(&str,
     println!("{tname} Test - search threshold: {search_threshold}");
     let mut correct: Vec<usize> = vec![];
     let mut points: f64 = 0.0;
+    let start=Instant::now();
     let mut n_searched: usize = 0;
-    let start = Instant::now();
+    let sc = SearchConstraints::default().nodes(search_threshold);
     for (i, (fen, label)) in tpos.iter().enumerate() {
         let Ok(board) = Board::from_fen(fen) else {
             println!("Bad fen: {fen}");
@@ -131,9 +132,9 @@ fn benchmark(verbose: bool, search_threshold: usize, tname: &str, tpos: &[(&str,
         let mut game = Game::new(board);
         let moves = game.board.legal_moves();
 
-        let l = game.score_moves(&moves, search_threshold, verbose);
+        let (l, search_info) = game.score_moves(&moves, &sc, verbose);
         let (best, score) = l[0];
-        n_searched += game.n_searched;
+        n_searched += search_info.nodes;
         let clabel = game.move2label(&best, &moves);
         let colour = ["white", "black"][game.board.turn.is_white() as usize];
         println!("{game}");
@@ -155,9 +156,10 @@ fn benchmark(verbose: bool, search_threshold: usize, tname: &str, tpos: &[(&str,
             }
         }
         println!(
-            "Position {:>2}; Searched: {:>9}, Score: {score:>5 }, Move ({colour}): {best} = {clabel:>4 }; Expected: {label}\n",
+            "Position {:>2}; Depth: {:>3}, Searched: {:>9}, Score: {score:>5 }, Move ({colour}): {best} = {clabel:>4 }; Expected: {label}\n",
             i + 1,
-            game.n_searched,
+            search_info.depth,
+            search_info.nodes,
         );
         if (*label).contains(clabel.as_str()) {
             //if clabel.as_str() == *label {
@@ -166,7 +168,7 @@ fn benchmark(verbose: bool, search_threshold: usize, tname: &str, tpos: &[(&str,
         println!("Correct: {correct:?} {}/{}", correct.len(), tpos.len());
         println!("Points: {points}");
 
-        let dur = (Instant::now() - start).as_millis();
+        let dur=(Instant::now() - start).as_millis() as u128;
         println!("Time: {dur} ms => {} ms/position", dur / (i + 1) as u128);
         let speed = if let Some(speed) = (n_searched as u128).checked_div(dur) {
             speed as usize
@@ -175,7 +177,7 @@ fn benchmark(verbose: bool, search_threshold: usize, tname: &str, tpos: &[(&str,
         };
         println!(
             "Search total: {n_searched:}; Time {} ms => {speed:} nodes/ms ",
-            (Instant::now() - start).as_millis() as usize,
+            dur as usize
         );
     }
 }
@@ -193,6 +195,7 @@ fn play(
     let mut tot = 0;
     let mut moves = game.board.legal_moves();
 
+    let sc = SearchConstraints::default().nodes(search_threshold);
     let start = Instant::now();
     loop {
         let msg = check_game_over(&game, &moves, half_moves);
@@ -220,12 +223,13 @@ fn play(
                     panic!("Not a valid library move")
                 }
             } else {
-                game.score_moves(&moves, search_threshold, verbose)
+                let (l, search_info) = game.score_moves(&moves, &sc, verbose);
+                tot += search_info.nodes;
+                l
             }
         };
 
         if verbose {
-            tot += game.n_searched;
             let speed = if let Some(speed) =
                 (tot as u128).checked_div((Instant::now() - start).as_millis())
             {

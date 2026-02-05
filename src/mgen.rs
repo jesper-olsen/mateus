@@ -102,7 +102,7 @@ impl fmt::Display for Move {
 }
 
 pub struct Board {
-    squares: [Piece; 64],
+    pub squares: [Piece; 64],
     pub turn: Colour,
     pub can_castle: u8, // white short, long, black short, long
     pub material: i16,
@@ -519,7 +519,7 @@ impl Board {
             self.can_castle,
             self.en_passant_sq,
         ));
-        let hash;
+        //let hash;
         self[m.to() as usize] = if self.is_castle(m) {
             self.en_passant_sq = 0;
             let (r_frm, r_to) = if m.to() <= 15 {
@@ -544,10 +544,10 @@ impl Board {
                 }
             }
 
-            hash = self[m.frm() as usize].hashkey(m.to())
-                ^ self[m.frm() as usize].hashkey(m.frm())
-                ^ self[r_frm as usize].hashkey(r_to)
-                ^ self[r_frm as usize].hashkey(r_frm);
+            //hash = self[m.frm() as usize].hashkey(m.to())
+            //    ^ self[m.frm() as usize].hashkey(m.frm())
+            //    ^ self[r_frm as usize].hashkey(r_to)
+            //    ^ self[r_frm as usize].hashkey(r_frm);
             self[r_to as usize] = self.squares[r_frm as usize]; // move rook
             self[r_frm as usize] = EMPTY;
             self[m.frm() as usize]
@@ -563,9 +563,9 @@ impl Board {
             }
 
             let p = Piece::new(m.promote_kind(), self.turn);
-            hash = p.hashkey(m.to())
-                ^ self[m.frm() as usize].hashkey(m.frm())
-                ^ self[m.to() as usize].hashkey(m.to());
+            //hash = p.hashkey(m.to())
+            //    ^ self[m.frm() as usize].hashkey(m.frm())
+            //    ^ self[m.to() as usize].hashkey(m.to());
             p
         } else if self.is_en_passant(m) {
             // +9  +1 -7
@@ -584,9 +584,9 @@ impl Board {
             self.bitmaps.pawns ^= 1 << m.frm();
             self.bitmaps.pawns ^= 1 << x;
 
-            hash = self[m.frm() as usize].hashkey(m.to())
-                ^ self[m.frm() as usize].hashkey(m.frm())
-                ^ self[x as usize].hashkey(x);
+            //hash = self[m.frm() as usize].hashkey(m.to())
+            //    ^ self[m.frm() as usize].hashkey(m.frm())
+            //    ^ self[x as usize].hashkey(x);
             self[x as usize] = EMPTY;
             self[m.frm() as usize]
         } else {
@@ -649,17 +649,18 @@ impl Board {
                 _ => (),
             }
 
-            hash = self[m.frm() as usize].hashkey(m.to())
-                ^ self[m.frm() as usize].hashkey(m.frm())
-                ^ self[m.to() as usize].hashkey(m.to());
+            //hash = self[m.frm() as usize].hashkey(m.to())
+            //    ^ self[m.frm() as usize].hashkey(m.frm())
+            //    ^ self[m.to() as usize].hashkey(m.to());
             self[m.frm() as usize]
         };
         self[m.frm() as usize] = EMPTY;
         self.material += m.val;
         self.rep_inc();
-        self.hash ^= hash ^ WHITE_HASH;
+        //self.hash ^= hash ^ WHITE_HASH;
         //self.bitmaps = to_bitmaps(&self.squares);
         self.turn.flip();
+        self.hash = calc_hash(&self.squares, self.turn); // TMP
     }
 
     pub fn backdate(&mut self, m: &Move) {
@@ -692,7 +693,6 @@ impl Board {
         self[m.to() as usize] = capture;
 
         if self.is_en_passant(m) {
-            //if m.en_passant() {
             let x = match m.to() > m.frm() {
                 true => m.frm() + 8,  // west
                 false => m.frm() - 8, // east

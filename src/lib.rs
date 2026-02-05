@@ -9,7 +9,7 @@ pub mod val;
 
 use core::cmp::{max, min};
 use mgen::*;
-use std::fmt;
+use std::{fmt, time, time::Duration};
 use transposition::Transpositions;
 use val::*;
 
@@ -20,6 +20,42 @@ pub struct Game {
     pub n_searched: usize,
     pub ttable: Transpositions,
     end_game: bool,
+}
+
+#[derive(Default)]
+pub struct SearchInfo {
+    pub depth: u8,
+    pub nodes: usize,
+    pub time: Duration,
+}
+
+#[derive(Default, Clone)]
+pub struct SearchConstraints {
+    pub depth: Option<u8>,
+    pub nodes: Option<usize>,
+    pub time: Option<Duration>,
+}
+
+impl SearchConstraints {
+    pub fn depth(mut self, depth: u8) -> Self {
+        self.depth = Some(depth);
+        self
+    }
+
+    pub fn nodes(mut self, nodes: usize) -> Self {
+        self.nodes = Some(nodes);
+        self
+    }
+
+    pub fn time(mut self, time: Duration) -> Self {
+        self.time = Some(time);
+        self
+    }
+
+    pub fn time_millis(mut self, millis: u64) -> Self {
+        self.time = Some(Duration::from_millis(millis));
+        self
+    }
 }
 
 impl Default for Game {
@@ -334,19 +370,36 @@ impl Game {
     pub fn score_moves(
         &mut self,
         moves: &[Move],
-        max_searched: usize,
+        sc: &SearchConstraints,
         verbose: bool,
-    ) -> Vec<(Move, i16)> {
+    ) -> (Vec<(Move, i16)>, SearchInfo) {
         // top level pvs - does iterative deepening, sorts moves
         // note that only the best move has exact scoring...
 
+        let mut search_info = SearchInfo::default();
+        let start = time::Instant::now();
+
         if moves.is_empty() {
-            return vec![];
+            return (vec![], search_info);
         }
 
         self.n_searched = 0;
         let mut pq0: Vec<(Move, i16)> = moves.iter().map(|m| (*m, 0)).collect();
+
+        let mut last_depth_time = Duration::from_millis(0);
+
+        if let Some(time_limit) = sc.time {
+            println!("info time_limit={time_limit:?}");
+        }
         for depth in (2..255).step_by(1) {
+            if let Some(time_limit) = sc.time {
+                let elapsed = start.elapsed();
+                if elapsed > (time_limit * 6 / 10) || elapsed + last_depth_time * 3 >= time_limit {
+                    break;
+                }
+            }
+
+            let depth_start = time::Instant::now();
             let mut pq: Vec<(Move, i16)> = Vec::new();
             let mut alpha = -INFINITE;
             let beta = INFINITE;
@@ -374,15 +427,24 @@ impl Game {
             pq0 = pq;
             if verbose {
                 println!(
-                    "Depth {:>2} #searched {:>8} bmove: {} bscore: {}",
-                    depth, self.n_searched, pq0[0].0, bscore
+                    "info Depth {depth:>2} #searched {:>8} bmove: {} bscore: {bscore}",
+                    self.n_searched, pq0[0].0
                 );
             }
-            if self.n_searched > max_searched || pq0[0].1.abs() >= INFINITE - 1000 {
+            let elapsed = start.elapsed();
+            search_info.nodes = self.n_searched;
+            search_info.depth = depth;
+            search_info.time = elapsed;
+            if (sc.nodes.is_some() && self.n_searched >= sc.nodes.unwrap())
+                || (sc.depth.is_some() && depth >= sc.depth.unwrap())
+                || (sc.time.is_some() && elapsed >= sc.time.unwrap())
+                || pq0[0].1.abs() >= INFINITE - 1000
+            {
                 break;
             }
+            last_depth_time = depth_start.elapsed();
         }
-        pq0
+        (pq0, search_info)
     } // fn score_moves
 }
 
