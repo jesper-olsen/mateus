@@ -6,7 +6,7 @@
 use ::std::time::Instant;
 use clap::Parser;
 use mateus::benchmark;
-use mateus::mgen::{self, Board, Move};
+use mateus::mgen::{Board, Move};
 use mateus::misc::str2move;
 use mateus::openings::library_moves;
 use mateus::val::*;
