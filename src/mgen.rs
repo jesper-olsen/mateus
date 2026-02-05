@@ -519,7 +519,7 @@ impl Board {
             self.can_castle,
             self.en_passant_sq,
         ));
-        //let hash;
+        let hash;
         self[m.to() as usize] = if self.is_castle(m) {
             self.en_passant_sq = 0;
             let (r_frm, r_to) = if m.to() <= 15 {
@@ -544,10 +544,10 @@ impl Board {
                 }
             }
 
-            //hash = self[m.frm() as usize].hashkey(m.to())
-            //    ^ self[m.frm() as usize].hashkey(m.frm())
-            //    ^ self[r_frm as usize].hashkey(r_to)
-            //    ^ self[r_frm as usize].hashkey(r_frm);
+            hash = self[m.frm() as usize].hashkey(m.to())
+                ^ self[m.frm() as usize].hashkey(m.frm())
+                ^ self[r_frm as usize].hashkey(r_to)
+                ^ self[r_frm as usize].hashkey(r_frm);
             self[r_to as usize] = self.squares[r_frm as usize]; // move rook
             self[r_frm as usize] = EMPTY;
             self[m.frm() as usize]
@@ -563,9 +563,9 @@ impl Board {
             }
 
             let p = Piece::new(m.promote_kind(), self.turn);
-            //hash = p.hashkey(m.to())
-            //    ^ self[m.frm() as usize].hashkey(m.frm())
-            //    ^ self[m.to() as usize].hashkey(m.to());
+            hash = p.hashkey(m.to())
+                ^ self[m.frm() as usize].hashkey(m.frm())
+                ^ self[m.to() as usize].hashkey(m.to());
             p
         } else if self.is_en_passant(m) {
             // +9  +1 -7
@@ -584,9 +584,9 @@ impl Board {
             self.bitmaps.pawns ^= 1 << m.frm();
             self.bitmaps.pawns ^= 1 << x;
 
-            //hash = self[m.frm() as usize].hashkey(m.to())
-            //    ^ self[m.frm() as usize].hashkey(m.frm())
-            //    ^ self[x as usize].hashkey(x);
+            hash = self[m.frm() as usize].hashkey(m.to())
+                ^ self[m.frm() as usize].hashkey(m.frm())
+                ^ self[x as usize].hashkey(x);
             self[x as usize] = EMPTY;
             self[m.frm() as usize]
         } else {
@@ -649,18 +649,18 @@ impl Board {
                 _ => (),
             }
 
-            //hash = self[m.frm() as usize].hashkey(m.to())
-            //    ^ self[m.frm() as usize].hashkey(m.frm())
-            //    ^ self[m.to() as usize].hashkey(m.to());
+            hash = self[m.frm() as usize].hashkey(m.to())
+                ^ self[m.frm() as usize].hashkey(m.frm())
+                ^ self[m.to() as usize].hashkey(m.to());
             self[m.frm() as usize]
         };
         self[m.frm() as usize] = EMPTY;
         self.material += m.val;
         self.rep_inc();
-        //self.hash ^= hash ^ WHITE_HASH;
+        self.hash ^= hash ^ WHITE_HASH;
         //self.bitmaps = to_bitmaps(&self.squares);
         self.turn.flip();
-        self.hash = calc_hash(&self.squares, self.turn); // TMP
+        //self.hash = calc_hash(&self.squares, self.turn); // TMP
     }
 
     pub fn backdate(&mut self, m: &Move) {
@@ -1120,10 +1120,7 @@ pub const fn abs_material(squares: &[Piece]) -> i16 {
 }
 
 pub const fn calc_hash(squares: &[Piece], colour: Colour) -> u64 {
-    let mut key = match colour {
-        WHITE => WHITE_HASH,
-        _ => 0,
-    };
+    let mut key = if colour.is_white() { WHITE_HASH } else { 0 };
 
     let mut i = 0;
     while i < squares.len() {
@@ -1160,6 +1157,22 @@ fn from_fen(s: &str) -> [Piece; 64] {
 mod tests {
     use crate::benchmark::*;
     use crate::*;
+
+    #[test]
+    fn test_hash() -> Result<(), String> {
+        let board = Board::from_fen(ROOT_FEN)?;
+        let mut game = Game::new(board);
+        let hash = calc_hash(&game.board.squares, game.board.turn);
+        assert_eq!(hash, game.board.hash);
+
+        let moves = game.board.legal_moves();
+        game.make_move(moves[0]);
+
+        let hash = calc_hash(&game.board.squares, game.board.turn);
+        assert_eq!(hash, game.board.hash);
+
+        Ok(())
+    }
 
     #[test]
     fn test_en_passant() -> Result<(), String> {

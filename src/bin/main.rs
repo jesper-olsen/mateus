@@ -121,7 +121,7 @@ fn benchmark(verbose: bool, search_threshold: usize, tname: &str, tpos: &[(&str,
     println!("{tname} Test - search threshold: {search_threshold}");
     let mut correct: Vec<usize> = vec![];
     let mut points: f64 = 0.0;
-    let start=Instant::now();
+    let start = Instant::now();
     let mut n_searched: usize = 0;
     let sc = SearchConstraints::default().nodes(search_threshold);
     for (i, (fen, label)) in tpos.iter().enumerate() {
@@ -168,7 +168,7 @@ fn benchmark(verbose: bool, search_threshold: usize, tname: &str, tpos: &[(&str,
         println!("Correct: {correct:?} {}/{}", correct.len(), tpos.len());
         println!("Points: {points}");
 
-        let dur=(Instant::now() - start).as_millis() as u128;
+        let dur = (Instant::now() - start).as_millis() as u128;
         println!("Time: {dur} ms => {} ms/position", dur / (i + 1) as u128);
         let speed = if let Some(speed) = (n_searched as u128).checked_div(dur) {
             speed as usize

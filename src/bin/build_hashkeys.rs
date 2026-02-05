@@ -23,5 +23,6 @@ fn main() {
     random_array_u64("P1_HASH");
     random_array_u64("P2_HASH");
     random_array_u64("NIL_HASH");
+    println!("pub const NIL_HASH: [u64;64] = [0;64];");
     println!("pub const WHITE_HASH: u64={};", rand::random::<u64>());
 }
